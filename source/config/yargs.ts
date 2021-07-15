@@ -14,4 +14,7 @@ export const argv = yargs.options({
   'install:eslint': {
     description: 'Add eslint to the project',
   },
+  'install:socket': {
+    description: 'Add Socket.io to the project',
+  },
 }).argv

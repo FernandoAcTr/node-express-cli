@@ -84,4 +84,22 @@ export class CliGenerator {
     shell.exec('npm set-script lint "eslint . --ext .ts"')
     shell.exec('npm set-script lint:fix "eslint . --ext .ts --fix"')
   }
+
+  installSocket(api: boolean) {
+    console.log(
+      '================= Installing Socket.io ================='.yellow
+    )
+    shell.exec('npm i socket.io')
+    let index = ''
+    if (api) index = fs.readFileSync('./code/api/index_socket.ts').toString()
+    else index = fs.readFileSync('./code/web/index_socket.ts').toString()
+    const socket = fs.readFileSync('./code/socket.ts').toString()
+    const socketController = fs
+      .readFileSync('./code/socket.controller.ts')
+      .toString()
+
+    fs.writeFileSync('./src/socket.ts', socket)
+    fs.writeFileSync('./src/socket.controller.ts', socketController)
+    fs.writeFileSync('./src/index.ts', index)
+  }
 }

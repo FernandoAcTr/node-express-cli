@@ -4,6 +4,7 @@ import { ApiCodeGenerator } from './generators/api_code_generator'
 import { DbType } from './generators/code_generator'
 import { WebCodeGenerator } from './generators/web_code_generator'
 import { CliGenerator } from './generators/cli_generator'
+import shell from 'shelljs'
 
 const apiGenerator = new ApiCodeGenerator()
 const webGenerator = new WebCodeGenerator()
@@ -40,6 +41,7 @@ async function init() {
 function generate(typeProject: typeChoices, database: dbChoices) {
   const dbType = database === dbChoices.MONGO ? DbType.MONGO : DbType.TYPEORM
 
+  shell.exec('npm init -y')
   if (typeProject === typeChoices.API) {
     apiGenerator.init(dbType)
   } else {
@@ -67,6 +69,16 @@ async function makeModule() {
     else cliGenerator.generateWebModule(moduleName.resp)
 }
 
+async function installSocket() {
+  const type = await inquirer.prompt({
+    type: 'list',
+    name: 'resp',
+    message: 'Type of module',
+    choices: Object.values(typeChoices),
+  })
+  cliGenerator.installSocket(type.resp === typeChoices.API)
+}
+
 let command = (argv as any)._[0]
 switch (command) {
   case 'init':
@@ -83,6 +95,9 @@ switch (command) {
 
   case 'install:eslint':
     cliGenerator.installEslint()
+    break
+  case 'install:socket':
+    installSocket()
     break
   default:
     console.log('Please enter --help to see a list of commands')
