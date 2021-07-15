@@ -1,5 +1,5 @@
 interface CodeGenerator {
-  createDirStructure(webapp: boolean): void
+  createDirStructure(): void
   createConfigFiles(): void
   fillDatabase(): void
   fillMiddlewares(): void

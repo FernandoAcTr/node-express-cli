@@ -1,7 +1,7 @@
 import fs from 'fs'
 
 export class ApiCodeGenerator implements CodeGenerator {
-  createDirStructure(webapp = false) {
+  createDirStructure() {
     fs.mkdirSync('./src', {
       recursive: true,
     })
@@ -29,24 +29,6 @@ export class ApiCodeGenerator implements CodeGenerator {
     fs.mkdirSync('./src/config', {
       recursive: true,
     })
-
-    if (webapp) {
-      fs.mkdirSync('./src/views/partials', {
-        recursive: true,
-      })
-
-      fs.mkdirSync('./src/views/layouts', {
-        recursive: true,
-      })
-
-      fs.mkdirSync('./public/css', {
-        recursive: true,
-      })
-
-      fs.mkdirSync('./public/js', {
-        recursive: true,
-      })
-    }
   }
 
   createConfigFiles() {
@@ -107,13 +89,16 @@ export class ApiCodeGenerator implements CodeGenerator {
   }
 
   fillSettings(): void {
-    throw new Error('Method not implemented.')
+    const settings = fs.readFileSync('./code/settings.ts').toString()
+    fs.writeFileSync('./src/config/settings.ts', settings)
   }
   fillRouter(): void {
-    throw new Error('Method not implemented.')
+    const router = fs.readFileSync('./code/router.ts').toString()
+    fs.writeFileSync('./src/router.ts', router)
   }
   fillIndex(): void {
-    throw new Error('Method not implemented.')
+    const index = fs.readFileSync('./code/api/index.ts').toString()
+    fs.writeFileSync('./src/index.ts', index)
   }
   installDependencies(): void {
     throw new Error('Method not implemented.')
@@ -130,5 +115,8 @@ export class ApiCodeGenerator implements CodeGenerator {
     this.createConfigFiles()
     this.fillDatabase()
     this.fillMiddlewares()
+    this.fillSettings()
+    this.fillRouter()
+    this.fillIndex()
   }
 }
