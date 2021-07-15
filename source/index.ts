@@ -67,8 +67,6 @@ async function makeModule() {
     else cliGenerator.generateWebModule(moduleName.resp)
 }
 
-async function installPrettier() {}
-
 let command = (argv as any)._[0]
 switch (command) {
   case 'init':
@@ -80,7 +78,7 @@ switch (command) {
     break
 
   case 'install:prettier':
-    makeModule()
+    cliGenerator.installPrettier()
     break
   default:
     console.log('Please enter --help to see a list of commands')
