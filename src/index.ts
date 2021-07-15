@@ -1,4 +1,4 @@
-import { CodeGenerator } from './code_generator'
+import { ApiCodeGenerator } from './api_code_generator'
 
-const generator = new CodeGenerator()
+const generator = new ApiCodeGenerator()
 generator.init()
