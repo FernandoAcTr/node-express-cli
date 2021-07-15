@@ -1,12 +1,13 @@
 import inquirer from 'inquirer'
+import { argv } from './config/yargs'
 import { ApiCodeGenerator } from './generators/api_code_generator'
 import { DbType } from './generators/code_generator'
 import { WebCodeGenerator } from './generators/web_code_generator'
-
-import { argv } from './config/yargs'
+import { CliGenerator } from './generators/cli_generator'
 
 const apiGenerator = new ApiCodeGenerator()
 const webGenerator = new WebCodeGenerator()
+const cliGenerator = new CliGenerator()
 
 enum typeChoices {
   API = 'API',
@@ -46,11 +47,41 @@ function generate(typeProject: typeChoices, database: dbChoices) {
   }
 }
 
+async function makeModule() {
+  const moduleName = await inquirer.prompt({
+    type: 'input',
+    name: 'resp',
+    message: 'Name of module:',
+  })
+
+  const type = await inquirer.prompt({
+    type: 'list',
+    name: 'resp',
+    message: 'Type of module',
+    choices: Object.values(typeChoices),
+  })
+
+  if (moduleName.resp)
+    if (type.resp === typeChoices.API)
+      cliGenerator.generateApiModule(moduleName.resp)
+    else cliGenerator.generateWebModule(moduleName.resp)
+}
+
+async function installPrettier() {}
+
 let command = (argv as any)._[0]
 switch (command) {
   case 'init':
     init()
+    break
 
+  case 'make:module':
+    makeModule()
+    break
+
+  case 'install:prettier':
+    makeModule()
+    break
   default:
-    console.log('No reconized command')
+    console.log('Please enter --help to see a list of commands')
 }
