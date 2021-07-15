@@ -9,7 +9,7 @@ import locals from './middlewares/locals'
 import morgan from 'morgan'
 
 //importin routes
-import routes from './routes/index.routes'
+import routes from './router'
 
 //importing configs
 import { settings } from './config/settings'
