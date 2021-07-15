@@ -80,6 +80,10 @@ switch (command) {
   case 'install:prettier':
     cliGenerator.installPrettier()
     break
+
+  case 'install:eslint':
+    cliGenerator.installEslint()
+    break
   default:
     console.log('Please enter --help to see a list of commands')
 }

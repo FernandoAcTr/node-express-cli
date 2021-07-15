@@ -67,10 +67,21 @@ export class CliGenerator {
     )
     shell.exec('npm i -D prettier')
     const prettier = fs.readFileSync('./code/prettierrc.json').toString()
-    fs.writeFileSync('.prettierrc.json ', prettier)
+    fs.writeFileSync('.prettierrc.json', prettier)
     fs.writeFileSync('.prettierignore', 'build')
     shell.exec(
       'npm set-script prettier:fix "prettier --config .prettierrc.json --write src/**/**/*.ts"'
     )
+  }
+
+  installEslint() {
+    console.log('================= Installing Eslint ================='.yellow)
+    shell.exec(
+      'npm install -D eslint eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin'
+    )
+    const eslint = fs.readFileSync('./code/eslintrc.js').toString()
+    fs.writeFileSync('.eslintrc.js', eslint)
+    shell.exec('npm set-script lint "eslint . --ext .ts"')
+    shell.exec('npm set-script lint:fix "eslint . --ext .ts --fix"')
   }
 }

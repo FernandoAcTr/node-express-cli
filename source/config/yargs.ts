@@ -11,4 +11,7 @@ export const argv = yargs.options({
   'install:prettier': {
     description: 'Add prettier to the project',
   },
+  'install:eslint': {
+    description: 'Add eslint to the project',
+  },
 }).argv
