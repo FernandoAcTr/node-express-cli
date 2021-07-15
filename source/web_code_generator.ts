@@ -1,6 +1,7 @@
 import fs from 'fs'
 import shell from 'shelljs'
 import 'colors'
+import { CodeGenerator, DbType } from './code_generator'
 
 export class WebCodeGenerator implements CodeGenerator {
   createDirStructure() {
@@ -12,15 +13,7 @@ export class WebCodeGenerator implements CodeGenerator {
       recursive: true,
     })
 
-    fs.mkdirSync('./src/database/migrations', {
-      recursive: true,
-    })
-
     fs.mkdirSync('./src/middlewares', {
-      recursive: true,
-    })
-
-    fs.mkdirSync('./src/entities', {
       recursive: true,
     })
 
@@ -53,9 +46,6 @@ export class WebCodeGenerator implements CodeGenerator {
     //gitignore
     const gitignore = fs.readFileSync('./code/gitignore').toString()
     fs.writeFileSync('.gitignore', gitignore)
-    //ormconfig
-    const ormconfig = fs.readFileSync('./code/ormconfig.json').toString()
-    fs.writeFileSync('ormconfig.json', ormconfig)
     //env
     const env = fs.readFileSync('./code/env').toString()
     fs.writeFileSync('.env', env)
@@ -66,9 +56,58 @@ export class WebCodeGenerator implements CodeGenerator {
     fs.writeFileSync('tsconfig.json', tsconfig)
   }
 
-  fillDatabase() {
-    const database = fs.readFileSync('./code/database.ts').toString()
-    fs.writeFileSync('./src/database/database.ts', database)
+  fillDatabase(dbType: DbType) {
+    if (dbType === DbType.TYPEORM) {
+      //migrations dir
+      fs.mkdirSync('./src/database/migrations', {
+        recursive: true,
+      })
+      //entities dir
+      fs.mkdirSync('./src/entities', {
+        recursive: true,
+      })
+
+      //ormconfig
+      const ormconfig = fs
+        .readFileSync('./code/database/ormconfig.json')
+        .toString()
+      fs.writeFileSync('ormconfig.json', ormconfig)
+
+      //database
+      const database = fs.readFileSync('./code/database/database.ts').toString()
+      fs.writeFileSync('./src/database/database.ts', database)
+
+      //create user entity
+      const user = fs.readFileSync('./code/database/user.typeorm.ts').toString()
+      fs.writeFileSync('./src/entities/user.entity.ts', user)
+
+      //Install db
+      console.log('================= Installing ORM ================='.yellow)
+      shell.exec('npm i typeorm')
+
+      //Add scripts
+      shell.exec(
+        'npm set-script migration:run "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:run"'
+      )
+      shell.exec(
+        'npm set-script migration:revert "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:revert"'
+      )
+      shell.exec(
+        'npm set-script migration:generate "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:generate --name"'
+      )
+    } else {
+      //Install db
+      console.log('================= Installing ORM ================='.yellow)
+      shell.exec('npm i mongoose')
+      shell.exec('npm i -D @types/mongoose')
+      //models dir
+      fs.mkdirSync('./src/models', {
+        recursive: true,
+      })
+      //create user model
+      const user = fs.readFileSync('./code/database/user.mongo.ts').toString()
+      fs.writeFileSync('./src/models/user.model.ts', user)
+    }
   }
 
   fillMiddlewares() {
@@ -102,7 +141,7 @@ export class WebCodeGenerator implements CodeGenerator {
   installDependencies(): void {
     console.log('================= Installing modules ================='.yellow)
     shell.exec(
-      'npm i express express-session dotenv passport passport-local morgan express-handlebars csurf typeorm connect-flash'
+      'npm i express express-session dotenv passport passport-local morgan express-handlebars csurf connect-flash'
     )
   }
 
@@ -122,7 +161,7 @@ export class WebCodeGenerator implements CodeGenerator {
     shell.exec(
       'npm set-script watch-hbs "mkdir build & nodemon -e hbs -w src/views -x cp -r src/views build"'
     )
-    shell.exec('npm set-script clean "rm -rf build & rm -rf node_modules"')
+    shell.exec('npm set-script clean "rm -rf build"')
     shell.exec('npm set-script build "tsc && cp -r src/views build"')
     shell.exec('npm set-script start "node build"')
     shell.exec(`npm set-script dev 'concurrently "npm:watch-*"'`)
@@ -137,10 +176,10 @@ export class WebCodeGenerator implements CodeGenerator {
     )
   }
 
-  init() {
+  init(dbType: DbType) {
     this.createDirStructure()
     this.createConfigFiles()
-    this.fillDatabase()
+    this.fillDatabase(dbType)
     this.fillMiddlewares()
     this.fillSettings()
     this.fillRouter()

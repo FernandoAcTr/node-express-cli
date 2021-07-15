@@ -1,5 +1,6 @@
 import inquirer from 'inquirer'
 import { ApiCodeGenerator } from './api_code_generator'
+import { DbType } from './code_generator'
 import { WebCodeGenerator } from './web_code_generator'
 
 const apiGenerator = new ApiCodeGenerator()
@@ -34,10 +35,12 @@ async function init() {
 }
 
 function generate(typeProject: typeChoices, database: dbChoices) {
+  const dbType = database === dbChoices.MONGO ? DbType.MONGO : DbType.TYPEORM
+
   if (typeProject === typeChoices.API) {
-    apiGenerator.init()
+    apiGenerator.init(dbType)
   } else {
-    webGenerator.init()
+    webGenerator.init(dbType)
   }
 }
 

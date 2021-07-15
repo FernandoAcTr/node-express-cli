@@ -1,7 +1,12 @@
-interface CodeGenerator {
+export enum DbType {
+  MONGO = 'mongo',
+  TYPEORM = 'typeorm',
+}
+
+export interface CodeGenerator {
   createDirStructure(): void
   createConfigFiles(): void
-  fillDatabase(): void
+  fillDatabase(dbType: DbType): void
   fillMiddlewares(): void
   fillSettings(): void
   fillRouter(): void
@@ -9,5 +14,5 @@ interface CodeGenerator {
   installDependencies(): void
   installDevDependencies(): void
   addScripts(): void
-  init(): void
+  init(dbType: DbType): void
 }

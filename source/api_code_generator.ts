@@ -1,6 +1,7 @@
 import fs from 'fs'
 import shell from 'shelljs'
 import 'colors'
+import { CodeGenerator, DbType } from './code_generator'
 
 export class ApiCodeGenerator implements CodeGenerator {
   createDirStructure() {
@@ -12,15 +13,7 @@ export class ApiCodeGenerator implements CodeGenerator {
       recursive: true,
     })
 
-    fs.mkdirSync('./src/database/migrations', {
-      recursive: true,
-    })
-
     fs.mkdirSync('./src/middlewares', {
-      recursive: true,
-    })
-
-    fs.mkdirSync('./src/entities', {
       recursive: true,
     })
 
@@ -37,9 +30,6 @@ export class ApiCodeGenerator implements CodeGenerator {
     //gitignore
     const gitignore = fs.readFileSync('./code/gitignore').toString()
     fs.writeFileSync('.gitignore', gitignore)
-    //ormconfig
-    const ormconfig = fs.readFileSync('./code/ormconfig.json').toString()
-    fs.writeFileSync('ormconfig.json', ormconfig)
     //env
     const env = fs.readFileSync('./code/env').toString()
     fs.writeFileSync('.env', env)
@@ -50,16 +40,63 @@ export class ApiCodeGenerator implements CodeGenerator {
     fs.writeFileSync('tsconfig.json', tsconfig)
   }
 
-  fillDatabase() {
-    const database = fs.readFileSync('./code/database.ts').toString()
-    fs.writeFileSync('./src/database/database.ts', database)
+  fillDatabase(dbType: DbType) {
+    if (dbType === DbType.TYPEORM) {
+      //migrations dir
+      fs.mkdirSync('./src/database/migrations', {
+        recursive: true,
+      })
+      //entities dir
+      fs.mkdirSync('./src/entities', {
+        recursive: true,
+      })
+
+      //ormconfig
+      const ormconfig = fs
+        .readFileSync('./code/database/ormconfig.json')
+        .toString()
+      fs.writeFileSync('ormconfig.json', ormconfig)
+
+      //database
+      const database = fs.readFileSync('./code/database/database.ts').toString()
+      fs.writeFileSync('./src/database/database.ts', database)
+
+      //create user entity
+      const user = fs.readFileSync('./code/database/user.typeorm.ts').toString()
+      fs.writeFileSync('./src/entities/user.entity.ts', user)
+
+      //Install db
+      console.log('================= Installing ORM ================='.yellow)
+      shell.exec('npm i typeorm')
+
+      //Add scripts
+      shell.exec(
+        'npm set-script migration:run "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:run"'
+      )
+      shell.exec(
+        'npm set-script migration:revert "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:revert"'
+      )
+      shell.exec(
+        'npm set-script migration:generate "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:generate --name"'
+      )
+    } else {
+      //Install db
+      console.log('================= Installing ORM ================='.yellow)
+      shell.exec('npm i mongoose')
+      shell.exec('npm i -D @types/mongoose')
+      //models dir
+      fs.mkdirSync('./src/models', {
+        recursive: true,
+      })
+      //create user model
+      const user = fs.readFileSync('./code/database/user.mongo.ts').toString()
+      fs.writeFileSync('./src/models/user.model.ts', user)
+    }
   }
 
   fillMiddlewares() {
     //validator
-    const validator = fs
-      .readFileSync('./code/api/validator.ts')
-      .toString()
+    const validator = fs.readFileSync('./code/api/validator.ts').toString()
     fs.writeFileSync('./src/middlewares/validator.ts', validator)
 
     //express-validators
@@ -75,19 +112,13 @@ export class ApiCodeGenerator implements CodeGenerator {
     const error_handler = fs
       .readFileSync('./code/api/error_handler.ts')
       .toString()
-    fs.writeFileSync(
-      './src/middlewares/error_handler.ts',
-      error_handler
-    )
+    fs.writeFileSync('./src/middlewares/error_handler.ts', error_handler)
 
     //rate limiter
     const rate_limiter = fs
       .readFileSync('./code/api/rate_limiter.ts')
       .toString()
-    fs.writeFileSync(
-      './src/middlewares/rate_limiter.ts',
-      rate_limiter
-    )
+    fs.writeFileSync('./src/middlewares/rate_limiter.ts', rate_limiter)
   }
 
   fillSettings(): void {
@@ -103,17 +134,19 @@ export class ApiCodeGenerator implements CodeGenerator {
     fs.writeFileSync('./src/index.ts', index)
   }
   installDependencies(): void {
-    console.log('================= Installing modules ================='.yellow)
+    console.log(
+      '================= Installing dependencies ================='.yellow
+    )
     shell.exec(
       'npm i express express-validator cors bcrypt jsonwebtoken dotenv passport passport-jwt morgan helmet rate-limiter-flexible'
     )
   }
   installDevDependencies(): void {
     console.log(
-      '================= Installing dev modules ================='.yellow
+      '================= Installing dev dependencies ================='.yellow
     )
     shell.exec(
-      'npm i -D @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/passport @types/passport-jwt @types/morgan @types/node typescript tsc-watch ts-node typeorm'
+      'npm i -D @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/passport @types/passport-jwt @types/morgan @types/node typescript tsc-watch ts-node'
     )
   }
   addScripts(): void {
@@ -121,21 +154,12 @@ export class ApiCodeGenerator implements CodeGenerator {
     shell.exec('npm set-script clean "rm -rf build"')
     shell.exec('npm set-script build "tsc"')
     shell.exec('npm set-script start "node build"')
-    shell.exec(
-      'npm set-script migration:run "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:run"'
-    )
-    shell.exec(
-      'npm set-script migration:revert "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:revert"'
-    )
-    shell.exec(
-      'npm set-script migration:generate "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:generate --name"'
-    )
   }
 
-  init() {
+  init(dbType: DbType) {
     this.createDirStructure()
     this.createConfigFiles()
-    this.fillDatabase()
+    this.fillDatabase(dbType)
     this.fillMiddlewares()
     this.fillSettings()
     this.fillRouter()
