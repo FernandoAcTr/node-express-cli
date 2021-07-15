@@ -1,7 +1,9 @@
 import inquirer from 'inquirer'
-import { ApiCodeGenerator } from './api_code_generator'
-import { DbType } from './code_generator'
-import { WebCodeGenerator } from './web_code_generator'
+import { ApiCodeGenerator } from './generators/api_code_generator'
+import { DbType } from './generators/code_generator'
+import { WebCodeGenerator } from './generators/web_code_generator'
+
+import { argv } from './config/yargs'
 
 const apiGenerator = new ApiCodeGenerator()
 const webGenerator = new WebCodeGenerator()
@@ -44,4 +46,11 @@ function generate(typeProject: typeChoices, database: dbChoices) {
   }
 }
 
-init()
+let command = (argv as any)._[0]
+switch (command) {
+  case 'init':
+    init()
+
+  default:
+    console.log('No reconized command')
+}
