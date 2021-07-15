@@ -1,5 +1,6 @@
 import fs from 'fs'
 import shell from 'shelljs'
+import 'colors'
 
 export class ApiCodeGenerator implements CodeGenerator {
   createDirStructure() {
@@ -108,10 +109,27 @@ export class ApiCodeGenerator implements CodeGenerator {
     )
   }
   installDevDependencies(): void {
-    throw new Error('Method not implemented.')
+    console.log(
+      '================= Installing dev modules ================='.yellow
+    )
+    shell.exec(
+      'npm i -D @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/passport @types/passport-jwt @types/morgan @types/node typescript tsc-watch ts-node typeorm'
+    )
   }
   addScripts(): void {
-    throw new Error('Method not implemented.')
+    shell.exec(`npm set-script dev 'tsc-watch --onSuccess "node build/index"'`)
+    shell.exec('npm set-script clean "rm -rf build"')
+    shell.exec('npm set-script build "tsc"')
+    shell.exec('npm set-script start "node build"')
+    shell.exec(
+      'npm set-script migration:run "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:run"'
+    )
+    shell.exec(
+      'npm set-script migration:revert "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:revert"'
+    )
+    shell.exec(
+      'npm set-script migration:generate "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:generate --name"'
+    )
   }
 
   init() {
@@ -122,5 +140,8 @@ export class ApiCodeGenerator implements CodeGenerator {
     this.fillSettings()
     this.fillRouter()
     this.fillIndex()
+    this.installDependencies()
+    this.installDevDependencies()
+    this.addScripts()
   }
 }
