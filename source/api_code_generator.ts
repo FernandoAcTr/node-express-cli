@@ -58,9 +58,9 @@ export class ApiCodeGenerator implements CodeGenerator {
   fillMiddlewares() {
     //validator
     const validator = fs
-      .readFileSync('./code/api/validator.middleware.ts')
+      .readFileSync('./code/api/validator.ts')
       .toString()
-    fs.writeFileSync('./src/middlewares/validator.middleware.ts', validator)
+    fs.writeFileSync('./src/middlewares/validator.ts', validator)
 
     //express-validators
     const express_validators = fs
@@ -76,16 +76,16 @@ export class ApiCodeGenerator implements CodeGenerator {
       .readFileSync('./code/api/error_handler.ts')
       .toString()
     fs.writeFileSync(
-      './src/middlewares/error_handler.middleware.ts',
+      './src/middlewares/error_handler.ts',
       error_handler
     )
 
     //rate limiter
     const rate_limiter = fs
-      .readFileSync('./code/api/rate_limiter.middleware.ts')
+      .readFileSync('./code/api/rate_limiter.ts')
       .toString()
     fs.writeFileSync(
-      './src/middlewares/rate_limiter.middleware.ts',
+      './src/middlewares/rate_limiter.ts',
       rate_limiter
     )
   }
