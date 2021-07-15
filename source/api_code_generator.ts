@@ -1,4 +1,5 @@
 import fs from 'fs'
+import shell from 'shelljs'
 
 export class ApiCodeGenerator implements CodeGenerator {
   createDirStructure() {
@@ -101,7 +102,10 @@ export class ApiCodeGenerator implements CodeGenerator {
     fs.writeFileSync('./src/index.ts', index)
   }
   installDependencies(): void {
-    throw new Error('Method not implemented.')
+    console.log('================= Installing modules ================='.yellow)
+    shell.exec(
+      'npm i express express-validator cors bcrypt jsonwebtoken dotenv passport passport-jwt morgan helmet rate-limiter-flexible'
+    )
   }
   installDevDependencies(): void {
     throw new Error('Method not implemented.')
