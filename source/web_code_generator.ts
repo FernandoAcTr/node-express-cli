@@ -83,7 +83,7 @@ export class WebCodeGenerator implements CodeGenerator {
   }
 
   fillRouter(): void {
-    const router = fs.readFileSync('./code/router.ts').toString()
+    const router = fs.readFileSync('./code/web/router.ts').toString()
     fs.writeFileSync('./src/router.ts', router)
   }
 
@@ -93,8 +93,10 @@ export class WebCodeGenerator implements CodeGenerator {
   }
 
   fillViews(): void {
-    fs.writeFileSync('./src/views/index.hbs', '')
-    fs.writeFileSync('./src/views/layouts/main.hbs', '')
+    const index = fs.readFileSync('./code/web/index.hbs').toString()
+    const main = fs.readFileSync('./code/web/main.hbs').toString()
+    fs.writeFileSync('./src/views/index.hbs', index)
+    fs.writeFileSync('./src/views/layouts/main.hbs', main)
   }
 
   installDependencies(): void {

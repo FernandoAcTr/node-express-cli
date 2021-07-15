@@ -95,7 +95,7 @@ export class ApiCodeGenerator implements CodeGenerator {
     fs.writeFileSync('./src/config/settings.ts', settings)
   }
   fillRouter(): void {
-    const router = fs.readFileSync('./code/router.ts').toString()
+    const router = fs.readFileSync('./code/api/router.ts').toString()
     fs.writeFileSync('./src/router.ts', router)
   }
   fillIndex(): void {
