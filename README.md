@@ -1,4 +1,4 @@
-# @express/cli
+# node-express-cli
 
 This is a simple and opinated express cli generator that support
 
@@ -10,10 +10,10 @@ This is a simple and opinated express cli generator that support
 
 ## Usage
 
-You only have to execute `npm install -g @express/cli` an then use
+You only have to execute `npm install -g node-express-cli` an then use
 
 ```
-@express/cli init
+node-express-cli init
 ```
 
-use `@express/cli --help` to see a list of commands
+use `node-express-cli --help` to see a list of commands

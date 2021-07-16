@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import inquirer from 'inquirer'
 import { argv } from './config/yargs'
 import { ApiCodeGenerator } from './generators/api_code_generator'
