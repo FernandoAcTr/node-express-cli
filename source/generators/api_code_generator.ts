@@ -116,7 +116,6 @@ export class ApiCodeGenerator implements CodeGenerator {
       //Install db
       console.log('================= Installing ORM ================='.yellow)
       shell.exec('npm i mongoose')
-      shell.exec('npm i -D @types/mongoose')
       //models dir
       fs.mkdirSync('./src/models', {
         recursive: true,
