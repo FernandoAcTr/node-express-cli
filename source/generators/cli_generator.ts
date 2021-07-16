@@ -10,13 +10,13 @@ export class CliGenerator {
     })
     //controller
     const controller = fs
-      .readFileSync('./code/api/module/controller.ts')
+      .readFileSync('code/api/module/controller.ts')
       .toString()
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
 
     //repository
     const repository = fs
-      .readFileSync('./code/api/module/repository.ts')
+      .readFileSync('code/api/module/repository.ts')
       .toString()
       .replace(
         '__RepositoryName__',
@@ -26,7 +26,7 @@ export class CliGenerator {
 
     //router
     const routes = fs
-      .readFileSync('./code/api/module/routes.ts')
+      .readFileSync('code/api/module/routes.ts')
       .toString()
       .replace('__modulename__', name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
@@ -39,13 +39,13 @@ export class CliGenerator {
     })
     //controller
     const controller = fs
-      .readFileSync('./code/web/module/controller.ts')
+      .readFileSync('code/web/module/controller.ts')
       .toString()
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
 
     //repository
     const repository = fs
-      .readFileSync('./code/web/module/repository.ts')
+      .readFileSync('code/web/module/repository.ts')
       .toString()
       .replace(
         '__RepositoryName__',
@@ -55,7 +55,7 @@ export class CliGenerator {
 
     //router
     const routes = fs
-      .readFileSync('./code/web/module/routes.ts')
+      .readFileSync('code/web/module/routes.ts')
       .toString()
       .replace('__modulename__', name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
@@ -66,7 +66,7 @@ export class CliGenerator {
       '================= Installing Prettier ================='.yellow
     )
     shell.exec('npm i -D prettier')
-    const prettier = fs.readFileSync('./code/prettierrc.json').toString()
+    const prettier = fs.readFileSync('code/prettierrc.json').toString()
     fs.writeFileSync('.prettierrc.json', prettier)
     fs.writeFileSync('.prettierignore', 'build')
     shell.exec(
@@ -79,7 +79,7 @@ export class CliGenerator {
     shell.exec(
       'npm install -D eslint eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin'
     )
-    const eslint = fs.readFileSync('./code/eslintrc.js').toString()
+    const eslint = fs.readFileSync('code/eslintrc.js').toString()
     fs.writeFileSync('.eslintrc.js', eslint)
     shell.exec('npm set-script lint "eslint . --ext .ts"')
     shell.exec('npm set-script lint:fix "eslint . --ext .ts --fix"')
@@ -91,11 +91,11 @@ export class CliGenerator {
     )
     shell.exec('npm i socket.io')
     let index = ''
-    if (api) index = fs.readFileSync('./code/api/index_socket.ts').toString()
-    else index = fs.readFileSync('./code/web/index_socket.ts').toString()
-    const socket = fs.readFileSync('./code/socket.ts').toString()
+    if (api) index = fs.readFileSync('code/api/index_socket.ts').toString()
+    else index = fs.readFileSync('code/web/index_socket.ts').toString()
+    const socket = fs.readFileSync('code/socket.ts').toString()
     const socketController = fs
-      .readFileSync('./code/socket.controller.ts')
+      .readFileSync('code/socket.controller.ts')
       .toString()
 
     fs.writeFileSync('./src/socket.ts', socket)

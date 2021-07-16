@@ -44,15 +44,15 @@ export class WebCodeGenerator implements CodeGenerator {
 
   createConfigFiles() {
     //gitignore
-    const gitignore = fs.readFileSync('./code/gitignore').toString()
+    const gitignore = fs.readFileSync('code/gitignore').toString()
     fs.writeFileSync('.gitignore', gitignore)
     //env
-    const env = fs.readFileSync('./code/env').toString()
+    const env = fs.readFileSync('code/env').toString()
     fs.writeFileSync('.env', env)
     //readme
     fs.writeFileSync('README.md', '')
     //tsconfig
-    const tsconfig = fs.readFileSync('./code/tsconfig.json').toString()
+    const tsconfig = fs.readFileSync('code/tsconfig.json').toString()
     fs.writeFileSync('tsconfig.json', tsconfig)
   }
 
@@ -69,16 +69,16 @@ export class WebCodeGenerator implements CodeGenerator {
 
       //ormconfig
       const ormconfig = fs
-        .readFileSync('./code/database/ormconfig.json')
+        .readFileSync('code/database/ormconfig.json')
         .toString()
       fs.writeFileSync('ormconfig.json', ormconfig)
 
       //database
-      const database = fs.readFileSync('./code/database/database.ts').toString()
+      const database = fs.readFileSync('code/database/database.ts').toString()
       fs.writeFileSync('./src/database/database.ts', database)
 
       //create user entity
-      const user = fs.readFileSync('./code/database/user.typeorm.ts').toString()
+      const user = fs.readFileSync('code/database/user.typeorm.ts').toString()
       fs.writeFileSync('./src/entities/user.entity.ts', user)
 
       //Install db
@@ -105,35 +105,35 @@ export class WebCodeGenerator implements CodeGenerator {
         recursive: true,
       })
       //create user model
-      const user = fs.readFileSync('./code/database/user.mongo.ts').toString()
+      const user = fs.readFileSync('code/database/user.mongo.ts').toString()
       fs.writeFileSync('./src/models/user.model.ts', user)
     }
   }
 
   fillMiddlewares() {
     //locals
-    const locals = fs.readFileSync('./code/web/locals.ts').toString()
+    const locals = fs.readFileSync('code/web/locals.ts').toString()
     fs.writeFileSync('./src/middlewares/locals.ts', locals)
   }
 
   fillSettings(): void {
-    const settings = fs.readFileSync('./code/settings.ts').toString()
+    const settings = fs.readFileSync('code/settings.ts').toString()
     fs.writeFileSync('./src/config/settings.ts', settings)
   }
 
   fillRouter(): void {
-    const router = fs.readFileSync('./code/web/router.ts').toString()
+    const router = fs.readFileSync('code/web/router.ts').toString()
     fs.writeFileSync('./src/router.ts', router)
   }
 
   fillIndex(): void {
-    const index = fs.readFileSync('./code/web/index.ts').toString()
+    const index = fs.readFileSync('code/web/index.ts').toString()
     fs.writeFileSync('./src/index.ts', index)
   }
 
   fillViews(): void {
-    const index = fs.readFileSync('./code/web/index.hbs').toString()
-    const main = fs.readFileSync('./code/web/main.hbs').toString()
+    const index = fs.readFileSync('code/web/index.hbs').toString()
+    const main = fs.readFileSync('code/web/main.hbs').toString()
     fs.writeFileSync('./src/views/index.hbs', index)
     fs.writeFileSync('./src/views/layouts/main.hbs', main)
   }

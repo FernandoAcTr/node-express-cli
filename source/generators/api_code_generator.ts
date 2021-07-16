@@ -28,15 +28,15 @@ export class ApiCodeGenerator implements CodeGenerator {
 
   createConfigFiles() {
     //gitignore
-    const gitignore = fs.readFileSync('./code/gitignore').toString()
+    const gitignore = fs.readFileSync('code/gitignore').toString()
     fs.writeFileSync('.gitignore', gitignore)
     //env
-    const env = fs.readFileSync('./code/env').toString()
+    const env = fs.readFileSync('code/env').toString()
     fs.writeFileSync('.env', env)
     //readme
     fs.writeFileSync('README.md', '')
     //tsconfig
-    const tsconfig = fs.readFileSync('./code/tsconfig.json').toString()
+    const tsconfig = fs.readFileSync('code/tsconfig.json').toString()
     fs.writeFileSync('tsconfig.json', tsconfig)
   }
 
@@ -53,16 +53,16 @@ export class ApiCodeGenerator implements CodeGenerator {
 
       //ormconfig
       const ormconfig = fs
-        .readFileSync('./code/database/ormconfig.json')
+        .readFileSync('code/database/ormconfig.json')
         .toString()
       fs.writeFileSync('ormconfig.json', ormconfig)
 
       //database
-      const database = fs.readFileSync('./code/database/database.ts').toString()
+      const database = fs.readFileSync('code/database/database.ts').toString()
       fs.writeFileSync('./src/database/database.ts', database)
 
       //create user entity
-      const user = fs.readFileSync('./code/database/user.typeorm.ts').toString()
+      const user = fs.readFileSync('code/database/user.typeorm.ts').toString()
       fs.writeFileSync('./src/entities/user.entity.ts', user)
 
       //Install db
@@ -89,19 +89,19 @@ export class ApiCodeGenerator implements CodeGenerator {
         recursive: true,
       })
       //create user model
-      const user = fs.readFileSync('./code/database/user.mongo.ts').toString()
+      const user = fs.readFileSync('code/database/user.mongo.ts').toString()
       fs.writeFileSync('./src/models/user.model.ts', user)
     }
   }
 
   fillMiddlewares() {
     //validator
-    const validator = fs.readFileSync('./code/api/validator.ts').toString()
+    const validator = fs.readFileSync('code/api/validator.ts').toString()
     fs.writeFileSync('./src/middlewares/validator.ts', validator)
 
     //express-validators
     const express_validators = fs
-      .readFileSync('./code/api/express_validators.ts')
+      .readFileSync('code/api/express_validators.ts')
       .toString()
     fs.writeFileSync(
       './src/middlewares/express_validators.ts',
@@ -110,27 +110,27 @@ export class ApiCodeGenerator implements CodeGenerator {
 
     //error handler
     const error_handler = fs
-      .readFileSync('./code/api/error_handler.ts')
+      .readFileSync('code/api/error_handler.ts')
       .toString()
     fs.writeFileSync('./src/middlewares/error_handler.ts', error_handler)
 
     //rate limiter
     const rate_limiter = fs
-      .readFileSync('./code/api/rate_limiter.ts')
+      .readFileSync('code/api/rate_limiter.ts')
       .toString()
     fs.writeFileSync('./src/middlewares/rate_limiter.ts', rate_limiter)
   }
 
   fillSettings(): void {
-    const settings = fs.readFileSync('./code/settings.ts').toString()
+    const settings = fs.readFileSync('code/settings.ts').toString()
     fs.writeFileSync('./src/config/settings.ts', settings)
   }
   fillRouter(): void {
-    const router = fs.readFileSync('./code/api/router.ts').toString()
+    const router = fs.readFileSync('code/api/router.ts').toString()
     fs.writeFileSync('./src/router.ts', router)
   }
   fillIndex(): void {
-    const index = fs.readFileSync('./code/api/index.ts').toString()
+    const index = fs.readFileSync('code/api/index.ts').toString()
     fs.writeFileSync('./src/index.ts', index)
   }
   installDependencies(): void {
