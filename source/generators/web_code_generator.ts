@@ -136,6 +136,20 @@ export class WebCodeGenerator implements CodeGenerator {
       fs.mkdirSync('./src/models', {
         recursive: true,
       })
+      //database
+      const database = fs
+        .readFileSync(
+          path.resolve(
+            __dirname,
+            '..',
+            '..',
+            'code',
+            'database',
+            'database.mongo.ts'
+          )
+        )
+        .toString()
+      fs.writeFileSync('./src/database/database.ts', database)
       //create user model
       const user = fs
         .readFileSync(
@@ -206,7 +220,7 @@ export class WebCodeGenerator implements CodeGenerator {
   installDependencies(): void {
     console.log('================= Installing modules ================='.yellow)
     shell.exec(
-      'npm i express express-session dotenv passport passport-local morgan express-handlebars csurf connect-flash'
+      'npm i express bcrypt jsonwebtoken express-session dotenv passport passport-local morgan express-handlebars csurf connect-flash'
     )
   }
 
@@ -215,7 +229,7 @@ export class WebCodeGenerator implements CodeGenerator {
       '================= Installing dev modules ================='.yellow
     )
     shell.exec(
-      'npm i -D @types/express @types/express-session @types/passport @types/passport-local @types/morgan @types/express-handlebars @types/csurf @types/connect-flash @types/node typescript tsc-watch concurrently nodemon ts-node'
+      'npm i -D @types/express @types/bcrypt @types/jsonwebtoken @types/express-session @types/passport @types/passport-local @types/morgan @types/express-handlebars @types/csurf @types/connect-flash @types/node typescript tsc-watch concurrently nodemon ts-node'
     )
   }
 

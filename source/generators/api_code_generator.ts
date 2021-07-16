@@ -120,6 +120,21 @@ export class ApiCodeGenerator implements CodeGenerator {
       fs.mkdirSync('./src/models', {
         recursive: true,
       })
+      //database
+      const database = fs
+        .readFileSync(
+          path.resolve(
+            __dirname,
+            '..',
+            '..',
+            'code',
+            'database',
+            'database.mongo.ts'
+          )
+        )
+        .toString()
+      fs.writeFileSync('./src/database/database.ts', database)
+
       //create user model
       const user = fs
         .readFileSync(
@@ -187,6 +202,7 @@ export class ApiCodeGenerator implements CodeGenerator {
       .toString()
     fs.writeFileSync('./src/config/settings.ts', settings)
   }
+
   fillRouter(): void {
     const router = fs
       .readFileSync(
@@ -195,6 +211,7 @@ export class ApiCodeGenerator implements CodeGenerator {
       .toString()
     fs.writeFileSync('./src/router.ts', router)
   }
+
   fillIndex(): void {
     const index = fs
       .readFileSync(
@@ -203,6 +220,7 @@ export class ApiCodeGenerator implements CodeGenerator {
       .toString()
     fs.writeFileSync('./src/index.ts', index)
   }
+
   installDependencies(): void {
     console.log(
       '================= Installing dependencies ================='.yellow
@@ -211,6 +229,7 @@ export class ApiCodeGenerator implements CodeGenerator {
       'npm i express express-validator cors bcrypt jsonwebtoken dotenv passport passport-jwt morgan helmet rate-limiter-flexible'
     )
   }
+
   installDevDependencies(): void {
     console.log(
       '================= Installing dev dependencies ================='.yellow
@@ -219,6 +238,7 @@ export class ApiCodeGenerator implements CodeGenerator {
       'npm i -D @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/passport @types/passport-jwt @types/morgan @types/node typescript tsc-watch ts-node'
     )
   }
+
   addScripts(): void {
     shell.exec(`npm set-script dev 'tsc-watch --onSuccess "node build/index"'`)
     shell.exec('npm set-script clean "rm -rf build"')

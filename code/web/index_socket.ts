@@ -8,14 +8,13 @@ import csurf from 'csurf'
 import locals from './middlewares/locals'
 import morgan from 'morgan'
 import SocketIO from './socket'
+import { Server } from 'http'
 
 //importin routes
 import routes from './router'
 
 //importing configs
 import { settings } from './config/settings'
-
-import './config/database'
 
 class App {
   public app: express.Application
