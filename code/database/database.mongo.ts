@@ -6,6 +6,7 @@ mongoose
     useUnifiedTopology: true,
     useCreateIndex: true,
     useNewUrlParser: true,
+    useFindAndModify: false,
   })
   .then((db) => console.log('Mongo is online...'))
   .catch((error) => console.error(error))
