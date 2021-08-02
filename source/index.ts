@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 import inquirer from 'inquirer'
+import shell from 'shelljs'
 import { argv } from './config/yargs'
 import { ApiCodeGenerator } from './generators/api_code_generator'
 import { DbType } from './generators/code_generator'
 import { WebCodeGenerator } from './generators/web_code_generator'
 import { CliGenerator } from './generators/cli_generator'
-import shell from 'shelljs'
+import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
 
 const apiGenerator = new ApiCodeGenerator()
 const webGenerator = new WebCodeGenerator()
+const grapqhGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
 
 enum typeChoices {
-  API = 'API',
+  API = 'REST API',
+  GRAPH = 'GraphQL API',
   WEB = 'Web App',
 }
 
@@ -45,8 +48,10 @@ function generate(typeProject: typeChoices, database: dbChoices) {
   shell.exec('npm init -y')
   if (typeProject === typeChoices.API) {
     apiGenerator.init(dbType)
-  } else {
+  } else if (typeProject === typeChoices.WEB) {
     webGenerator.init(dbType)
+  } else if (typeProject === typeChoices.GRAPH) {
+    grapqhGenerator.init(dbType)
   }
 }
 
