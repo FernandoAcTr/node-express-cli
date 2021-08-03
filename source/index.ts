@@ -56,12 +56,6 @@ function generate(typeProject: typeChoices, database: dbChoices) {
 }
 
 async function makeModule() {
-  const moduleName = await inquirer.prompt({
-    type: 'input',
-    name: 'resp',
-    message: 'Name of module:',
-  })
-
   const type = await inquirer.prompt({
     type: 'list',
     name: 'resp',
@@ -69,10 +63,19 @@ async function makeModule() {
     choices: Object.values(typeChoices),
   })
 
+  const moduleName = await inquirer.prompt({
+    type: 'input',
+    name: 'resp',
+    message: 'Name of module:',
+  })
+
   if (moduleName.resp)
     if (type.resp === typeChoices.API)
       cliGenerator.generateApiModule(moduleName.resp)
-    else cliGenerator.generateWebModule(moduleName.resp)
+    else if (type.resp === typeChoices.WEB)
+      cliGenerator.generateWebModule(moduleName.resp)
+    else if (type.resp === typeChoices.GRAPH)
+      cliGenerator.generateGraphqlModule(moduleName.resp)
 }
 
 async function installSocket() {
