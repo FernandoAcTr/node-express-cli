@@ -41,7 +41,7 @@ export class CliGenerator {
       .toString()
       .replace(
         '__RepositoryName__',
-        `${name[0].toUpperCase()}${name.substr(1).toLowerCase()}Controller`
+        `${name[0].toUpperCase()}${name.substr(1).toLowerCase()}Repository`
       )
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.repository.ts`, repository)
 
