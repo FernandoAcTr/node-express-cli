@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import inquirer from 'inquirer'
 import shell from 'shelljs'
-import { argv } from './config/yargs'
+import { argv } from './plugins/yargs'
 import { ApiCodeGenerator } from './generators/api_code_generator'
 import { DbType } from './generators/code_generator'
 import { WebCodeGenerator } from './generators/web_code_generator'

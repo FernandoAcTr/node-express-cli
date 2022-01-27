@@ -1,4 +1,12 @@
-export class __RepositoryName__ {
+import { getRepository, Repository } from 'typeorm';
+
+export class __ServiceName__ {
+  private readonly repository: Repository<Object>;
+
+  constructor() {
+    this.repository = getRepository(Object);
+  }
+  
   async store(body: any): Promise<Object> {
     return {}
   }

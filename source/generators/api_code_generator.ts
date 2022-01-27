@@ -30,6 +30,10 @@ export class ApiCodeGenerator implements CodeGenerator {
     fs.mkdirSync('./src/config', {
       recursive: true,
     })
+
+    fs.mkdirSync('./src/helpers', {
+      recursive: true,
+    })
   }
 
   createConfigFiles() {
@@ -82,6 +86,14 @@ export class ApiCodeGenerator implements CodeGenerator {
       )
       .toString()
     fs.writeFileSync('./src/middlewares/rate_limiter.ts', rate_limiter)
+
+    //logger helper
+    const logguer = fs
+      .readFileSync(
+        path.resolve(__dirname, '..', '..', 'code', 'api', 'logger.ts')
+      )
+      .toString()
+    fs.writeFileSync('./src/helpers/logger.ts', logguer)
   }
 
   fillSettings(): void {
@@ -111,7 +123,7 @@ export class ApiCodeGenerator implements CodeGenerator {
       '================= Installing dependencies ================='.yellow
     )
     shell.exec(
-      'npm i express express-validator cors bcrypt jsonwebtoken dotenv passport passport-jwt morgan helmet rate-limiter-flexible'
+      'npm i app-root-path winston express express-validator module-alias cors bcrypt jsonwebtoken dotenv passport passport-jwt morgan helmet rate-limiter-flexible'
     )
   }
 
@@ -120,12 +132,12 @@ export class ApiCodeGenerator implements CodeGenerator {
       '================= Installing dev dependencies ================='.yellow
     )
     shell.exec(
-      'npm i -D @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/passport @types/passport-jwt @types/morgan @types/node typescript tsc-watch ts-node'
+      'npm i -D @types/app-root-path @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/passport @types/passport-jwt @types/morgan @types/node typescript tsc-watch ts-node'
     )
   }
 
   addScripts(): void {
-    shell.exec(`npm set-script dev 'tsc-watch --onSuccess "node build/index"'`)
+    shell.exec(`npm set-script dev 'tsc-watch --onSuccess \"node build/index\"'`)
     shell.exec('npm set-script clean "rm -rf build"')
     shell.exec('npm set-script build "tsc"')
     shell.exec('npm set-script start "node build"')

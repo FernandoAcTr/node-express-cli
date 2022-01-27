@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-
+import logger from '@helpers/loguer'
 export class ErrorHandler extends Error {
   statusCode: number
   message: string
@@ -17,8 +17,8 @@ export const handleErrorMiddleware = (
   res: Response,
   next: NextFunction
 ) => {
-  console.log(err)
   const { statusCode, message } = err
+  logger.error(`Error ${statusCode}: message`);
   res.status(statusCode).json({
     statusCode,
     message,

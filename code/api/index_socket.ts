@@ -1,3 +1,4 @@
+import 'module-alias/register'
 import express from 'express'
 import morgan from 'morgan'
 import cors from 'cors'
@@ -26,7 +27,9 @@ class App {
   config() {}
 
   middlewares() {
+    this.app.use(rateLimiterMiddleware)
     this.app.use(morgan('dev'))
+    this.app.use(helmet())
     this.app.use(cors())
     this.app.use(express.json())
     this.app.use(express.urlencoded({ extended: false }))
@@ -35,6 +38,7 @@ class App {
 
   routes() {
     this.app.use(routes)
+    this.app.use(handleErrorMiddleware)
   }
 
   start(): Server {
