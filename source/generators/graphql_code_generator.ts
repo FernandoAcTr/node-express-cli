@@ -3,13 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import shell from 'shelljs'
 import { CodeGenerator, DbType } from './code_generator'
-import {
-  createDatabaseConfig,
-  createCommonConfigFiles,
-  createSettingsFile,
-} from '../utils/utils'
 
-export class GraphqlCodeGenerator implements CodeGenerator {
+export class GraphqlCodeGenerator extends CodeGenerator {
   createDirStructure(): void {
     fs.mkdirSync('./src', {
       recursive: true,
@@ -40,20 +35,8 @@ export class GraphqlCodeGenerator implements CodeGenerator {
     })
   }
 
-  createConfigFiles(): void {
-    createCommonConfigFiles()
-  }
-
-  fillDatabase(dbType: DbType) {
-    createDatabaseConfig(dbType)
-  }
-
   fillMiddlewares(): void {
     //
-  }
-
-  fillSettings(): void {
-    createSettingsFile()
   }
 
   fillRouter(): void {

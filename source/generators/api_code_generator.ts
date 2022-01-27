@@ -3,13 +3,8 @@ import path from 'path'
 import shell from 'shelljs'
 import 'colors'
 import { CodeGenerator, DbType } from './code_generator'
-import {
-  createCommonConfigFiles,
-  createDatabaseConfig,
-  createSettingsFile,
-} from '../utils/utils'
 
-export class ApiCodeGenerator implements CodeGenerator {
+export class ApiCodeGenerator extends CodeGenerator {
   createDirStructure() {
     fs.mkdirSync('./src', {
       recursive: true,
@@ -34,14 +29,6 @@ export class ApiCodeGenerator implements CodeGenerator {
     fs.mkdirSync('./src/helpers', {
       recursive: true,
     })
-  }
-
-  createConfigFiles() {
-    createCommonConfigFiles()
-  }
-
-  fillDatabase(dbType: DbType) {
-    createDatabaseConfig(dbType)
   }
 
   fillMiddlewares() {
@@ -96,10 +83,6 @@ export class ApiCodeGenerator implements CodeGenerator {
     fs.writeFileSync('./src/helpers/logger.ts', logguer)
   }
 
-  fillSettings(): void {
-    createSettingsFile()
-  }
-
   fillRouter(): void {
     const router = fs
       .readFileSync(
@@ -137,7 +120,9 @@ export class ApiCodeGenerator implements CodeGenerator {
   }
 
   addScripts(): void {
-    shell.exec(`npm set-script dev 'tsc-watch --onSuccess \"node build/index\"'`)
+    shell.exec(
+      `npm set-script dev 'tsc-watch --onSuccess \"node build/index\"'`
+    )
     shell.exec('npm set-script clean "rm -rf build"')
     shell.exec('npm set-script build "tsc"')
     shell.exec('npm set-script start "node build"')

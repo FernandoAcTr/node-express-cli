@@ -3,13 +3,7 @@ import shell from 'shelljs'
 import 'colors'
 import { CodeGenerator, DbType } from './code_generator'
 import path from 'path'
-import {
-  createCommonConfigFiles,
-  createDatabaseConfig,
-  createSettingsFile,
-} from '../utils/utils'
-
-export class WebCodeGenerator implements CodeGenerator {
+export class WebCodeGenerator extends CodeGenerator {
   createDirStructure() {
     fs.mkdirSync('./src', {
       recursive: true,
@@ -48,14 +42,6 @@ export class WebCodeGenerator implements CodeGenerator {
     })
   }
 
-  createConfigFiles() {
-    createCommonConfigFiles()
-  }
-
-  fillDatabase(dbType: DbType) {
-    createDatabaseConfig(dbType)
-  }
-
   fillMiddlewares() {
     //locals
     const locals = fs
@@ -64,10 +50,6 @@ export class WebCodeGenerator implements CodeGenerator {
       )
       .toString()
     fs.writeFileSync('./src/middlewares/locals.ts', locals)
-  }
-
-  fillSettings(): void {
-    createSettingsFile()
   }
 
   fillRouter(): void {
