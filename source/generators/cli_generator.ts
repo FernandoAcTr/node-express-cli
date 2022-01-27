@@ -25,8 +25,8 @@ export class CliGenerator {
       .toString()
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
 
-    //repository
-    const repository = fs
+    //service
+    const service = fs
       .readFileSync(
         path.resolve(
           __dirname,
@@ -35,15 +35,15 @@ export class CliGenerator {
           'code',
           'api',
           'module',
-          'repository.ts'
+          'service.ts'
         )
       )
       .toString()
       .replace(
-        '__RepositoryName__',
-        `${name[0].toUpperCase()}${name.substr(1).toLowerCase()}Repository`
+        '__ServiceName__',
+        `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}Repository`
       )
-    fs.writeFileSync(`${dir}/${name.toLowerCase()}.repository.ts`, repository)
+    fs.writeFileSync(`${dir}/${name.toLowerCase()}.service.ts`, service)
 
     //router
     const routes = fs
@@ -61,6 +61,22 @@ export class CliGenerator {
       .toString()
       .replace('__modulename__', name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
+
+    //validator
+    const validator = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'api',
+          'module',
+          'validator.ts'
+        )
+      )
+      .toString()
+    fs.writeFileSync(`${dir}/${name.toLowerCase()}.validator.ts`, validator)
   }
 
   generateWebModule(name: string): void {
