@@ -194,21 +194,5 @@ export class WebCodeGenerator extends CodeGenerator {
       .toString()
       .replace(/__modulename__/g, name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
-
-    //validator
-    const validator = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'api',
-          'module',
-          'validator.ts'
-        )
-      )
-      .toString()
-    fs.writeFileSync(`${dir}/${name.toLowerCase()}.validator.ts`, validator)
   }
 }
