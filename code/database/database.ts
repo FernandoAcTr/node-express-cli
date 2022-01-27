@@ -1,5 +1,5 @@
 import { createConnection } from 'typeorm'
-import { settings } from '../config/settings'
+import { settings } from '@config/settings'
 const { DB } = settings
 
 createConnection({

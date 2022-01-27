@@ -59,7 +59,7 @@ export class CliGenerator {
         )
       )
       .toString()
-      .replace('__modulename__', name.toLowerCase())
+      .replace(/__modulename__/g, name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
 
     //validator
