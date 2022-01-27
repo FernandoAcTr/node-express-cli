@@ -17,7 +17,7 @@ export abstract class CodeGenerator {
   abstract installDevDependencies(): void
   abstract addScripts(): void
   abstract init(dbType: DbType): void
-  abstract makeModule(name: String): void;
+  abstract makeModule(name: String): void
 
   createConfigFiles(): void {
     //gitignore
@@ -30,8 +30,10 @@ export abstract class CodeGenerator {
       .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'env'))
       .toString()
     fs.writeFileSync('.env', env)
+
     //readme
     fs.writeFileSync('README.md', '')
+
     //tsconfig
     const tsconfig = fs
       .readFileSync(
@@ -39,6 +41,15 @@ export abstract class CodeGenerator {
       )
       .toString()
     fs.writeFileSync('tsconfig.json', tsconfig)
+
+    //types
+    const types = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'index.d.ts'))
+      .toString()
+    fs.mkdirSync('./@types/express', {
+      recursive: true,
+    })
+    fs.writeFileSync('./@types/express/index.d.ts', types)
   }
 
   fillDatabase(dbType: DbType): void {
