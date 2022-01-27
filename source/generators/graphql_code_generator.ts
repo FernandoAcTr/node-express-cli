@@ -154,4 +154,79 @@ export class GraphqlCodeGenerator extends CodeGenerator {
     this.installDevDependencies()
     this.addScripts()
   }
+
+  makeModule(name: String): void {
+    const modulename = name.toLowerCase()
+    const entityName = name[0].toUpperCase() + name.substr(1).toLowerCase()
+    const dir = `./src/graphql/modules/${modulename}s`
+    fs.mkdirSync(dir, {
+      recursive: true,
+    })
+    const repository = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'graphql',
+          'module',
+          'module.repository.ts'
+        )
+      )
+      .toString()
+      .replace(new RegExp('__EntityName__', 'g'), entityName)
+
+    const schema = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'graphql',
+          'module',
+          'module.schema.ts'
+        )
+      )
+      .toString()
+      .replace(new RegExp('__EntityName__', 'g'), entityName)
+      .replace(new RegExp('__modulename__', 'g'), modulename)
+    const resolver = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'graphql',
+          'module',
+          'module.resolver.ts'
+        )
+      )
+      .toString()
+      .replace(new RegExp('__EntityName__', 'g'), entityName)
+      .replace(new RegExp('__modulename__', 'g'), modulename)
+
+    const index = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'graphql',
+          'module',
+          'module.index.ts'
+        )
+      )
+      .toString()
+      .replace(new RegExp('__EntityName__', 'g'), entityName)
+      .replace(new RegExp('__modulename__', 'g'), modulename)
+
+    fs.writeFileSync(`${dir}/${modulename}.schema.ts`, schema)
+    fs.writeFileSync(`${dir}/${modulename}.resolver.ts`, resolver)
+    fs.writeFileSync(`${dir}/${modulename}.repository.ts`, repository)
+    fs.writeFileSync(`${dir}/index.ts`, index)
+  }
 }

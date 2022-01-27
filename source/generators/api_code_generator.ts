@@ -140,4 +140,79 @@ export class ApiCodeGenerator extends CodeGenerator {
     this.installDevDependencies()
     this.addScripts()
   }
+
+  makeModule(name: String): void {
+    const dir = `./src/modules/${name.toLowerCase()}`
+    fs.mkdirSync(dir, {
+      recursive: true,
+    })
+    //controller
+    const controller = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'api',
+          'module',
+          'controller.ts'
+        )
+      )
+      .toString()
+    fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
+
+    //service
+    const service = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'api',
+          'module',
+          'service.ts'
+        )
+      )
+      .toString()
+      .replace(
+        '__ServiceName__',
+        `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}Service`
+      )
+    fs.writeFileSync(`${dir}/${name.toLowerCase()}.service.ts`, service)
+
+    //router
+    const routes = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'api',
+          'module',
+          'routes.ts'
+        )
+      )
+      .toString()
+      .replace(/__modulename__/g, name.toLowerCase())
+    fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
+
+    //validator
+    const validator = fs
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'api',
+          'module',
+          'validator.ts'
+        )
+      )
+      .toString()
+    fs.writeFileSync(`${dir}/${name.toLowerCase()}.validator.ts`, validator)
+  }
 }

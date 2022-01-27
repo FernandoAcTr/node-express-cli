@@ -10,7 +10,7 @@ import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
 
 const apiGenerator = new ApiCodeGenerator()
 const webGenerator = new WebCodeGenerator()
-const grapqhGenerator = new GraphqlCodeGenerator()
+const grapqlGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
 
 enum typeChoices {
@@ -51,7 +51,7 @@ function generate(typeProject: typeChoices, database: dbChoices) {
   } else if (typeProject === typeChoices.WEB) {
     webGenerator.init(dbType)
   } else if (typeProject === typeChoices.GRAPH) {
-    grapqhGenerator.init(dbType)
+    grapqlGenerator.init(dbType)
   }
 }
 
@@ -70,12 +70,11 @@ async function makeModule() {
   })
 
   if (moduleName.resp)
-    if (type.resp === typeChoices.API)
-      cliGenerator.generateApiModule(moduleName.resp)
+    if (type.resp === typeChoices.API) apiGenerator.makeModule(moduleName.resp)
     else if (type.resp === typeChoices.WEB)
-      cliGenerator.generateWebModule(moduleName.resp)
+      webGenerator.makeModule(moduleName.resp)
     else if (type.resp === typeChoices.GRAPH)
-      cliGenerator.generateGraphqlModule(moduleName.resp)
+      grapqlGenerator.makeModule(moduleName.resp)
 }
 
 async function installSocket() {
@@ -105,6 +104,7 @@ switch (command) {
   case 'install:eslint':
     cliGenerator.installEslint()
     break
+    
   case 'install:socket':
     installSocket()
     break

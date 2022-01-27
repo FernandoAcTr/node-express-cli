@@ -17,6 +17,7 @@ export abstract class CodeGenerator {
   abstract installDevDependencies(): void
   abstract addScripts(): void
   abstract init(dbType: DbType): void
+  abstract makeModule(name: String): void;
 
   createConfigFiles(): void {
     //gitignore
