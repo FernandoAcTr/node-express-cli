@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import logger from '@helpers/loguer'
+import logger from '@helpers/logger'
 export class ErrorHandler extends Error {
   statusCode: number
   message: string
