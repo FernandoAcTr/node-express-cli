@@ -128,6 +128,33 @@ export class ApiCodeGenerator extends CodeGenerator {
     shell.exec('npm set-script start "node build"')
   }
 
+  addAlias(): void {
+    const pkgPath = path.resolve('package.json')
+    const tsConfigPath = path.resolve('tsconfig.json')
+    const pkg = require(pkgPath)
+    const tsConfig = require(tsConfigPath)
+    pkg._moduleAliases = {
+      '@src': 'build/',
+      '@database': 'build/database',
+      '@entities': 'build/entities',
+      '@middlewares': 'build/middlewares',
+      '@helpers': 'build/helpers',
+      '@config': 'build/config',
+      '@modules': 'build/modules',
+    }
+    tsConfig.compilerOptions.paths = {
+      '@src/*': ['src/*'],
+      '@database/*': ['database/*'],
+      '@entities/*': ['entities/*'],
+      '@middlewares/*': ['middlewares/*'],
+      '@helpers/*': ['helpers/*'],
+      '@config/*': ['config/*'],
+      '@modules/*': ['modules/*'],
+    }
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg))
+    fs.writeFileSync(tsConfigPath, JSON.stringify(tsConfig))
+  }
+
   init(dbType: DbType) {
     this.createDirStructure()
     this.createConfigFiles()
@@ -139,6 +166,7 @@ export class ApiCodeGenerator extends CodeGenerator {
     this.installDependencies()
     this.installDevDependencies()
     this.addScripts()
+    this.addAlias()
   }
 
   makeModule(name: String): void {
