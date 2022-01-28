@@ -6,7 +6,7 @@ import helmet from 'helmet'
 import { rateLimiterMiddleware } from './middlewares/rate_limiter'
 import { handleErrorMiddleware } from './middlewares/error_handler'
 
-//importin routes
+//importing routes
 import routes from './router'
 
 //importing configs

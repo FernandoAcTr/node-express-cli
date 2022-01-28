@@ -3,3 +3,4 @@ node_modules/
 build/
 ormconfig.json
 .env
+logs

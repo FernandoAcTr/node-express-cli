@@ -8,7 +8,7 @@ import csurf from 'csurf'
 import locals from './middlewares/locals'
 import morgan from 'morgan'
 
-//importin routes
+//importing routes
 import routes from './router'
 
 //importing configs

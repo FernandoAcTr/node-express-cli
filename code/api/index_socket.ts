@@ -8,7 +8,7 @@ import { handleErrorMiddleware } from './middlewares/error_handler'
 import SocketIO from './socket'
 import { Server } from 'http'
 
-//importin routes
+//importing routes
 import routes from './router'
 
 //importing configs
