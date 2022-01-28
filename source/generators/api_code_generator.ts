@@ -174,7 +174,10 @@ export class ApiCodeGenerator extends CodeGenerator {
     fs.mkdirSync(dir, {
       recursive: true,
     })
+
     //controller
+    const serviceName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}Service`
+
     const controller = fs
       .readFileSync(
         path.resolve(
@@ -188,6 +191,8 @@ export class ApiCodeGenerator extends CodeGenerator {
         )
       )
       .toString()
+      .replace(/__ServiceName__/g, serviceName)
+      .replace(/__modulename__/g, name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
 
     //service
@@ -204,10 +209,7 @@ export class ApiCodeGenerator extends CodeGenerator {
         )
       )
       .toString()
-      .replace(
-        '__ServiceName__',
-        `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}Service`
-      )
+      .replace('__ServiceName__', serviceName)
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.service.ts`, service)
 
     //router

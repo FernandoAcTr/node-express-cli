@@ -18,7 +18,7 @@ export const handleErrorMiddleware = (
   next: NextFunction
 ) => {
   const { statusCode, message } = err
-  logger.error(`Error ${statusCode}: message`);
+  logger.error(`Error ${statusCode}: ${message}`);
   res.status(statusCode).json({
     statusCode,
     message,

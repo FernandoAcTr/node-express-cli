@@ -11,7 +11,7 @@ export class __ServiceName__ {
     return {}
   }
 
-  async findOne(): Promise<Object> {
+  async findOne(id: any): Promise<Object> {
     return {}
   }
 

@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
+import { __ServiceName__ } from './__modulename__.service'
 
 /**
  * Return all entities
@@ -11,7 +12,7 @@ export async function index(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  //
+  const service = new __ServiceName__()
 }
 
 /**
@@ -26,6 +27,7 @@ export async function show(
   next: NextFunction
 ): Promise<void> {
   const { id } = req.params
+  const service = new __ServiceName__()
 }
 
 /**
@@ -39,7 +41,7 @@ export async function store(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  //
+  const service = new __ServiceName__()
 }
 
 /**
@@ -53,7 +55,7 @@ export async function create(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  //
+  const service = new __ServiceName__()
 }
 
 /**
@@ -68,6 +70,7 @@ export async function update(
   next: NextFunction
 ): Promise<void> {
   const { id } = req.params
+  const service = new __ServiceName__()
 }
 
 /**
@@ -81,7 +84,7 @@ export async function edit(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  //
+  const service = new __ServiceName__()
 }
 
 /**
@@ -96,4 +99,5 @@ export async function destroy(
   next: NextFunction
 ): Promise<void> {
   const { id } = req.params
+  const service = new __ServiceName__()
 }

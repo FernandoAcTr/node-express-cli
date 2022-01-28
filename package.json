@@ -1,6 +1,6 @@
 {
   "name": "node-express-cli",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Simple express cli generator",
   "main": "dist/index.js",
   "bin": "dist/index.js",
