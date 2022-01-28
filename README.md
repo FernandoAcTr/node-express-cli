@@ -59,8 +59,8 @@ Mismos que serán leídos dentro del archivo src/database/database.ts para crear
 Cuando los parámetros sean correctos debes llamar la conexión en el archivo principal del servidor index.ts
 
 ```
-//importing configs
-import { settings } from './config/settings'
+//importing database
+import './database/database';
 ```
 Es muy importante que las entidades de base de datos dentro del directorio src/entities/ terminen con extensión .entity.ts, de lo contrario no podrán ser accedidas por typeorm al realizar el proceso de introspección y se generará un error al arrancar el servidor. 
 
