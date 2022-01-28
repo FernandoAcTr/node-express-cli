@@ -1,6 +1,6 @@
 {
   "name": "node-express-cli",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Simple express cli generator",
   "main": "dist/index.js",
   "bin": "dist/index.js",
@@ -10,9 +10,13 @@
     "dev": "tsc-watch",
     "prepare": "npm run build"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["express", "cli", "generator"],
+  "author": "Fernando Acosta",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FernandoAcTr/node-express-cli"
+  },
   "dependencies": {
     "colors": "^1.4.0",
     "inquirer": "^8.1.2",
