@@ -1,6 +1,6 @@
 # node-express-cli
 
-node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [https://www.typescriptlang.org/](Typescript). Es util para generar proyectos API REST, Aplicaciones Web tradicionales usando MVC y API's GraphQL.
+node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/). Es util para generar proyectos API REST, Aplicaciones Web tradicionales usando MVC y API's GraphQL.
 node-express-cli actualmente ofrece las siguientes caracteristicas
 
 - Creación de la configuración inicial del proyecto (estructura de directorios, scripts, dependencias de desarrollo, etc.)
@@ -51,8 +51,8 @@ Por ejemplo, una importación se haría de la siguiente manera:
 
 En cuanto a bases de datos actualmente el paquete soporta 2 opciones
 
-- SQL con [https://typeorm.io/#/](TypeORM)
-- MongoDB con [https://mongoosejs.com/](Mongoose)
+- SQL con [TypeORM](https://typeorm.io/#/)
+- MongoDB con [Mongoose](https://mongoosejs.com/)
 
 Una vez creado el proyecto, debes configurar los parámetros de la base de datos dentro del archivo .env
 Mismos que serán leídos dentro del archivo src/database/database.ts para crear la conexión. Este último debes personalizarlo también, dependiendo el SGDB que deseas utilizar.
@@ -81,7 +81,7 @@ node-express-cli make:module
 Cada que se crea un módulo debes asignarle un nombre y de qué tipo será: Rest, Web o GraphQL. Asegurate de seleccionar la misma opción que utilizaste para crear el proyecto, pues el módulo varia ligeramente entre cada tipo de configuración. 
 
 ## Validación de Request
-El body de un request puede ser validado utilizando la librería [https://www.npmjs.com/package/express-validator](express-validator). 
+El body de un request puede ser validado utilizando la librería [express-validator](https://www.npmjs.com/package/express-validator). 
 Para esto un módulo incluye un archivo de validación en donde se colocan cada conjunto de validaciones dentro de un array.
 
 ![Validators](./docs/img/validacion.png)
@@ -92,7 +92,7 @@ Y para utilizarlos se pasan como middleware a una ruta, seguidos del middleware 
 
 ## Logger
 
-Un proyecto REST incluye un Logguer utilizando la librería [https://www.npmjs.com/package/winston](winston). Este logger puede ser utilizado de la siguiente manera: 
+Un proyecto REST incluye un Logguer utilizando la librería [winston](https://www.npmjs.com/package/winston). Este logger puede ser utilizado de la siguiente manera: 
 
 ![Log](./docs/img/log.png)
 
@@ -108,6 +108,27 @@ El patrón propuesto es que el servicio sea el que lance los errores y el contro
 
 ### Controlador
 ![Log](./docs/img/error_controlador.png)
+
+## Instalación de Socket
+Adicionalmente después de crear el servidor es posible instalar el uso de sockets mediante la librería [https://socket.io/](socket.io). 
+Para ello utilizar el comando 
+```
+node-express-cli install:socket
+```
+
+Es importante que esta acción se realice antes de personalizar el archivo principal del servidor index.ts, pues reemplazará todo su contenido con la nueva configuración para soportar el socket. 
+
+## Instalación de Prettier y ESlint
+La instalación de [Prettier](https://prettier.io/) y [ESlint](https://eslint.org/) se incluyen como opciones separadas para ofrecer una configuración más granular. 
+Para instalar prettier: 
+```
+node-express-cli install:prettier
+```
+Para instalar ESlint
+```
+node-express-cli install:eslint
+```
+Es necesario instalar prettier para poder instalar eslint. 
 
 ## Levantar el servidor 
 
