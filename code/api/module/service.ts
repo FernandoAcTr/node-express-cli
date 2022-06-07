@@ -1,12 +1,13 @@
-import { getRepository, Repository } from 'typeorm';
+import { AppDataSource } from '@database/database'
+import { Repository } from 'typeorm'
 
 export class __ServiceName__ {
-  private readonly repository: Repository<Object>;
+  private readonly repository: Repository<Object>
 
   constructor() {
-    this.repository = getRepository(Object);
+    this.repository = AppDataSource.getRepository(Object)
   }
-  
+
   async store(body: any): Promise<Object> {
     return {}
   }

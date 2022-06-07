@@ -1,8 +1,8 @@
-import { createConnection } from 'typeorm'
+import { DataSource } from 'typeorm'
 import { settings } from '@config/settings'
 const { DB } = settings
 
-createConnection({
+export const AppDataSource = new DataSource({
   type: 'mysql',
   host: DB.HOST,
   port: Number(DB.PORT),
@@ -13,6 +13,8 @@ createConnection({
   logging: false,
   entities: ['build/entities/*.entity.js'],
 })
+
+AppDataSource.initialize()
   .then(() => {
     console.log('Mysql conection is online...')
   })
