@@ -44,40 +44,23 @@ export class GraphqlCodeGenerator extends CodeGenerator {
   }
 
   fillIndex(): void {
-    const index = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'graphql', 'index.ts')
-      )
-      .toString()
+    const index = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'index.ts')).toString()
     const schemaIndex = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'graphql',
-          'schema.index.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'schema.index.ts'))
       .toString()
     fs.writeFileSync('./src/index.ts', index)
     fs.writeFileSync('./src/graphql/index.ts', schemaIndex)
   }
 
   installDependencies(): void {
-    console.log(
-      '================= Installing dependencies ================='.yellow
-    )
+    console.log('================= Installing dependencies ================='.yellow)
     shell.exec(
       'npm i express cors dotenv bcrypt jsonwebtoken @graphql-tools/schema apollo-server-express graphql lodash'
     )
   }
 
   installDevDependencies(): void {
-    console.log(
-      '================= Installing dev dependencies ================='.yellow
-    )
+    console.log('================= Installing dev dependencies ================='.yellow)
     shell.exec(
       'npm i -D @types/express @types/bcrypt @types/jsonwebtoken @types/lodash @types/node ts-node tsc-watch typescript'
     )
@@ -92,52 +75,16 @@ export class GraphqlCodeGenerator extends CodeGenerator {
 
   createDefaultModule() {
     const schema = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'graphql',
-          'module',
-          'default',
-          'default.schema.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'default', 'default.schema.ts'))
       .toString()
     const resolver = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'graphql',
-          'module',
-          'default',
-          'default.resolver.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'default', 'default.resolver.ts'))
       .toString()
     const index = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'graphql',
-          'module',
-          'default',
-          'index.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'default', 'index.ts'))
       .toString()
     fs.writeFileSync('./src/graphql/modules/default/default.schema.ts', schema)
-    fs.writeFileSync(
-      './src/graphql/modules/default/default.resolver.ts',
-      resolver
-    )
+    fs.writeFileSync('./src/graphql/modules/default/default.resolver.ts', resolver)
     fs.writeFileSync('./src/graphql/modules/default/index.ts', index)
   }
 
@@ -163,63 +110,23 @@ export class GraphqlCodeGenerator extends CodeGenerator {
       recursive: true,
     })
     const repository = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'graphql',
-          'module',
-          'module.repository.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'module.repository.ts'))
       .toString()
       .replace(new RegExp('__EntityName__', 'g'), entityName)
 
     const schema = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'graphql',
-          'module',
-          'module.schema.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'module.schema.ts'))
       .toString()
       .replace(new RegExp('__EntityName__', 'g'), entityName)
       .replace(new RegExp('__modulename__', 'g'), modulename)
     const resolver = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'graphql',
-          'module',
-          'module.resolver.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'module.resolver.ts'))
       .toString()
       .replace(new RegExp('__EntityName__', 'g'), entityName)
       .replace(new RegExp('__modulename__', 'g'), modulename)
 
     const index = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'graphql',
-          'module',
-          'module.index.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'module.index.ts'))
       .toString()
       .replace(new RegExp('__EntityName__', 'g'), entityName)
       .replace(new RegExp('__modulename__', 'g'), modulename)

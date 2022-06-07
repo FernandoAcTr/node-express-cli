@@ -44,43 +44,23 @@ export class WebCodeGenerator extends CodeGenerator {
 
   fillMiddlewares() {
     //locals
-    const locals = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'web', 'locals.ts')
-      )
-      .toString()
+    const locals = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'locals.ts')).toString()
     fs.writeFileSync('./src/middlewares/locals.ts', locals)
   }
 
   fillRouter(): void {
-    const router = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'web', 'router.ts')
-      )
-      .toString()
+    const router = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'router.ts')).toString()
     fs.writeFileSync('./src/router.ts', router)
   }
 
   fillIndex(): void {
-    const index = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'web', 'index.ts')
-      )
-      .toString()
+    const index = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'index.ts')).toString()
     fs.writeFileSync('./src/index.ts', index)
   }
 
   fillViews(): void {
-    const index = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'web', 'index.hbs')
-      )
-      .toString()
-    const main = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'web', 'main.hbs')
-      )
-      .toString()
+    const index = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'index.hbs')).toString()
+    const main = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'main.hbs')).toString()
     fs.writeFileSync('./src/views/index.hbs', index)
     fs.writeFileSync('./src/views/layouts/main.hbs', main)
   }
@@ -93,31 +73,21 @@ export class WebCodeGenerator extends CodeGenerator {
   }
 
   installDevDependencies(): void {
-    console.log(
-      '================= Installing dev modules ================='.yellow
-    )
+    console.log('================= Installing dev modules ================='.yellow)
     shell.exec(
       'npm i -D @types/express @types/bcrypt @types/jsonwebtoken @types/express-session @types/passport @types/passport-local @types/morgan @types/express-handlebars @types/csurf @types/connect-flash @types/node typescript tsc-watch concurrently nodemon ts-node'
     )
   }
 
   addScripts(): void {
-    shell.exec(
-      `npm set-script watch-ts 'tsc-watch --onSuccess "node build/index"'`
-    )
-    shell.exec(
-      'npm set-script watch-hbs "mkdir build & nodemon -e hbs -w src/views -x cp -r src/views build"'
-    )
+    shell.exec(`npm set-script watch-ts 'tsc-watch --onSuccess "node build/index"'`)
+    shell.exec('npm set-script watch-hbs "mkdir build & nodemon -e hbs -w src/views -x cp -r src/views build"')
     shell.exec('npm set-script clean "rm -rf build"')
     shell.exec('npm set-script build "tsc && cp -r src/views build"')
     shell.exec('npm set-script start "node build"')
     shell.exec(`npm set-script dev 'concurrently "npm:watch-*"'`)
-    shell.exec(
-      'npm set-script migration:run "ts-node ./node_modules/typeorm/cli.js migration:run"'
-    )
-    shell.exec(
-      'npm set-script migration:revert "ts-node ./node_modules/typeorm/cli.js migration:revert"'
-    )
+    shell.exec('npm set-script migration:run "ts-node ./node_modules/typeorm/cli.js migration:run"')
+    shell.exec('npm set-script migration:revert "ts-node ./node_modules/typeorm/cli.js migration:revert"')
     shell.exec(
       'npm set-script migration:generate "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:generate --name"'
     )
@@ -146,17 +116,7 @@ export class WebCodeGenerator extends CodeGenerator {
     //controller
     const serviceName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}Service`
     const controller = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'web',
-          'module',
-          'controller.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'module', 'controller.ts'))
       .toString()
       .replace(/__ServiceName__/g, serviceName)
       .replace(/__modulename__/g, name.toLowerCase())
@@ -164,37 +124,14 @@ export class WebCodeGenerator extends CodeGenerator {
 
     //service
     const service = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'web',
-          'module',
-          'service.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'module', 'service.ts'))
       .toString()
-      .replace(
-        '__ServiceName__',
-        serviceName
-      )
+      .replace('__ServiceName__', serviceName)
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.service.ts`, service)
 
     //router
     const routes = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'web',
-          'module',
-          'routes.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'module', 'routes.ts'))
       .toString()
       .replace(/__modulename__/g, name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)

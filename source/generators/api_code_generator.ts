@@ -33,102 +33,64 @@ export class ApiCodeGenerator extends CodeGenerator {
 
   fillMiddlewares() {
     //validator
-    const validator = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'api', 'validator.ts')
-      )
-      .toString()
+    const validator = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'validator.ts')).toString()
     fs.writeFileSync('./src/middlewares/validator.ts', validator)
 
     //express-validators
     const express_validators = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'api',
-          'express_validators.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'express_validators.ts'))
       .toString()
-    fs.writeFileSync(
-      './src/middlewares/express_validators.ts',
-      express_validators
-    )
+    fs.writeFileSync('./src/middlewares/express_validators.ts', express_validators)
 
     //error handler
     const error_handler = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'api', 'error_handler.ts')
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'error_handler.ts'))
       .toString()
     fs.writeFileSync('./src/middlewares/error_handler.ts', error_handler)
 
     //rate limiter
     const rate_limiter = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'api', 'rate_limiter.ts')
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'rate_limiter.ts'))
       .toString()
     fs.writeFileSync('./src/middlewares/rate_limiter.ts', rate_limiter)
 
     //logger helper
-    const logguer = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'api', 'logger.ts')
-      )
-      .toString()
+    const logguer = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'logger.ts')).toString()
     fs.writeFileSync('./src/helpers/logger.ts', logguer)
   }
 
   fillRouter(): void {
-    const router = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'api', 'router.ts')
-      )
-      .toString()
+    const router = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'router.ts')).toString()
     fs.writeFileSync('./src/router.ts', router)
   }
 
   fillIndex(): void {
-    const index = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'api', 'index.ts')
-      )
-      .toString()
+    const index = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'index.ts')).toString()
     fs.writeFileSync('./src/index.ts', index)
   }
 
   installDependencies(): void {
-    console.log(
-      '================= Installing dependencies ================='.yellow
-    )
+    console.log('================= Installing dependencies ================='.yellow)
     shell.exec(
       'npm i app-root-path winston express express-validator module-alias cors bcrypt jsonwebtoken dotenv passport passport-jwt morgan helmet rate-limiter-flexible'
     )
   }
 
   installDevDependencies(): void {
-    console.log(
-      '================= Installing dev dependencies ================='.yellow
-    )
+    console.log('================= Installing dev dependencies ================='.yellow)
     shell.exec(
       'npm i -D @types/app-root-path @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/passport @types/passport-jwt @types/morgan @types/node typescript tsc-watch ts-node'
     )
   }
 
   addScripts(): void {
-    shell.exec(
-      `npm set-script dev 'tsc-watch --onSuccess \"node build/index\"'`
-    )
+    shell.exec(`npm set-script dev 'tsc-watch --onSuccess \"node build/index\"'`)
     shell.exec('npm set-script clean "rm -rf build"')
     shell.exec('npm set-script build "tsc"')
     shell.exec('npm set-script start "node build"')
   }
 
-  addAlias(): void {
+  private addAlias(): void {
     const pkgPath = path.resolve('package.json')
     const tsConfigPath = path.resolve('tsconfig.json')
     const pkg = require(pkgPath)
@@ -171,78 +133,66 @@ export class ApiCodeGenerator extends CodeGenerator {
 
   makeModule(name: String): void {
     const dir = `./src/modules/${name.toLowerCase()}`
+    const servicesDir = `./src/modules/${name.toLowerCase()}/services`
     fs.mkdirSync(dir, {
       recursive: true,
     })
 
-    //controller
-    const serviceName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}Service`
+    fs.mkdirSync(servicesDir, {
+      recursive: true,
+    })
 
-    const controller = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'api',
-          'module',
-          'controller.ts'
-        )
-      )
-      .toString()
-      .replace(/__ServiceName__/g, serviceName)
-      .replace(/__modulename__/g, name.toLowerCase())
-    fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
-
-    //service
-    const service = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'api',
-          'module',
-          'service.ts'
-        )
-      )
-      .toString()
-      .replace('__ServiceName__', serviceName)
-    fs.writeFileSync(`${dir}/${name.toLowerCase()}.service.ts`, service)
+    const serviceName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}`
 
     //router
     const routes = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'api',
-          'module',
-          'routes.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'module', 'routes.ts'))
       .toString()
       .replace(/__modulename__/g, name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
 
     //validator
     const validator = fs
-      .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'api',
-          'module',
-          'validator.ts'
-        )
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'module', 'validator.ts'))
       .toString()
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.validator.ts`, validator)
+
+    //controller
+    const controller = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'module', 'controller.ts'))
+      .toString()
+      .replace(/__ServiceName__/g, serviceName)
+    fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
+
+    //services
+    const destroyer = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'module', 'services', 'service_destroyer.ts'))
+      .toString()
+      .replace('__ServiceName__', serviceName)
+    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_destroyer.ts`, destroyer)
+
+    const finder = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'module', 'services', 'service_finder.ts'))
+      .toString()
+      .replace('__ServiceName__', serviceName)
+    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_finder.ts`, finder)
+
+    const saver = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'module', 'services', 'service_saver.ts'))
+      .toString()
+      .replace('__ServiceName__', serviceName)
+    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_saver.ts`, saver)
+
+    const updater = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'module', 'services', 'service_updater.ts'))
+      .toString()
+      .replace('__ServiceName__', serviceName)
+    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_updater.ts`, updater)
+
+    const index = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'module', 'services', 'index.ts'))
+      .toString()
+      .replace(/__service__/g, name.toLowerCase())
+    fs.writeFileSync(`${servicesDir}/index.ts`, index)
   }
 }

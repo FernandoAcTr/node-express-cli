@@ -1,15 +1,11 @@
 import { AppDataSource } from '@database/database'
 import { Repository } from 'typeorm'
 
-export class __ServiceName__ {
+export class __ServiceName__Finder {
   private readonly repository: Repository<Object>
 
   constructor() {
     this.repository = AppDataSource.getRepository(Object)
-  }
-
-  async store(body: any): Promise<Object> {
-    return {}
   }
 
   async findOne(id: any): Promise<Object> {
@@ -18,13 +14,5 @@ export class __ServiceName__ {
 
   async findAll(): Promise<Object[]> {
     return []
-  }
-
-  async update(id: any, body: any): Promise<Object> {
-    return {}
-  }
-
-  async destroy(id: any): Promise<Object> {
-    return {}
   }
 }

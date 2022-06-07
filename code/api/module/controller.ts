@@ -1,5 +1,10 @@
 import { NextFunction, Request, Response } from 'express'
-import { __ServiceName__ } from './__modulename__.service'
+import {
+  __ServiceName__Destroyer,
+  __ServiceName__Finder,
+  __ServiceName__Saver,
+  __ServiceName__Updater,
+} from './services'
 
 /**
  * Return all entities
@@ -7,12 +12,8 @@ import { __ServiceName__ } from './__modulename__.service'
  * @param res
  * @param next
  */
-export async function index(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  const service = new __ServiceName__()
+export async function index(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const finder = new __ServiceName__Finder()
 }
 
 /**
@@ -21,13 +22,9 @@ export async function index(
  * @param res
  * @param next
  */
-export async function show(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function show(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { id } = req.params
-  const service = new __ServiceName__()
+  const finder = new __ServiceName__Finder()
 }
 
 /**
@@ -36,12 +33,8 @@ export async function show(
  * @param res
  * @param next
  */
-export async function store(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  const service = new __ServiceName__()
+export async function store(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const saver = new __ServiceName__Saver()
 }
 
 /**
@@ -50,13 +43,9 @@ export async function store(
  * @param res
  * @param next
  */
-export async function update(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function update(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { id } = req.params
-  const service = new __ServiceName__()
+  const updater = new __ServiceName__Updater()
 }
 
 /**
@@ -65,11 +54,7 @@ export async function update(
  * @param res
  * @param next
  */
-export async function destroy(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function destroy(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { id } = req.params
-  const service = new __ServiceName__()
+  const destroyer = new __ServiceName__Destroyer()
 }
