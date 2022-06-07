@@ -16,6 +16,6 @@ export const AppDataSource = new DataSource({
 
 AppDataSource.initialize()
   .then(() => {
-    console.log('Mysql conection is online...')
+    console.log('🚀 Database conection is online...')
   })
   .catch(console.log)

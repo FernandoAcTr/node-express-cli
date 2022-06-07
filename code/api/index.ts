@@ -5,6 +5,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import { rateLimiterMiddleware } from './middlewares/rate_limiter'
 import { handleErrorMiddleware } from './middlewares/error_handler'
+import logger from './helpers/logger'
 
 //importing routes
 import routes from './router'
@@ -25,10 +26,10 @@ class Server {
   config() {}
 
   middlewares() {
-    this.app.use(rateLimiterMiddleware)
-    this.app.use(morgan('dev'))
-    this.app.use(helmet())
+    this.app.use(morgan('[:date[iso]] (:status) ":method :url HTTP/:http-version" :response-time ms - [:res[content-length]]'))
     this.app.use(cors())
+    this.app.use(rateLimiterMiddleware)
+    this.app.use(helmet())
     this.app.use(express.json())
     this.app.use(express.urlencoded({ extended: false }))
   }
@@ -40,7 +41,7 @@ class Server {
 
   start() {
     this.app.listen(settings.PORT, () => {
-      console.log('Server listen on port ' + settings.PORT)
+      logger.info('🚀 Server listen on port ' + settings.PORT)
     })
   }
 }

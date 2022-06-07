@@ -7,6 +7,8 @@ import { rateLimiterMiddleware } from './middlewares/rate_limiter'
 import { handleErrorMiddleware } from './middlewares/error_handler'
 import SocketIO from './socket'
 import { Server } from 'http'
+import logger from './helpers/logger'
+
 
 //importing routes
 import routes from './router'
@@ -27,13 +29,12 @@ class App {
   config() {}
 
   middlewares() {
+    this.app.use(morgan('[:date[iso]] (:status) ":method :url HTTP/:http-version" :response-time ms - [:res[content-length]]'))
+    this.app.use(cors({origin: '*'}))
     this.app.use(rateLimiterMiddleware)
-    this.app.use(morgan('dev'))
     this.app.use(helmet())
-    this.app.use(cors())
     this.app.use(express.json())
     this.app.use(express.urlencoded({ extended: false }))
-    this.app.use(express.static('public'))
   }
 
   routes() {
@@ -43,7 +44,7 @@ class App {
 
   start(): Server {
     return this.app.listen(settings.PORT, () => {
-      console.log('Server listen on port ' + settings.PORT)
+      logger.info('🚀 Server listen on port ' + settings.PORT)
     })
   }
 }

@@ -1,6 +1,6 @@
 # node-express-cli
 
-node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/). Es util para generar proyectos API REST, Aplicaciones Web tradicionales usando MVC y API's GraphQL.
+node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/). Es util para generar proyectos API REST y API's GraphQL.
 node-express-cli actualmente ofrece las siguientes caracteristicas
 
 - Creación de la configuración inicial del proyecto (estructura de directorios, scripts, dependencias de desarrollo, etc.)
@@ -20,10 +20,9 @@ node-express-cli init
 Existen 3 opciones para generar el proyecto:
 
 - API Rest
-- Web App
 - GraphQL
 
-Cada una generará una configuración diferente en cuanto a middlewares y dependencias de desarrollo, por ejemplo Web App instala handlebars y session, mientras que API Rest no lo hace. Además la manera en que se configura el archivo index.ts del servidor es diferente para cada una.
+Cada una generará una configuración diferente en cuanto a middlewares y dependencias de desarrollo. Además la manera en que se configura el archivo index.ts del servidor es diferente para cada una.
 
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
 

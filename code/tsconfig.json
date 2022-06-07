@@ -3,23 +3,17 @@
     "target": "es6",
     "module": "commonjs",
     "allowJs": true,
-
     "outDir": "./build",
     "rootDir": "./src",
-
     "strict": true,
-
     "strictPropertyInitialization": false,
-
     "baseUrl": "./src",
-
     "esModuleInterop": true,
-
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
     "typeRoots": ["@types", "node_modules/@types"]
   },
   "exclude": ["node_modules", "build"]

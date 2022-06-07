@@ -4,19 +4,16 @@ import shell from 'shelljs'
 import { argv } from './plugins/yargs'
 import { ApiCodeGenerator } from './generators/api_code_generator'
 import { DbType } from './generators/code_generator'
-import { WebCodeGenerator } from './generators/web_code_generator'
 import { CliGenerator } from './generators/cli_generator'
 import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
 
 const apiGenerator = new ApiCodeGenerator()
-const webGenerator = new WebCodeGenerator()
 const grapqlGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
 
 enum typeChoices {
   API = 'REST API',
   GRAPH = 'GraphQL API',
-  WEB = 'Web App',
 }
 
 enum dbChoices {
@@ -48,8 +45,6 @@ function generate(typeProject: typeChoices, database: dbChoices) {
   shell.exec('npm init -y')
   if (typeProject === typeChoices.API) {
     apiGenerator.init(dbType)
-  } else if (typeProject === typeChoices.WEB) {
-    webGenerator.init(dbType)
   } else if (typeProject === typeChoices.GRAPH) {
     grapqlGenerator.init(dbType)
   }
@@ -71,20 +66,16 @@ async function makeModule() {
 
   if (moduleName.resp)
     if (type.resp === typeChoices.API) apiGenerator.makeModule(moduleName.resp)
-    else if (type.resp === typeChoices.WEB)
-      webGenerator.makeModule(moduleName.resp)
-    else if (type.resp === typeChoices.GRAPH)
-      grapqlGenerator.makeModule(moduleName.resp)
+    else if (type.resp === typeChoices.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
 }
 
 async function installSocket() {
-  const type = await inquirer.prompt({
-    type: 'list',
+  const confirm = await inquirer.prompt({
+    type: 'confirm',
+    message: 'Are you sure? This action will replace all your code in index.ts',
     name: 'resp',
-    message: 'Type of module',
-    choices: Object.values(typeChoices),
   })
-  cliGenerator.installSocket(type.resp === typeChoices.API)
+  if (confirm.resp) cliGenerator.installSocket()
 }
 
 let command = (argv as any)._[0]
@@ -104,7 +95,7 @@ switch (command) {
   case 'install:eslint':
     cliGenerator.installEslint()
     break
-    
+
   case 'install:socket':
     installSocket()
     break

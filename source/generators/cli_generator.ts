@@ -24,12 +24,10 @@ export class CliGenerator {
     shell.exec('npm set-script lint:fix "eslint . --ext .ts --fix"')
   }
 
-  installSocket(api: boolean) {
+  installSocket() {
     console.log('================= Installing Socket.io ================='.yellow)
     shell.exec('npm i socket.io')
-    let index = ''
-    if (api) index = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'index_socket.ts')).toString()
-    else index = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'web', 'index_socket.ts')).toString()
+    const index = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'api', 'index_socket.ts')).toString()
     const socket = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'socket.ts')).toString()
     const socketController = fs
       .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'socket.controller.ts'))
