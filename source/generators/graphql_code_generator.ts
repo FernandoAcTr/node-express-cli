@@ -1,5 +1,5 @@
 import 'colors'
-import fs from 'fs'
+import fs from 'fs-extra'
 import path from 'path'
 import shell from 'shelljs'
 import { CodeGenerator, DbType } from './code_generator'
@@ -35,71 +35,29 @@ export class GraphqlCodeGenerator extends CodeGenerator {
     })
   }
 
-  fillMiddlewares(): void {
-    //
-  }
+  copyCode(dbType: DbType): void {
+    fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'graphql_api'), './')
 
-  fillRouter(): void {
-    //
-  }
-
-  fillIndex(): void {
-    const index = fs.readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'index.ts')).toString()
-    const schemaIndex = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'schema.index.ts'))
-      .toString()
-    fs.writeFileSync('./src/index.ts', index)
-    fs.writeFileSync('./src/graphql/index.ts', schemaIndex)
+    if (dbType === DbType.TYPEORM) {
+      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'database.ts'), './src/database/database.ts')
+      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'user.entity.ts'), './src/entities/user.entity.ts')
+      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'ormconfig.json'), './ormconfig.json')
+    } else {
+      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'database.ts'), './src/database/database.ts')
+      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'), './src/entities/user.model.ts')
+    }
   }
 
   installDependencies(): void {
     console.log('================= Installing dependencies ================='.yellow)
-    shell.exec(
-      'npm i express cors dotenv bcrypt jsonwebtoken @graphql-tools/schema apollo-server-express graphql lodash'
-    )
+    shell.exec('npm install')
   }
 
-  installDevDependencies(): void {
-    console.log('================= Installing dev dependencies ================='.yellow)
-    shell.exec(
-      'npm i -D @types/express @types/bcrypt @types/jsonwebtoken @types/lodash @types/node ts-node tsc-watch typescript'
-    )
-  }
-
-  addScripts(): void {
-    shell.exec(`npm set-script dev 'tsc-watch --onSuccess "node build/index"'`)
-    shell.exec('npm set-script clean "rm -rf build"')
-    shell.exec('npm set-script build "tsc"')
-    shell.exec('npm set-script start "node build"')
-  }
-
-  createDefaultModule() {
-    const schema = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'default', 'default.schema.ts'))
-      .toString()
-    const resolver = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'default', 'default.resolver.ts'))
-      .toString()
-    const index = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'default', 'index.ts'))
-      .toString()
-    fs.writeFileSync('./src/graphql/modules/default/default.schema.ts', schema)
-    fs.writeFileSync('./src/graphql/modules/default/default.resolver.ts', resolver)
-    fs.writeFileSync('./src/graphql/modules/default/index.ts', index)
-  }
-
-  init(dbType: DbType): void {
+  init(dbType: DbType) {
     this.createDirStructure()
-    this.createConfigFiles()
-    this.fillDatabase(dbType)
-    this.fillMiddlewares()
-    this.fillSettings()
-    this.fillRouter()
-    this.fillIndex()
-    this.createDefaultModule()
+    this.copyCode(dbType)
     this.installDependencies()
-    this.installDevDependencies()
-    this.addScripts()
+    this.installDatabase(dbType)
   }
 
   makeModule(name: String): void {
@@ -110,23 +68,23 @@ export class GraphqlCodeGenerator extends CodeGenerator {
       recursive: true,
     })
     const repository = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'module.repository.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.repository.ts'))
       .toString()
       .replace(new RegExp('__EntityName__', 'g'), entityName)
 
     const schema = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'module.schema.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.schema.ts'))
       .toString()
       .replace(new RegExp('__EntityName__', 'g'), entityName)
       .replace(new RegExp('__modulename__', 'g'), modulename)
     const resolver = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'module.resolver.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.resolver.ts'))
       .toString()
       .replace(new RegExp('__EntityName__', 'g'), entityName)
       .replace(new RegExp('__modulename__', 'g'), modulename)
 
     const index = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'graphql', 'module', 'module.index.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.index.ts'))
       .toString()
       .replace(new RegExp('__EntityName__', 'g'), entityName)
       .replace(new RegExp('__modulename__', 'g'), modulename)
