@@ -53,12 +53,24 @@ En cuanto a bases de datos actualmente el paquete soporta 2 opciones
 - SQL con [TypeORM](https://typeorm.io/#/)
 - MongoDB con [Mongoose](https://mongoosejs.com/)
 
+Para agregar una de las dos opciones utiliza el comando `node-express-cli install:database`
+
 Una vez creado el proyecto, debes configurar los parámetros de la base de datos dentro del archivo .env
 Mismos que serán leídos dentro del archivo src/database/database.ts para crear la conexión. Este último debes personalizarlo también, dependiendo el SGDB que deseas utilizar.
-Cuando los parámetros sean correctos debes llamar la conexión en el archivo principal del servidor index.ts
+Cuando los parámetros sean correctos debes llamar la conexión en el archivo principal del servidor index.ts  
+
+Si usas Typeorm, agrega esto en el método start() del index.ts
 
 ```
-//importing database
+AppDataSource.initialize()
+      .then(() => {
+        logger.info('🚀 Database conection is online...')
+      })
+      .catch(console.log)
+```
+Si usas mongoose basta con importar el módulo de conexión al inicio del index.ts
+
+```
 import './database/database';
 ```
 Es muy importante que las entidades de base de datos dentro del directorio src/entities/ terminen con extensión .entity.ts, de lo contrario no podrán ser accedidas por typeorm al realizar el proceso de introspección y se generará un error al arrancar el servidor. 
@@ -128,6 +140,12 @@ Para instalar ESlint
 node-express-cli install:eslint
 ```
 Es necesario instalar prettier para poder instalar eslint. 
+
+## Scaffolding de autenticación
+Es posible instalar un módulo de autenticación con lo básico necesario para autenticar un usuario con JWT, haciendo uso de la conocida librería [Passport](https://www.npmjs.com/package/passport).  
+Para instalarlo utiliza el comando `node-express-cli install:auth`.
+Esta acción creará un modelo básico de usuario, una estrategia de passport y un módulo de autenticación. 
+Solamente deberás agregar las rutas del módulo auth al router principal de la aplicación y crear/ejecutar las migraciones para la base de datos si estás utilizando TypeORM
 
 ## Levantar el servidor 
 

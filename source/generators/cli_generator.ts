@@ -111,5 +111,6 @@ export class CliGenerator {
     }
 
     console.log("Now you need to add passport.initialize() and passport.use(JWTStrategy) in your middlewares section on index.ts".bgYellow)
+    console.log("You need to add auth module routes to the app router".green)
   }
 }
