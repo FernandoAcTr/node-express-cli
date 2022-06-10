@@ -1,9 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
 
 @Entity()
 export class User {
-  @PrimaryGeneratedColumn('uuid')
-  usuario_id: string
+  @PrimaryGeneratedColumn()
+  user_id: number
 
   @Column({ length: 100, unique: true })
   email: string
@@ -13,6 +13,12 @@ export class User {
 
   @Column()
   name: string
+
+  @CreateDateColumn()
+  created_at: Date
+
+  @UpdateDateColumn()
+  updated_at: Date
 
   toJSON(): any {
     const { password, ...other } = this as any

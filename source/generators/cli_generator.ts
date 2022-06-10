@@ -56,10 +56,7 @@ export class CliGenerator {
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'datasources.ts'),
         './src/database/datasources.ts'
       )
-      // fs.copyFile(
-      //   path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'user.entity.ts'),
-      //   './src/entities/user.entity.ts'
-      // )
+
       console.log('Please import package reflect-metadata at tht top of your index.ts'.yellow)
       console.log('You must install specific database driver like mysql or pg'.bgYellow)
       console.log(
@@ -79,10 +76,40 @@ export class CliGenerator {
       )
 
       console.log('Now you need to import database.ts in your index.ts in order to connect with mongo'.yellow)
-      // fs.copyFile(
-      //   path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'),
-      //   './src/entities/user.model.ts'
-      // )
     }
+  }
+
+  installAuth(dbType: DbType) {
+    console.log('================= Installing auth dependencies ================='.yellow)
+    shell.exec('npm i bcrypt passport passport-jwt jsonwebtoken')
+    shell.exec('npm i -D @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken')
+
+    if (dbType === DbType.TYPEORM) {
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'user.entity.ts'),
+        './src/entities/user.entity.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'passport.ts'),
+        './src/middlewares/passport.ts'
+      )
+
+      fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'auth'), './src/modules/auth')
+    } else {
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'),
+        './src/models/user.model.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'passport.ts'),
+        './src/middlewares/passport.ts'
+      )
+
+      fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'auth'), './src/modules/auth')
+    }
+
+    console.log("Now you need to add passport.initialize() and passport.use(JWTStrategy) in your middlewares section on index.ts".bgYellow)
   }
 }

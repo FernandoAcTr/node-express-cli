@@ -19,6 +19,7 @@
       "@src/*": ["src/*"],
       "@database/*": ["database/*"],
       "@entities/*": ["entities/*"],
+      "@models/*": ["models/*"],
       "@middlewares/*": ["middlewares/*"],
       "@helpers/*": ["helpers/*"],
       "@config/*": ["config/*"],

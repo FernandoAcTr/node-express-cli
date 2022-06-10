@@ -20,4 +20,7 @@ export const argv = yargs.options({
   'install:database': {
     description: 'Add Database support (Typeorm or Mongo) to the project',
   },
+  'install:auth': {
+    description: 'Add basic scaffolding to auth with jwt and passport',
+  },
 }).argv

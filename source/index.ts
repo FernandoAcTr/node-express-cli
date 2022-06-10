@@ -16,8 +16,8 @@ enum typeChoices {
 }
 
 enum dbChoices {
-  MONGO = 'Mongo DB with Mongoose',
-  TYPEORM = 'SQL with TypeOrm',
+  MONGO = 'Mongoose',
+  TYPEORM = 'TypeOrm',
 }
 
 async function init() {
@@ -43,7 +43,7 @@ async function askForDatabase() {
   const question = await inquirer.prompt({
     type: 'list',
     name: 'database',
-    message: 'Choose type of database',
+    message: 'Choose an ORM',
     choices: Object.values(dbChoices),
   })
   const dbType = question.database === dbChoices.MONGO ? DbType.MONGO : DbType.TYPEORM
@@ -106,6 +106,12 @@ switch (command) {
     askForDatabase().then((dbType) => {
       cliGenerator.installDatabase(dbType)
     })
+
+  case 'install:auth': 
+  askForDatabase().then((dbType) => {
+    cliGenerator.installAuth(dbType)
+  })
+  
   default:
     console.log('Please enter --help to see a list of commands')
 }
