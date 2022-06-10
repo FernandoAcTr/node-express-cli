@@ -57,7 +57,7 @@ export class CliGenerator {
         './src/database/datasources.ts'
       )
 
-      console.log('Please import package reflect-metadata at tht top of your index.ts'.yellow)
+      console.log('Please import package reflect-metadata at the top of your index.ts'.yellow)
       console.log('You must install specific database driver like mysql or pg'.bgYellow)
       console.log(
         'You need to initialize the AppDataSource manually. A greet place is in start() method in your index.ts'.yellow
