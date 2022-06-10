@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import shell from 'shelljs'
 import 'colors'
-import { CodeGenerator } from './code_generator'
+import { CodeGenerator, DbType } from './code_generator'
 
 export class ApiCodeGenerator extends CodeGenerator {
   createDirStructure() {
@@ -52,9 +52,11 @@ export class ApiCodeGenerator extends CodeGenerator {
     this.installDependencies()
   }
 
-  makeModule(name: String): void {
+  makeModule(name: String, dbType: DbType): void {
     const dir = `./src/modules/${name.toLowerCase()}`
     const servicesDir = `./src/modules/${name.toLowerCase()}/services`
+    const codeDir = dbType == DbType.MONGO ? 'mongo' : 'typeorm'
+
     fs.mkdirSync(dir, {
       recursive: true,
     })
@@ -67,20 +69,20 @@ export class ApiCodeGenerator extends CodeGenerator {
 
     //router
     const routes = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'routes.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'routes.ts'))
       .toString()
       .replace(/__modulename__/g, name.toLowerCase())
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
 
     //validator
     const validator = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'validator.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'validator.ts'))
       .toString()
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.validator.ts`, validator)
 
     //controller
     const controller = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'controller.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'controller.ts'))
       .toString()
       .replace(/__ServiceName__/g, serviceName)
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
@@ -88,17 +90,7 @@ export class ApiCodeGenerator extends CodeGenerator {
     //services
     const destroyer = fs
       .readFileSync(
-        path.resolve(
-          __dirname,
-          '..',
-          '..',
-          'code',
-          'generated',
-          'typeorm',
-          'module',
-          'services',
-          'service_destroyer.ts'
-        )
+        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service_destroyer.ts')
       )
       .toString()
       .replace('__ServiceName__', serviceName)
@@ -106,7 +98,7 @@ export class ApiCodeGenerator extends CodeGenerator {
 
     const finder = fs
       .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_finder.ts')
+        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service_finder.ts')
       )
       .toString()
       .replace('__ServiceName__', serviceName)
@@ -114,7 +106,7 @@ export class ApiCodeGenerator extends CodeGenerator {
 
     const saver = fs
       .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_saver.ts')
+        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service_saver.ts')
       )
       .toString()
       .replace('__ServiceName__', serviceName)
@@ -122,16 +114,14 @@ export class ApiCodeGenerator extends CodeGenerator {
 
     const updater = fs
       .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_updater.ts')
+        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service_updater.ts')
       )
       .toString()
       .replace('__ServiceName__', serviceName)
     fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_updater.ts`, updater)
 
     const index = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'index.ts')
-      )
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'index.ts'))
       .toString()
       .replace(/__service__/g, name.toLowerCase())
     fs.writeFileSync(`${servicesDir}/index.ts`, index)

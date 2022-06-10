@@ -65,8 +65,10 @@ async function makeModule() {
   })
 
   if (moduleName.resp)
-    if (type.resp === typeChoices.API) apiGenerator.makeModule(moduleName.resp)
-    else if (type.resp === typeChoices.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
+    if (type.resp === typeChoices.API) {
+      const dbType = await askForDatabase()
+      apiGenerator.makeModule(moduleName.resp, dbType)
+    } else if (type.resp === typeChoices.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
 }
 
 async function installSocket() {

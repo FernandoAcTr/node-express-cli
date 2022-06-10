@@ -9,5 +9,5 @@ export abstract class CodeGenerator {
   abstract installDependencies(): void
 
   abstract init(): void
-  abstract makeModule(name: String): void
+  abstract makeModule(name: String, dbType: DbType): void
 }

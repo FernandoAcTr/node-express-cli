@@ -1,4 +1,4 @@
-import { AppDataSource } from '@database/database'
+import { AppDataSource } from '@database/datasources'
 import { Repository } from 'typeorm'
 
 export class __ServiceName__Finder {
