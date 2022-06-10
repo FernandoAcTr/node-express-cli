@@ -106,12 +106,14 @@ switch (command) {
     askForDatabase().then((dbType) => {
       cliGenerator.installDatabase(dbType)
     })
+    break
 
-  case 'install:auth': 
-  askForDatabase().then((dbType) => {
-    cliGenerator.installAuth(dbType)
-  })
-  
+  case 'install:auth':
+    askForDatabase().then((dbType) => {
+      cliGenerator.installAuth(dbType)
+    })
+    break
+
   default:
     console.log('Please enter --help to see a list of commands')
 }

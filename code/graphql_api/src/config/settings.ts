@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import dotenvParseVariables from 'dotenv-parse-variables'
 
 let env: any = dotenv.config()
-if (env.error) throw env.error
+if (env.error) console.log(env.error)
 env = dotenvParseVariables(env.parsed!)
 
 export const settings = {
