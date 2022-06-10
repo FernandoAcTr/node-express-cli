@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import shell from 'shelljs'
 import 'colors'
-import { CodeGenerator, DbType } from './code_generator'
+import { CodeGenerator } from './code_generator'
 
 export class ApiCodeGenerator extends CodeGenerator {
   createDirStructure() {
@@ -31,30 +31,25 @@ export class ApiCodeGenerator extends CodeGenerator {
     })
   }
 
-  copyCode(dbType: DbType): void {
+  copyCode(): void {
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'api'), './')
-
-    if (dbType === DbType.TYPEORM) {
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'database.ts'), './src/database/database.ts')
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'user.entity.ts'), './src/entities/user.entity.ts')
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'ormconfig.json'), './ormconfig.json')
-    } else {
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'database.ts'), './src/database/database.ts')
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'), './src/entities/user.model.ts')
-    }
   }
 
   installDependencies(): void {
     console.log('================= Installing dependencies ================='.yellow)
-    shell.exec('npm install')
+    shell.exec(
+      'npm install app-root-path bcrypt cors dotenv dotenv-parse-variables express express-validator helmet module-alias morgan rate-limiter-flexible winston'
+    )
+
+    shell.exec(
+      'npm install -D npm install @types/app-root-path @types/bcrypt @types/cors @types/dotenv-parse-variables @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch typescript'
+    )
   }
 
-
-  init(dbType: DbType) {
+  init() {
     this.createDirStructure()
-    this.copyCode(dbType)
+    this.copyCode()
     this.installDependencies()
-    this.installDatabase(dbType)
   }
 
   makeModule(name: String): void {
@@ -92,35 +87,53 @@ export class ApiCodeGenerator extends CodeGenerator {
 
     //services
     const destroyer = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_destroyer.ts'))
+      .readFileSync(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'generated',
+          'typeorm',
+          'module',
+          'services',
+          'service_destroyer.ts'
+        )
+      )
       .toString()
       .replace('__ServiceName__', serviceName)
     fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_destroyer.ts`, destroyer)
 
     const finder = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_finder.ts'))
+      .readFileSync(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_finder.ts')
+      )
       .toString()
       .replace('__ServiceName__', serviceName)
     fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_finder.ts`, finder)
 
     const saver = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_saver.ts'))
+      .readFileSync(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_saver.ts')
+      )
       .toString()
       .replace('__ServiceName__', serviceName)
     fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_saver.ts`, saver)
 
     const updater = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_updater.ts'))
+      .readFileSync(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'service_updater.ts')
+      )
       .toString()
       .replace('__ServiceName__', serviceName)
     fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_updater.ts`, updater)
 
     const index = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'index.ts'))
+      .readFileSync(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'module', 'services', 'index.ts')
+      )
       .toString()
       .replace(/__service__/g, name.toLowerCase())
     fs.writeFileSync(`${servicesDir}/index.ts`, index)
   }
-
-
 }

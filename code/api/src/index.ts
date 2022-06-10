@@ -1,4 +1,4 @@
-import 'module-alias/register'
+import './alias'
 import express from 'express'
 import morgan from 'morgan'
 import cors from 'cors'

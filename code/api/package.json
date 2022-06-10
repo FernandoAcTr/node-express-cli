@@ -15,44 +15,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "app-root-path": "latest",
-    "bcrypt": "latest",
-    "cors": "latest",
-    "dotenv": "latest",
-    "express": "latest",
-    "express-validator": "latest",
-    "helmet": "latest",
-    "jsonwebtoken": "latest",
-    "module-alias": "latest",
-    "morgan": "latest",
-    "passport": "latest",
-    "passport-jwt": "latest",
-    "rate-limiter-flexible": "latest",
-    "winston": "latest"
+   
   },
   "devDependencies": {
-    "@types/app-root-path": "latest",
-    "@types/bcrypt": "latest",
-    "@types/cors": "latest",
-    "@types/express": "latest",
-    "@types/jsonwebtoken": "latest",
-    "@types/morgan": "latest",
-    "@types/node": "latest",
-    "@types/passport": "latest",
-    "@types/passport-jwt": "latest",
-    "prettier": "latest",
-    "ts-node": "latest",
-    "ts-node-dev": "latest",
-    "tsc-watch": "latest",
-    "typescript": "latest"
-  },
-  "_moduleAliases": {
-    "@src": "build/",
-    "@database": "build/database",
-    "@entities": "build/entities",
-    "@middlewares": "build/middlewares",
-    "@helpers": "build/helpers",
-    "@config": "build/config",
-    "@modules": "build/modules"
+    
   }
 }

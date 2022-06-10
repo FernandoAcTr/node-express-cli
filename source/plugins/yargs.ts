@@ -17,4 +17,7 @@ export const argv = yargs.options({
   'install:socket': {
     description: 'Add Socket.io to the project',
   },
+  'install:database': {
+    description: 'Add Database support (Typeorm or Mongo) to the project',
+  },
 }).argv

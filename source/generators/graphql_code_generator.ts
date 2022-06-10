@@ -2,7 +2,7 @@ import 'colors'
 import fs from 'fs-extra'
 import path from 'path'
 import shell from 'shelljs'
-import { CodeGenerator, DbType } from './code_generator'
+import { CodeGenerator } from './code_generator'
 
 export class GraphqlCodeGenerator extends CodeGenerator {
   createDirStructure(): void {
@@ -35,29 +35,20 @@ export class GraphqlCodeGenerator extends CodeGenerator {
     })
   }
 
-  copyCode(dbType: DbType): void {
+  copyCode(): void {
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'graphql_api'), './')
-
-    if (dbType === DbType.TYPEORM) {
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'database.ts'), './src/database/database.ts')
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'user.entity.ts'), './src/entities/user.entity.ts')
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'ormconfig.json'), './ormconfig.json')
-    } else {
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'database.ts'), './src/database/database.ts')
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'), './src/entities/user.model.ts')
-    }
   }
 
   installDependencies(): void {
     console.log('================= Installing dependencies ================='.yellow)
-    shell.exec('npm install')
+    shell.exec('npm install @graphql-tools/schema apollo-server-express bcrypt cors dotenv dotenv-parse-variables express graphql lodash')
+    shell.exec('npm install -D @types/bcrypt @types/express @types/lodash @types/node @types/dotenv-parse-variables ts-node tsc-watch typescript')
   }
 
-  init(dbType: DbType) {
+  init() {
     this.createDirStructure()
-    this.copyCode(dbType)
+    this.copyCode()
     this.installDependencies()
-    this.installDatabase(dbType)
   }
 
   makeModule(name: String): void {

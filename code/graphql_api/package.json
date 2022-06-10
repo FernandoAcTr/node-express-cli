@@ -3,17 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "dependencies": {
-    "@graphql-tools/schema": "latest",
-    "apollo-server-express": "latest",
-    "bcrypt": "latest",
-    "cors": "latest",
-    "dotenv": "latest",
-    "express": "latest",
-    "graphql": "latest",
-    "jsonwebtoken": "latest",
-    "lodash": "latest"
-  },
+  "dependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsc-watch --onSuccess \"node build/index\"",
@@ -24,14 +14,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "@types/bcrypt": "latest",
-    "@types/express": "latest",
-    "@types/jsonwebtoken": "latest",
-    "@types/lodash": "latest",
-    "@types/node": "latest",
-    "ts-node": "latest",
-    "tsc-watch": "latest",
-    "typescript": "latest"
-  }
+  "devDependencies": {}
 }

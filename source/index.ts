@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import inquirer from 'inquirer'
-import shell from 'shelljs'
 import { argv } from './plugins/yargs'
 import { ApiCodeGenerator } from './generators/api_code_generator'
 import { DbType } from './generators/code_generator'
@@ -29,25 +28,26 @@ async function init() {
     choices: Object.values(typeChoices),
   })
 
-  const database = await inquirer.prompt({
+  generate(type.resp)
+}
+
+function generate(typeProject: typeChoices) {
+  if (typeProject === typeChoices.API) {
+    apiGenerator.init()
+  } else if (typeProject === typeChoices.GRAPH) {
+    grapqlGenerator.init()
+  }
+}
+
+async function askForDatabase() {
+  const question = await inquirer.prompt({
     type: 'list',
-    name: 'resp',
+    name: 'database',
     message: 'Choose type of database',
     choices: Object.values(dbChoices),
   })
-
-  generate(type.resp, database.resp)
-}
-
-function generate(typeProject: typeChoices, database: dbChoices) {
-  const dbType = database === dbChoices.MONGO ? DbType.MONGO : DbType.TYPEORM
-
-  shell.exec('npm init -y')
-  if (typeProject === typeChoices.API) {
-    apiGenerator.init(dbType)
-  } else if (typeProject === typeChoices.GRAPH) {
-    grapqlGenerator.init(dbType)
-  }
+  const dbType = question.database === dbChoices.MONGO ? DbType.MONGO : DbType.TYPEORM
+  return dbType
 }
 
 async function makeModule() {
@@ -99,6 +99,11 @@ switch (command) {
   case 'install:socket':
     installSocket()
     break
+
+  case 'install:database':
+    askForDatabase().then((dbType) => {
+      cliGenerator.installDatabase(dbType)
+    })
   default:
     console.log('Please enter --help to see a list of commands')
 }
