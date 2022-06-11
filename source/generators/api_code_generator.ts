@@ -38,11 +38,11 @@ export class ApiCodeGenerator extends CodeGenerator {
   installDependencies(): void {
     console.log('================= Installing dependencies ================='.yellow)
     shell.exec(
-      'npm install app-root-path bcrypt cors dotenv dotenv-parse-variables express express-validator helmet module-alias morgan rate-limiter-flexible winston'
+      'yarn add app-root-path bcrypt cors dotenv dotenv-parse-variables express express-validator helmet module-alias morgan rate-limiter-flexible winston'
     )
 
     shell.exec(
-      'npm install -D npm install @types/app-root-path @types/bcrypt @types/cors @types/dotenv-parse-variables @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch typescript'
+      'yarn add -D @types/app-root-path @types/bcrypt @types/cors @types/dotenv-parse-variables @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch typescript'
     )
   }
 

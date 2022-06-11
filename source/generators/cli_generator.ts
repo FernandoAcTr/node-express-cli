@@ -7,7 +7,7 @@ import { DbType } from './code_generator'
 export class CliGenerator {
   installPrettier() {
     console.log('================= Installing Prettier ================='.yellow)
-    shell.exec('npm i -D prettier')
+    shell.exec('yarn add -D prettier')
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prettier'), './')
     shell.exec('npm set-script prettier:fix "prettier --config .prettierrc.json --write src/**/**/*.ts"')
@@ -16,7 +16,7 @@ export class CliGenerator {
   installEslint() {
     console.log('================= Installing Eslint ================='.yellow)
     shell.exec(
-      'npm install -D eslint eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin'
+      'yarn add -D eslint eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin'
     )
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'eslint'), './')
@@ -27,7 +27,7 @@ export class CliGenerator {
 
   installSocket() {
     console.log('================= Installing Socket.io ================='.yellow)
-    shell.exec('npm i socket.io')
+    shell.exec('yarn add socket.io')
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'socketio'), './src')
   }
@@ -35,7 +35,7 @@ export class CliGenerator {
   installDatabase(dbType: DbType): void {
     if (dbType === DbType.TYPEORM) {
       console.log('================= Installing ORM ================='.yellow)
-      shell.exec('npm i typeorm reflect-metadata')
+      shell.exec('yarn add typeorm reflect-metadata')
 
       shell.exec(
         'npm set-script typeorm "ts-node -r ./src/alias ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
@@ -57,14 +57,14 @@ export class CliGenerator {
         './src/database/datasources.ts'
       )
 
-      console.log('Please import package reflect-metadata at the top of your index.ts'.yellow)
-      console.log('You must install specific database driver like mysql or pg'.bgYellow)
+      console.log("Please add the line 'import reflect-metadata' at the top of your index.ts".green)
+      console.log('You must install specific database driver like mysql or pg'.green)
       console.log(
-        'You need to initialize the AppDataSource manually. A greet place is in start() method in your index.ts'.yellow
+        'You need to initialize the AppDataSource manually. A greet place is in start() method in your index.ts'.green
       )
     } else {
       console.log('================= Installing ORM ================='.yellow)
-      shell.exec('npm i mongoose')
+      shell.exec('yarn add mongoose')
 
       fs.mkdirSync('./src/models', {
         recursive: true,
@@ -75,14 +75,14 @@ export class CliGenerator {
         './src/database/database.ts'
       )
 
-      console.log('Now you need to import database.ts in your index.ts in order to connect with mongo'.yellow)
+      console.log('Now you need to import database.ts in your index.ts in order to connect with mongo'.green)
     }
   }
 
   installAuth(dbType: DbType) {
     console.log('================= Installing auth dependencies ================='.yellow)
-    shell.exec('npm i bcrypt passport passport-jwt jsonwebtoken')
-    shell.exec('npm i -D @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken')
+    shell.exec('yarn add bcrypt passport passport-jwt jsonwebtoken')
+    shell.exec('yarn add -D @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken')
 
     if (dbType === DbType.TYPEORM) {
       fs.copyFile(
@@ -110,7 +110,10 @@ export class CliGenerator {
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'auth'), './src/modules/auth')
     }
 
-    console.log("Now you need to add passport.initialize() and passport.use(JWTStrategy) in your middlewares section on index.ts".bgYellow)
-    console.log("You need to add auth module routes to the app router".green)
+    console.log(
+      'Now you need to add passport.initialize() and passport.use(JWTStrategy) in your middlewares section on index.ts'
+        .green
+    )
+    console.log('You need to add auth module routes to the app router'.green)
   }
 }

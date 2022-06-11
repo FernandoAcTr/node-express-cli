@@ -75,7 +75,7 @@ import './database/database';
 ```
 Es muy importante que las entidades de base de datos dentro del directorio src/entities/ terminen con extensión .entity.ts, de lo contrario no podrán ser accedidas por typeorm al realizar el proceso de introspección y se generará un error al arrancar el servidor. 
 
-Nota: TypeORM es solo un ORM, no instala la librería específica de postgres, mysql o cualquier otro manejador de base de datos. Para esto debes ejecutar el comando específico de la librería, como `npm install pg` o `npm install mysql`.
+Nota: TypeORM es solo un ORM, no instala la librería específica de postgres, mysql o cualquier otro manejador de base de datos. Para esto debes ejecutar el comando específico de la librería, como `yarn add pg` o `yarn add mysql`.
 
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, un servicio y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 

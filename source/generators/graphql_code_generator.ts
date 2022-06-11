@@ -41,8 +41,8 @@ export class GraphqlCodeGenerator extends CodeGenerator {
 
   installDependencies(): void {
     console.log('================= Installing dependencies ================='.yellow)
-    shell.exec('npm install @graphql-tools/schema apollo-server-express bcrypt cors dotenv dotenv-parse-variables express graphql lodash')
-    shell.exec('npm install -D @types/bcrypt @types/express @types/lodash @types/node @types/dotenv-parse-variables ts-node tsc-watch typescript')
+    shell.exec('yarn add @graphql-tools/schema apollo-server-express bcrypt cors dotenv dotenv-parse-variables express graphql lodash')
+    shell.exec('yarn add -D @types/bcrypt @types/express @types/lodash @types/node @types/dotenv-parse-variables ts-node tsc-watch typescript')
   }
 
   init() {

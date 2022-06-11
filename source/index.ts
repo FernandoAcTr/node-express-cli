@@ -29,6 +29,7 @@ async function init() {
   })
 
   generate(type.resp)
+  console.log("Cool! All ready. The next step is to create an .env file and run the command 'npm run dev'".green)
 }
 
 function generate(typeProject: typeChoices) {
