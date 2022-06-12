@@ -116,4 +116,20 @@ export class CliGenerator {
     )
     console.log('You need to add auth module routes to the app router'.green)
   }
+
+  installMailer() {
+    console.log('================= Installing Mail dependencies ================='.yellow)
+    shell.exec('yarn add handlebars nodemailer')
+    shell.exec('yarn add -D @types/nodemailer')
+
+    fs.copyFileSync(
+      path.resolve(__dirname, '..', '..', 'code', 'generated', 'mailer', 'mailer.ts'),
+      './src/helpers/mailer.ts'
+    )
+    fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mailer', 'templates'), './src/templates')
+    console.log(
+      "A new class called mailer has been installed inside helpers directory. You can use it to send emails and notifications via the notification template or create your own email's templates"
+        .green
+    )
+  }
 }

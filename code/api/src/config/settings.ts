@@ -16,4 +16,12 @@ export const settings = {
     NAME: env.DB_NAME,
     URI: env.DB_URI,
   },
+  MAILER: {
+    HOST: env.MAIL_HOST,
+    PORT: env.MAIL_PORT,
+    USERNAME: env.MAIL_USERNAME,
+    PASSWORD: env.MAIL_PASSWORD,
+    FROM_ADDRESS: env.MAIL_FROM_ADDRESS,
+    FROM_NAME: env.MAIL_FROM_NAME,
+  },
 }

@@ -115,6 +115,10 @@ switch (command) {
     })
     break
 
+  case 'install:mailer':
+    cliGenerator.installMailer()
+    break
+
   default:
     console.log('Please enter --help to see a list of commands')
 }

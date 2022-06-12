@@ -23,4 +23,7 @@ export const argv = yargs.options({
   'install:auth': {
     description: 'Add basic scaffolding to auth with jwt and passport',
   },
+  'install:mailer': {
+    description: 'Add support for send mails via nodemailer library',
+  },
 }).argv
