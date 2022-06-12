@@ -26,14 +26,6 @@ Cada una generará una configuración diferente en cuanto a middlewares y depend
 
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
 
-Nota: Para la plataforma Windows existe un pequeño bug al crear el proyecto: No se crea un script "dev". Se está trabajando en ello, pero si notas que no existe dicho script dentro del package.json puedes agregarlo manualmente copiando y pegando la siguiente línea.
-
-```
-"dev": "tsc-watch --onSuccess \"node build/index\""
-```
-
-Notarás además que el package.json está de manera minificada, en una sola línea, ocurre lo mismo con el archivo tsconfig.json. Ambos pueden ser formateados correctamente utilizado algun formateador de código como prettier.
-
 ## Estructura de directorios
 
 ![Estructura](./docs/img/estructura.png)
