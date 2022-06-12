@@ -77,6 +77,14 @@ Es muy importante que las entidades de base de datos dentro del directorio src/e
 
 Nota: TypeORM es solo un ORM, no instala la librería específica de postgres, mysql o cualquier otro manejador de base de datos. Para esto debes ejecutar el comando específico de la librería, como `yarn add pg` o `yarn add mysql`.
 
+### Migraciones
+Si utiliza TypeORM se agregarán 3 comandos nuevos al package.json
+- m:run
+- m:revert
+- m:generate  
+
+Cuya función es correr, revertir y generar migraciones, respectivamente. Si desea saber más acerca de las migraciones, visite la [documentación oficial](https://typeorm.io/migrations) de TypeORM
+
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, un servicio y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
 Para conectar las rutas de un módulo es necesario agregar el router del módulo al router principal del servidor, router.ts.
@@ -89,7 +97,7 @@ Para crear un módulo se utiliza el comando:
 ```
 node-express-cli make:module
 ```
-Cada que se crea un módulo debes asignarle un nombre y de qué tipo será: Rest, Web o GraphQL. Asegurate de seleccionar la misma opción que utilizaste para crear el proyecto, pues el módulo varia ligeramente entre cada tipo de configuración. 
+Cada que se crea un módulo debes asignarle un nombre y de qué tipo será: Rest o GraphQL. Asegurate de seleccionar la misma opción que utilizaste para crear el proyecto, pues el módulo varia ligeramente entre cada tipo de configuración. 
 
 ## Validación de Request
 El body de un request puede ser validado utilizando la librería [express-validator](https://www.npmjs.com/package/express-validator). 
@@ -127,7 +135,7 @@ Para ello utilizar el comando
 node-express-cli install:socket
 ```
 
-Es importante que esta acción se realice antes de personalizar el archivo principal del servidor index.ts, pues reemplazará todo su contenido con la nueva configuración para soportar el socket. 
+Es importante que esta acción se realice antes de personalizar el archivo principal del servidor index.ts, pues reemplazará todo su contenido con la nueva configuración para soportar el socket.
 
 ## Instalación de Prettier y ESlint
 La instalación de [Prettier](https://prettier.io/) y [ESlint](https://eslint.org/) se incluyen como opciones separadas para ofrecer una configuración más granular. 
@@ -146,6 +154,25 @@ Es posible instalar un módulo de autenticación con lo básico necesario para a
 Para instalarlo utiliza el comando `node-express-cli install:auth`.
 Esta acción creará un modelo básico de usuario, una estrategia de passport y un módulo de autenticación. 
 Solamente deberás agregar las rutas del módulo auth al router principal de la aplicación y crear/ejecutar las migraciones para la base de datos si estás utilizando TypeORM
+
+## Envío de Emails
+Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  
+Esta acción instalará una clase Mailer, dentro del directorio helpers, la cual tiene la lógina necesaria para envío de emails y notificaciones.  
+Se instala además un template básico html para las notificaciones, el cuál es compilado mediante handlebars. Un ejemplo de envío de una notificación es: 
+
+```
+Mailer.sendNotification({
+    to: 'joe@gmail.com',
+    subject: 'Asunto del mensaje',
+    atte: 'Foo Bar',
+    content: 'Contenido de la notificación',
+    greeting: 'Hola!',
+    action: {
+      title: 'Visita nuestro sitio',
+      url: 'http://www.my-site.com',
+    },
+})
+```
 
 ## Levantar el servidor 
 
