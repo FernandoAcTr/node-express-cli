@@ -8,6 +8,9 @@ export const argv = yargs.options({
   'make:module': {
     description: 'Generate a new resource module',
   },
+  'make:seeder': {
+    description: 'Generate a new seeder class',
+  },
   'install:prettier': {
     description: 'Add prettier to the project',
   },

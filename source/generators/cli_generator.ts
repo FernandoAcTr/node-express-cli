@@ -77,6 +77,22 @@ export class CliGenerator {
 
       console.log('Now you need to import database.ts in your index.ts in order to connect with mongo'.green)
     }
+
+    fs.mkdirSync('./src/database/seeds', {
+      recursive: true,
+    })
+
+    fs.copyFile(
+      path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'dbSeeder.ts'),
+      './src/database/seeds/dbSeeder.ts'
+    )
+
+    fs.copyFile(
+      path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seeder.ts'),
+      './src/database/seeds/seeder.ts'
+    )
+
+    shell.exec('npm set-script db:seed "ts-node ./src/database/seeds/dbSeeder.ts"')
   }
 
   installAuth(dbType: DbType) {
@@ -131,5 +147,17 @@ export class CliGenerator {
       "A new class called mailer has been installed inside helpers directory. You can use it to send emails and notifications via the notification template or create your own email's templates"
         .green
     )
+  }
+
+  makeSeeder(name: string) {
+    const filename = `${name[0].toLowerCase()}${name.substring(1)}.seeder.ts`
+    const seederName = `${name[0].toUpperCase()}${name.substring(1)}Seeder`
+
+    const seeder = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'dinamicSeeder.ts'))
+      .toString()
+      .replace(/__ClassName__/g, seederName)
+
+    fs.writeFileSync(`./src/database/seeds/${filename}`, seeder)
   }
 }

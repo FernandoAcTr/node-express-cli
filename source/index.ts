@@ -72,6 +72,16 @@ async function makeModule() {
     } else if (type.resp === typeChoices.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
 }
 
+async function makeSeeder() {
+  const seederName = await inquirer.prompt({
+    type: 'input',
+    name: 'resp',
+    message: 'Name of seeder:',
+  })
+
+  if (seederName.resp) cliGenerator.makeSeeder(seederName.resp)
+}
+
 async function installSocket() {
   const confirm = await inquirer.prompt({
     type: 'confirm',
@@ -117,6 +127,10 @@ switch (command) {
 
   case 'install:mailer':
     cliGenerator.installMailer()
+    break
+
+  case 'make:seeder':
+    makeSeeder()
     break
 
   default:
