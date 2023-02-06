@@ -97,7 +97,10 @@ export class CliGenerator {
         './src/database/sequelize-cli.json'
       )
 
-      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', '.sequelizerc'), './.sequelizerc')
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', '.sequelizerc'),
+        './.sequelizerc'
+      )
 
       console.log('You must install specific database driver like mysql2 or pg'.green)
       console.log(
@@ -200,5 +203,30 @@ export class CliGenerator {
       .replace(/__ClassName__/g, seederName)
 
     fs.writeFileSync(`./src/database/seeds/${filename}`, seeder)
+  }
+
+  makeEntity(name: String, dbType: DbType) {
+    const codeDirs = {
+      [DbType.MONGO]: 'mongo',
+      [DbType.TYPEORM]: 'typeorm',
+      [DbType.SEQUELIZE]: 'sequelize',
+    }
+    const codeDir = codeDirs[dbType]
+
+    const entityName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}`
+
+    if (dbType == DbType.MONGO) {
+      const model = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'model.ts'))
+        .toString()
+        .replace(/__EntityName__/g, entityName)
+      fs.writeFileSync(`./src/models/${name.toLowerCase()}.model.ts`, model)
+    } else {
+      const entity = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'entity.ts'))
+        .toString()
+        .replace(/__EntityName__/g, entityName)
+      fs.writeFileSync(`./src/entities/${name.toLowerCase()}.entity.ts`, entity)
+    }
   }
 }

@@ -3,7 +3,7 @@ import fs from 'fs'
 import inquirer from 'inquirer'
 import { argv } from './plugins/yargs'
 import { ApiCodeGenerator } from './generators/api_code_generator'
-import { DbType, ProjectType } from './generators/code_generator';
+import { DbType, ProjectType } from './generators/code_generator'
 import { CliGenerator } from './generators/cli_generator'
 import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
 
@@ -79,6 +79,16 @@ async function makeSeeder() {
   if (seederName.resp) cliGenerator.makeSeeder(seederName.resp)
 }
 
+async function makeEntity() {
+  const entityName = await inquirer.prompt({
+    type: 'input',
+    name: 'resp',
+    message: 'Name of entity:',
+  })
+  const config = getConfig()
+  if (entityName.resp) cliGenerator.makeEntity(entityName.resp, config.orm)
+}
+
 async function installSocket() {
   const confirm = await inquirer.prompt({
     type: 'confirm',
@@ -127,6 +137,10 @@ switch (command) {
 
   case 'make:seeder':
     makeSeeder()
+    break
+
+  case 'make:entity':
+    makeEntity()
     break
 
   default:

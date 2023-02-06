@@ -11,6 +11,9 @@ export const argv = yargs.options({
   'make:seeder': {
     description: 'Generate a new seeder class',
   },
+  'make:entity': {
+    description: 'Generate a new entity class',
+  },
   'install:prettier': {
     description: 'Add prettier to the project',
   },
