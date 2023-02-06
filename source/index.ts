@@ -3,23 +3,13 @@ import fs from 'fs'
 import inquirer from 'inquirer'
 import { argv } from './plugins/yargs'
 import { ApiCodeGenerator } from './generators/api_code_generator'
-import { DbType } from './generators/code_generator'
+import { DbType, ProjectType } from './generators/code_generator';
 import { CliGenerator } from './generators/cli_generator'
 import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
 
 const apiGenerator = new ApiCodeGenerator()
 const grapqlGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
-
-enum typeChoices {
-  API = 'REST API',
-  GRAPH = 'GraphQL API',
-}
-
-enum dbChoices {
-  MONGO = 'Mongoose',
-  TYPEORM = 'TypeOrm',
-}
 
 const getConfig = () => JSON.parse(fs.readFileSync('cli.config.json').toString())
 const writeConfig = (config: any) => fs.writeFileSync('cli.config.json', JSON.stringify(config))
@@ -29,17 +19,17 @@ async function init() {
     type: 'list',
     name: 'resp',
     message: 'Choose type of project',
-    choices: Object.values(typeChoices),
+    choices: Object.values(ProjectType),
   })
 
   generate(type.resp)
   console.log("Cool! All ready. The next step is to create an .env file and run the command 'npm run dev'".green)
 }
 
-function generate(typeProject: typeChoices) {
-  if (typeProject === typeChoices.API) {
+function generate(typeProject: ProjectType) {
+  if (typeProject === ProjectType.API) {
     apiGenerator.init()
-  } else if (typeProject === typeChoices.GRAPH) {
+  } else if (typeProject === ProjectType.GRAPH) {
     grapqlGenerator.init()
   }
 
@@ -53,15 +43,14 @@ async function askForDatabase() {
     type: 'list',
     name: 'database',
     message: 'Choose an ORM',
-    choices: Object.values(dbChoices),
+    choices: Object.values(DbType),
   })
-  const dbType = question.database === dbChoices.MONGO ? DbType.MONGO : DbType.TYPEORM
 
   const config = getConfig()
-  config.orm = dbType
+  config.orm = question.database
   writeConfig(config)
 
-  return dbType
+  return question.database
 }
 
 async function makeModule() {
@@ -73,11 +62,11 @@ async function makeModule() {
   })
 
   if (moduleName.resp)
-    if (config.project === typeChoices.API) {
+    if (config.project === ProjectType.API) {
       const config = getConfig()
       const dbType = config.orm
       apiGenerator.makeModule(moduleName.resp, dbType)
-    } else if (config.project === typeChoices.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
+    } else if (config.project === ProjectType.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
 }
 
 async function makeSeeder() {

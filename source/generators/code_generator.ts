@@ -1,6 +1,12 @@
 export enum DbType {
-  MONGO = 'mongo',
+  MONGO = 'mongoose',
   TYPEORM = 'typeorm',
+  SEQUELIZE = 'sequelize',
+}
+
+export enum ProjectType {
+  API = 'REST API',
+  GRAPH = 'GraphQL API',
 }
 
 export abstract class CodeGenerator {

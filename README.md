@@ -31,7 +31,7 @@ tipo de proyecto y orm.
 ```
 {
   "project": "GraphQL API", -> opciones disponibles:  REST API | GraphQL API
-  "orm": "mongo", -> opciones disponibles: mongo | typeorm
+  "orm": "mongo", -> opciones disponibles: mongoose | typeorm | sequelize
 }
 ```
 

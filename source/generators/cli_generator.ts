@@ -33,8 +33,9 @@ export class CliGenerator {
   }
 
   installDatabase(dbType: DbType): void {
+    console.log('================= Installing ORM ================='.yellow)
+
     if (dbType === DbType.TYPEORM) {
-      console.log('================= Installing ORM ================='.yellow)
       shell.exec('yarn add typeorm reflect-metadata')
 
       shell.exec(
@@ -62,8 +63,7 @@ export class CliGenerator {
       console.log(
         'You need to initialize the AppDataSource manually. A greet place is in start() method in your index.ts'.green
       )
-    } else {
-      console.log('================= Installing ORM ================='.yellow)
+    } else if (dbType === DbType.MONGO) {
       shell.exec('yarn add mongoose')
 
       fs.mkdirSync('./src/models', {
@@ -76,6 +76,35 @@ export class CliGenerator {
       )
 
       console.log('Now you need to import database.ts in your index.ts in order to connect with mongo'.green)
+    } else if (dbType === DbType.SEQUELIZE) {
+      shell.exec('yarn add sequelize')
+
+      fs.mkdirSync('./src/entities', {
+        recursive: true,
+      })
+
+      fs.mkdirSync('./src/database/migrations', {
+        recursive: true,
+      })
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'datasources.ts'),
+        './src/database/datasources.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'sequelize-cli.json'),
+        './src/database/sequelize-cli.json'
+      )
+
+      fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', '.sequelizerc'), './.sequelizerc')
+
+      console.log('You must install specific database driver like mysql2 or pg'.green)
+      console.log(
+        `You can use the .authenticate() function to test if the connection is OK. A greet place is in start() method in your index.ts`
+          .green
+      )
+      console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
     }
 
     fs.mkdirSync('./src/database/seeds', {
@@ -112,7 +141,7 @@ export class CliGenerator {
       )
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'auth'), './src/modules/auth')
-    } else {
+    } else if (dbType == DbType.MONGO) {
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'),
         './src/models/user.model.ts'
@@ -124,6 +153,18 @@ export class CliGenerator {
       )
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'auth'), './src/modules/auth')
+    } else if (dbType === DbType.SEQUELIZE) {
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'user.entity.ts'),
+        './src/entities/user.entity.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'passport.ts'),
+        './src/middlewares/passport.ts'
+      )
+
+      fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'auth'), './src/modules/auth')
     }
 
     console.log(

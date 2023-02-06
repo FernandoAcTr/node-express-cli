@@ -55,7 +55,12 @@ export class ApiCodeGenerator extends CodeGenerator {
   makeModule(name: String, dbType: DbType): void {
     const dir = `./src/modules/${name.toLowerCase()}`
     const servicesDir = `./src/modules/${name.toLowerCase()}/services`
-    const codeDir = dbType == DbType.MONGO ? 'mongo' : 'typeorm'
+    const codeDirs = {
+      [DbType.MONGO]: 'mongo',
+      [DbType.TYPEORM]: 'typeorm',
+      [DbType.SEQUELIZE]: 'sequelize',
+    }
+    const codeDir = codeDirs[dbType]
 
     fs.mkdirSync(dir, {
       recursive: true,
