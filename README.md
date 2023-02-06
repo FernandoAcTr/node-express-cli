@@ -17,7 +17,7 @@ Lo primero que debes ejecutar es el comando `npm install -g node-express-cli` pa
 node-express-cli init
 ```
 
-Existen 3 opciones para generar el proyecto:
+Existen 2 opciones para generar el proyecto:
 
 - API Rest
 - GraphQL
@@ -25,6 +25,15 @@ Existen 3 opciones para generar el proyecto:
 Cada una generará una configuración diferente en cuanto a middlewares y dependencias de desarrollo. Además la manera en que se configura el archivo index.ts del servidor es diferente para cada una.
 
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
+
+El proyecto ahora incluye y debe incluir un archivo llamado cli.config.json con las opciones seleccionadas para 
+tipo de proyecto y orm. 
+```
+{
+  "project": "GraphQL API", -> opciones disponibles:  REST API | GraphQL API
+  "orm": "mongo", -> opciones disponibles: mongo | typeorm
+}
+```
 
 ## Estructura de directorios
 
