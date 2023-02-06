@@ -1,9 +1,5 @@
-export class __EntityName__Repository {
-  async store(body: any): Promise<Object> {
-    return {}
-  }
-
-  async findOne(): Promise<Object> {
+export class __ServiceName__Service {
+  async findOne(id: any): Promise<Object> {
     return {}
   }
 
@@ -15,7 +11,15 @@ export class __EntityName__Repository {
     return {}
   }
 
+  async store(body: any): Promise<Object> {
+    return {}
+  }
+
   async destroy(id: any): Promise<Object> {
+    return {}
+  }
+
+  async delete(id: any): Promise<Object> {
     return {}
   }
 }

@@ -1,10 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import {
-  __ServiceName__Destroyer,
-  __ServiceName__Finder,
-  __ServiceName__Saver,
-  __ServiceName__Updater,
-} from './services'
+import { __ServiceName__Service } from './services'
 
 /**
  * Return all entities
@@ -13,7 +8,7 @@ import {
  * @param next
  */
 export async function index(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const finder = new __ServiceName__Finder()
+  const finder = new __ServiceName__Service()
 }
 
 /**
@@ -24,7 +19,7 @@ export async function index(req: Request, res: Response, next: NextFunction): Pr
  */
 export async function show(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { id } = req.params
-  const finder = new __ServiceName__Finder()
+  const finder = new __ServiceName__Service()
 }
 
 /**
@@ -34,7 +29,7 @@ export async function show(req: Request, res: Response, next: NextFunction): Pro
  * @param next
  */
 export async function store(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const saver = new __ServiceName__Saver()
+  const saver = new __ServiceName__Service()
 }
 
 /**
@@ -45,7 +40,7 @@ export async function store(req: Request, res: Response, next: NextFunction): Pr
  */
 export async function update(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { id } = req.params
-  const updater = new __ServiceName__Updater()
+  const updater = new __ServiceName__Service()
 }
 
 /**
@@ -56,5 +51,5 @@ export async function update(req: Request, res: Response, next: NextFunction): P
  */
 export async function destroy(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { id } = req.params
-  const destroyer = new __ServiceName__Destroyer()
+  const destroyer = new __ServiceName__Service()
 }

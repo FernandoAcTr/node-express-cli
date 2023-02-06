@@ -88,37 +88,13 @@ export class ApiCodeGenerator extends CodeGenerator {
     fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
 
     //services
-    const destroyer = fs
+    const service = fs
       .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service_destroyer.ts')
+        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service.ts')
       )
       .toString()
       .replace('__ServiceName__', serviceName)
-    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_destroyer.ts`, destroyer)
-
-    const finder = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service_finder.ts')
-      )
-      .toString()
-      .replace('__ServiceName__', serviceName)
-    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_finder.ts`, finder)
-
-    const saver = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service_saver.ts')
-      )
-      .toString()
-      .replace('__ServiceName__', serviceName)
-    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_saver.ts`, saver)
-
-    const updater = fs
-      .readFileSync(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service_updater.ts')
-      )
-      .toString()
-      .replace('__ServiceName__', serviceName)
-    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}_updater.ts`, updater)
+    fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}.service.ts`, service)
 
     const index = fs
       .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'index.ts'))
