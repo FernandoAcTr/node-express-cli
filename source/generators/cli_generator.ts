@@ -78,6 +78,12 @@ export class CliGenerator {
       console.log('Now you need to import database.ts in your index.ts in order to connect with mongo'.green)
     } else if (dbType === DbType.SEQUELIZE) {
       shell.exec('yarn add sequelize')
+      shell.exec('yarn add -D sequelize-cli')
+
+      shell.exec('npm set-script db:migrate "npx sequelize-cli db:migrate"')
+      shell.exec('npm set-script db:migrate:undo "npx sequelize-cli db:migrate:undo"')
+      shell.exec('npm set-script db:migrate:fresh "npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
+      shell.exec('npm set-script db:make:migration "npx sequelize-cli migration:generate"')
 
       fs.mkdirSync('./src/entities', {
         recursive: true,
@@ -167,6 +173,11 @@ export class CliGenerator {
         './src/middlewares/passport.ts'
       )
 
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', '20230216034845-users.js'),
+        './src/database/migrations/20230216034845-users.js'
+      )
+
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'auth'), './src/modules/auth')
     }
 
@@ -175,6 +186,7 @@ export class CliGenerator {
         .green
     )
     console.log('You need to add auth module routes to the app router'.green)
+    console.log('You need to run the database migrations. Depending on the ORM you chose it is necessary to run an specific command'.green)
   }
 
   installMailer() {
