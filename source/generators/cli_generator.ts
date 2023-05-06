@@ -10,7 +10,7 @@ export class CliGenerator {
     shell.exec('yarn add -D prettier')
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prettier'), './')
-    shell.exec('npm set-script prettier:fix "prettier --config .prettierrc.json --write src/**/**/*.ts"')
+    shell.exec('npm pkg set scripts.prettier:fix="prettier --config .prettierrc.json --write src/**/**/*.ts"')
   }
 
   installEslint() {
@@ -21,8 +21,8 @@ export class CliGenerator {
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'eslint'), './')
 
-    shell.exec('npm set-script lint "eslint . --ext .ts"')
-    shell.exec('npm set-script lint:fix "eslint . --ext .ts --fix"')
+    shell.exec('npm pkg set scripts.lint="eslint . --ext .ts"')
+    shell.exec('npm pkg set scripts.lint:fix="eslint . --ext .ts --fix"')
   }
 
   installSocket() {
@@ -34,16 +34,31 @@ export class CliGenerator {
 
   installDatabase(dbType: DbType): void {
     console.log('================= Installing ORM ================='.yellow)
+    shell.exec('yarn add @faker-js/faker')
+    shell.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
+
+    fs.mkdirSync('./src/database/seeds', {
+      recursive: true,
+    })
+
+    fs.mkdirSync('./src/database/factories', {
+      recursive: true,
+    })
+
+    fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seed.ts'), './src/database/seed.ts')
 
     if (dbType === DbType.TYPEORM) {
       shell.exec('yarn add typeorm reflect-metadata')
 
       shell.exec(
-        'npm set-script typeorm "ts-node -r ./src/alias ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
+        'npm pkg set scripts.typeorm="ts-node -r ./src/alias ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
       )
-      shell.exec('npm set-script m:run "npm run typeorm migration:run"')
-      shell.exec('npm set-script m:revert "npm run typeorm migration:revert"')
-      shell.exec('npm set-script m:generate "npm run typeorm migration:generate"')
+      shell.exec('npm pkg set scripts.m:run="npm run typeorm migration:run"')
+      shell.exec('npm pkg set scripts.m:revert="npm run typeorm migration:revert"')
+      shell.exec('npm pkg set scripts.m:generate="npm run typeorm migration:generate"')
+      shell.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
+      shell.exec('npm pkg set scripts.m:drop="npm run typeorm schema:drop"')
+      shell.exec('npm pkg set scripts.m:run:fresh="npm run m:drop && npm run m:run && npm run db:seed"')
 
       fs.mkdirSync('./src/entities', {
         recursive: true,
@@ -56,6 +71,26 @@ export class CliGenerator {
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'datasources.ts'),
         './src/database/datasources.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'seeder.ts'),
+        './src/database/seeder.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'seed.entity.ts'),
+        './src/entities/seed.entity.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '0000000000000-seeds.ts'),
+        './src/database/migrations/0000000000000-seeds.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', 'index.ts'),
+        './src/database/migrations/index.ts'
       )
 
       console.log("Please add the line 'import reflect-metadata' at the top of your index.ts".green)
@@ -80,10 +115,12 @@ export class CliGenerator {
       shell.exec('yarn add sequelize')
       shell.exec('yarn add -D sequelize-cli')
 
-      shell.exec('npm set-script db:migrate "npx sequelize-cli db:migrate"')
-      shell.exec('npm set-script db:migrate:undo "npx sequelize-cli db:migrate:undo"')
-      shell.exec('npm set-script db:migrate:fresh "npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
-      shell.exec('npm set-script db:make:migration "npx sequelize-cli migration:generate"')
+      shell.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
+      shell.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
+      shell.exec(
+        'npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"'
+      )
+      shell.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate"')
 
       fs.mkdirSync('./src/entities', {
         recursive: true,
@@ -115,22 +152,6 @@ export class CliGenerator {
       )
       console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
     }
-
-    fs.mkdirSync('./src/database/seeds', {
-      recursive: true,
-    })
-
-    fs.copyFile(
-      path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'dbSeeder.ts'),
-      './src/database/seeds/dbSeeder.ts'
-    )
-
-    fs.copyFile(
-      path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seeder.ts'),
-      './src/database/seeds/seeder.ts'
-    )
-
-    shell.exec('npm set-script db:seed "ts-node ./src/database/seeds/dbSeeder.ts"')
   }
 
   installAuth(dbType: DbType) {
@@ -140,8 +161,16 @@ export class CliGenerator {
 
     if (dbType === DbType.TYPEORM) {
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'user.entity.ts'),
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'user.entity.ts'),
         './src/entities/user.entity.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'token.entity.ts'),
+        './src/entities/token.entity.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'role.entity.ts'),
+        './src/entities/role.entity.ts'
       )
 
       fs.copyFile(
@@ -150,6 +179,27 @@ export class CliGenerator {
       )
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'auth'), './src/modules/auth')
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '1677294697210-users.ts'),
+        './src/database/migrations/1677294697210-users.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '1677304667455-tokens.ts'),
+        './src/database/migrations/1677304667455-tokens.ts'
+      )
+      fs.copyFile(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'generated',
+          'typeorm',
+          'migrations',
+          '1677458918277-reset-password-tokens.ts'
+        ),
+        './src/database/migrations/1677458918277-reset-password-tokens.ts'
+      )
     } else if (dbType == DbType.MONGO) {
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'),
@@ -186,7 +236,10 @@ export class CliGenerator {
         .green
     )
     console.log('You need to add auth module routes to the app router'.green)
-    console.log('You need to run the database migrations. Depending on the ORM you chose it is necessary to run an specific command'.green)
+    console.log(
+      'You need to run the database migrations. Depending on the ORM you chose it is necessary to run an specific command'
+        .green
+    )
   }
 
   installMailer() {
@@ -210,7 +263,7 @@ export class CliGenerator {
     const seederName = `${name[0].toUpperCase()}${name.substring(1)}Seeder`
 
     const seeder = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'dinamicSeeder.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seedTemplate.ts'))
       .toString()
       .replace(/__ClassName__/g, seederName)
 

@@ -26,3 +26,14 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     next(error)
   }
 }
+
+export async function refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const authService = new AuthService()
+
+  try {
+    const token = await authService.refreshToken(req.user.id! as any)
+    res.json(token)
+  } catch (error) {
+    next(error)
+  }
+}

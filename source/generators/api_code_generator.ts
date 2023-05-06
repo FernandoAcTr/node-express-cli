@@ -33,6 +33,7 @@ export class ApiCodeGenerator extends CodeGenerator {
 
   copyCode(): void {
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'api'), './')
+    fs.rename('./gitignore', './.gitignore')
   }
 
   installDependencies(): void {

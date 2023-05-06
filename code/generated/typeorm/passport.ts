@@ -1,7 +1,9 @@
-import { Strategy, ExtractJwt, StrategyOptions } from 'passport-jwt'
+import passport from 'passport'
+import jwt from 'jsonwebtoken'
+import { NextFunction, Request, Response } from 'express'
+import { Strategy, ExtractJwt } from 'passport-jwt'
 import { settings } from '@config/settings'
-import { User } from '@entities/user.entity'
-import { AppDataSource } from '@database/datasources'
+import { HTTPError, UnauthorizedError } from './error_handler'
 
 export const JWTStrategy = new Strategy(
   {
@@ -10,12 +12,39 @@ export const JWTStrategy = new Strategy(
   },
   async (payload, done) => {
     try {
-      const user = await AppDataSource.getRepository(User).findOne({ where: { user_id: payload.user_id } })
-      if (user) return done(null, user)
-
-      return done(null, false)
+      return done(null, { id: payload.user_id })
     } catch (error) {
       done(error, false)
     }
   }
 )
+
+export const authenticate = (req: Request, res: Response, next: NextFunction) =>
+  passport.authenticate('jwt', { session: false }, (error, user, info, status) => {
+    if (info?.message == 'jwt expired') throw new HTTPError(401, 'Expired')
+
+    if (!user) throw new UnauthorizedError()
+
+    req.user = user
+    next()
+  })(req, res, next)
+
+export const authenticateRefresh = (req: Request, res: Response, next: NextFunction) =>
+  passport.authenticate('jwt', { session: false }, async (error, user, info, status) => {
+    try {
+      if (info?.message == 'No auth token') throw new HTTPError(401, 'Unauthorized')
+
+      if (info?.message == 'jwt expired') {
+        const token = req.headers['authorization']?.split(' ')[1]
+        const payload: any = jwt.verify(token!, settings.SECRET, { ignoreExpiration: true })
+
+        req.user = { id: payload.user_id }
+        return next()
+      }
+
+      req.user = user
+      next()
+    } catch (error) {
+      next(error)
+    }
+  })(req, res, next)

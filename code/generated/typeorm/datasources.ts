@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm'
 import { settings } from '@config/settings'
-import path from 'path'
+import migrations from './migrations'
 
 const { DB } = settings
 
@@ -13,6 +13,6 @@ export const AppDataSource = new DataSource({
   database: DB.NAME,
   synchronize: false,
   logging: false,
-  entities: [path.resolve(__dirname, '..') + '/entities/*.{js,ts}'],
-  migrations: [__dirname + '/migrations/*.{js,ts}'],
+  entities: [],
+  migrations: migrations,
 })

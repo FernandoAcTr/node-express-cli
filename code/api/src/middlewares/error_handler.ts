@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import logger from '@helpers/logger'
 
-export class ErrorHandler extends Error {
+export class HTTPError extends Error {
   statusCode: number
   message: string
 
@@ -11,9 +11,14 @@ export class ErrorHandler extends Error {
     this.message = message
   }
 }
+export class UnauthorizedError extends HTTPError {
+  constructor() {
+    super(401, 'Unauthorized')
+  }
+}
 
-export const handleErrorMiddleware = (err: ErrorHandler | Error, req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof ErrorHandler) {
+export const handleErrorMiddleware = (err: HTTPError | Error, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof HTTPError) {
     const { statusCode, message } = err
     logger.error(`Error ${statusCode}: ${message}`)
     res.status(statusCode).json({
@@ -21,7 +26,7 @@ export const handleErrorMiddleware = (err: ErrorHandler | Error, req: Request, r
       message,
     })
   } else {
-    logger.error(`Error de servidor ${err}`)
+    logger.error(`Server Error ${err}`)
     res.status(500).json({
       statusCode: 500,
       message: 'Internal Server Error',

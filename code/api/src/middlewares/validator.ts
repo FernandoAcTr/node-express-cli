@@ -9,6 +9,7 @@ export function validateBody(req: Request, res: Response, next: NextFunction) {
   if (!errors.isEmpty()) {
     return res.status(400).json({
       errors: arrayErrors,
+      message: arrayErrors[0]?.msg,
     })
   }
 
