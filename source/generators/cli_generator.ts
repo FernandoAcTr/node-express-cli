@@ -34,6 +34,21 @@ export class CliGenerator {
 
   installDatabase(dbType: DbType): void {
     console.log('================= Installing ORM ================='.yellow)
+    shell.exec('yarn add @faker-js/faker')
+    shell.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
+
+    fs.mkdirSync('./src/database/seeds', {
+      recursive: true,
+    })
+
+    fs.mkdirSync('./src/database/factories', {
+      recursive: true,
+    })
+
+    fs.copyFile(
+      path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seed.ts'),
+      './src/database/seed.ts'
+    )
 
     if (dbType === DbType.TYPEORM) {
       shell.exec('yarn add typeorm reflect-metadata')
@@ -61,6 +76,16 @@ export class CliGenerator {
         './src/database/datasources.ts'
       )
 
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'seeder.ts'),
+        './src/database/seeder.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '0000000000000-seeds.ts'),
+        './src/database/migrations/0000000000000-seeds.ts'
+      )
+
       console.log("Please add the line 'import reflect-metadata' at the top of your index.ts".green)
       console.log('You must install specific database driver like mysql or pg'.green)
       console.log(
@@ -85,7 +110,9 @@ export class CliGenerator {
 
       shell.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
       shell.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
-      shell.exec('npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
+      shell.exec(
+        'npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"'
+      )
       shell.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate"')
 
       fs.mkdirSync('./src/entities', {
@@ -118,22 +145,6 @@ export class CliGenerator {
       )
       console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
     }
-
-    fs.mkdirSync('./src/database/seeds', {
-      recursive: true,
-    })
-
-    fs.copyFile(
-      path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'dbSeeder.ts'),
-      './src/database/seeds/dbSeeder.ts'
-    )
-
-    fs.copyFile(
-      path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seeder.ts'),
-      './src/database/seeds/seeder.ts'
-    )
-
-    shell.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
   }
 
   installAuth(dbType: DbType) {
@@ -189,7 +200,10 @@ export class CliGenerator {
         .green
     )
     console.log('You need to add auth module routes to the app router'.green)
-    console.log('You need to run the database migrations. Depending on the ORM you chose it is necessary to run an specific command'.green)
+    console.log(
+      'You need to run the database migrations. Depending on the ORM you chose it is necessary to run an specific command'
+        .green
+    )
   }
 
   installMailer() {

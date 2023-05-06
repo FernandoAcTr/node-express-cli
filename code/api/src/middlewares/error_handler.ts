@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import logger from '@helpers/logger'
 
-export class ErrorHandler extends Error {
+export class HTTPError extends Error {
   statusCode: number
   message: string
 
@@ -11,8 +11,13 @@ export class ErrorHandler extends Error {
     this.message = message
   }
 }
+export class UnauthorizedError extends HTTPError {
+  constructor() {
+    super(401, 'Unauthorized')
+  }
+}
 
-export const handleErrorMiddleware = (err: ErrorHandler | Error, req: Request, res: Response, next: NextFunction) => {
+export const handleErrorMiddleware = (err: HTTPError | Error, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof ErrorHandler) {
     const { statusCode, message } = err
     logger.error(`Error ${statusCode}: ${message}`)

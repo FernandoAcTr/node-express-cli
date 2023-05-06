@@ -1,10 +1,10 @@
-import { Seeder } from './seeder'
+import { Seed } from './seed'
 import logger from '@helpers/logger'
 
-export class __ClassName__ implements Seeder {
-  seed(): Promise<void> {
-    logger.info('Seeding __ClassName__')
+export class __ClassName__ implements Seed {
+  name: string = ''
 
+  seed(): Promise<void> {
     throw new Error('Method not implemented.')
   }
 }

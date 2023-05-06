@@ -3,27 +3,20 @@ import express from 'express'
 import morgan from 'morgan'
 import cors from 'cors'
 import helmet from 'helmet'
-import { rateLimiterMiddleware } from './middlewares/rate_limiter'
-import { handleErrorMiddleware } from './middlewares/error_handler'
 import logger from './helpers/logger'
-
-//importing routes
 import routes from './router'
-
-//importing configs
+import { rateLimiterMiddleware } from './middlewares/rate_limiter'
 import { settings } from './config/settings'
+import { handleErrorMiddleware } from './middlewares/error_handler'
 
 class Server {
   public app: express.Application
 
   constructor() {
     this.app = express()
-    this.config()
     this.middlewares()
     this.routes()
   }
-
-  config() {}
 
   middlewares() {
     this.app.use(morgan('[:date[iso]] (:status) ":method :url HTTP/:http-version" :response-time ms - [:res[content-length]]'))

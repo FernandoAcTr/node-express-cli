@@ -8,7 +8,7 @@ import { settings } from '@config/settings'
 
 export class AuthService {
   private readonly repository: Repository<User>
-  private passwordEncrypter: PasswordEncrypter
+  private readonly passwordEncrypter: PasswordEncrypter
 
   constructor() {
     this.repository = AppDataSource.getRepository(User)
@@ -43,7 +43,7 @@ export class AuthService {
   }
 
   private createToken(user: User) {
-    return jwt.sign({ user_id: user.user_id }, settings.SECRET, {
+    return jwt.sign({ user_id: user.id }, settings.SECRET, {
       expiresIn: 86400,
     })
   }
