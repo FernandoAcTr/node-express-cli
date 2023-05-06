@@ -6,6 +6,7 @@ if (env.error) console.log(env.error)
 env = dotenvParseVariables(env.parsed!)
 
 export const settings = {
+  ENV: env.ENV || 'develop',
   PORT: env.PORT || 3000,
   SECRET: env.SECRET || 'somesecrettoken',
   DB: {
@@ -14,7 +15,6 @@ export const settings = {
     HOST: env.DB_HOST,
     PORT: env.DB_PORT,
     NAME: env.DB_NAME,
-    URI: env.DB_URI,
   },
   MAILER: {
     HOST: env.MAIL_HOST,
