@@ -45,10 +45,7 @@ export class CliGenerator {
       recursive: true,
     })
 
-    fs.copyFile(
-      path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seed.ts'),
-      './src/database/seed.ts'
-    )
+    fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seed.ts'), './src/database/seed.ts')
 
     if (dbType === DbType.TYPEORM) {
       shell.exec('yarn add typeorm reflect-metadata')
@@ -79,6 +76,11 @@ export class CliGenerator {
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'seeder.ts'),
         './src/database/seeder.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'seed.entity.ts'),
+        './src/entities/seed.entity.ts'
       )
 
       fs.copyFile(
@@ -154,8 +156,16 @@ export class CliGenerator {
 
     if (dbType === DbType.TYPEORM) {
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'user.entity.ts'),
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'user.entity.ts'),
         './src/entities/user.entity.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'token.entity.ts'),
+        './src/entities/token.entity.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'role.entity.ts'),
+        './src/entities/role.entity.ts'
       )
 
       fs.copyFile(
@@ -164,6 +174,27 @@ export class CliGenerator {
       )
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'auth'), './src/modules/auth')
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '1677294697210-users.ts'),
+        './src/database/migrations/1677294697210-users.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '1677304667455-tokens.ts'),
+        './src/database/migrations/1677304667455-tokens.ts'
+      )
+      fs.copyFile(
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'generated',
+          'typeorm',
+          'migrations',
+          '1677458918277-reset-password-tokens.ts'
+        ),
+        './src/database/migrations/1677458918277-reset-password-tokens.ts'
+      )
     } else if (dbType == DbType.MONGO) {
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'),
@@ -227,7 +258,7 @@ export class CliGenerator {
     const seederName = `${name[0].toUpperCase()}${name.substring(1)}Seeder`
 
     const seeder = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'dinamicSeeder.ts'))
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seedTemplate.ts'))
       .toString()
       .replace(/__ClassName__/g, seederName)
 

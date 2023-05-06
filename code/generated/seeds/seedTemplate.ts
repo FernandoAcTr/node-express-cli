@@ -1,6 +1,4 @@
 import { Seed } from './seed'
-import logger from '@helpers/logger'
-
 export class __ClassName__ implements Seed {
   name: string = ''
 

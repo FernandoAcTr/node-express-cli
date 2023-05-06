@@ -42,6 +42,14 @@ export class AuthService {
     return { user: dbUser, token: token }
   }
 
+  async refreshToken(user_id: number) {
+    const user = await User.findOneOrFail({ where: { id: user_id } })
+
+    const token = this.createToken(user)
+
+    return { token }
+  }
+
   private createToken(user: User) {
     return jwt.sign({ user_id: user.id }, settings.SECRET, {
       expiresIn: 86400,
