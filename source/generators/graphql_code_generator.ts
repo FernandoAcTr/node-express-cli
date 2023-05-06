@@ -37,6 +37,7 @@ export class GraphqlCodeGenerator extends CodeGenerator {
 
   copyCode(): void {
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'graphql_api'), './')
+    fs.rename('./gitignore', './.gitignore')
   }
 
   installDependencies(): void {
