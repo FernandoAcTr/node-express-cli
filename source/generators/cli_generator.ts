@@ -10,7 +10,7 @@ export class CliGenerator {
     shell.exec('yarn add -D prettier')
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prettier'), './')
-    shell.exec('npm set-script prettier:fix "prettier --config .prettierrc.json --write src/**/**/*.ts"')
+    shell.exec('npm pkg set scripts.prettier:fix="prettier --config .prettierrc.json --write src/**/**/*.ts"')
   }
 
   installEslint() {
@@ -21,8 +21,8 @@ export class CliGenerator {
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'eslint'), './')
 
-    shell.exec('npm set-script lint "eslint . --ext .ts"')
-    shell.exec('npm set-script lint:fix "eslint . --ext .ts --fix"')
+    shell.exec('npm pkg set scripts.lint="eslint . --ext .ts"')
+    shell.exec('npm pkg set scripts.lint:fix="eslint . --ext .ts --fix"')
   }
 
   installSocket() {
@@ -39,11 +39,14 @@ export class CliGenerator {
       shell.exec('yarn add typeorm reflect-metadata')
 
       shell.exec(
-        'npm set-script typeorm "ts-node -r ./src/alias ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
+        'npm pkg set scripts.typeorm="ts-node -r ./src/alias ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
       )
-      shell.exec('npm set-script m:run "npm run typeorm migration:run"')
-      shell.exec('npm set-script m:revert "npm run typeorm migration:revert"')
-      shell.exec('npm set-script m:generate "npm run typeorm migration:generate"')
+      shell.exec('npm pkg set scripts.m:run="npm run typeorm migration:run"')
+      shell.exec('npm pkg set scripts.m:revert="npm run typeorm migration:revert"')
+      shell.exec('npm pkg set scripts.m:generate="npm run typeorm migration:generate"')
+      shell.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
+      shell.exec('npm pkg set scripts.m:drop="npm run typeorm schema:drop"')
+      shell.exec('npm pkg set scripts.m:run:fresh="npm run m:drop && npm run m:run && npm run db:seed"')
 
       fs.mkdirSync('./src/entities', {
         recursive: true,
@@ -80,10 +83,10 @@ export class CliGenerator {
       shell.exec('yarn add sequelize')
       shell.exec('yarn add -D sequelize-cli')
 
-      shell.exec('npm set-script db:migrate "npx sequelize-cli db:migrate"')
-      shell.exec('npm set-script db:migrate:undo "npx sequelize-cli db:migrate:undo"')
-      shell.exec('npm set-script db:migrate:fresh "npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
-      shell.exec('npm set-script db:make:migration "npx sequelize-cli migration:generate"')
+      shell.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
+      shell.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
+      shell.exec('npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
+      shell.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate"')
 
       fs.mkdirSync('./src/entities', {
         recursive: true,
@@ -130,7 +133,7 @@ export class CliGenerator {
       './src/database/seeds/seeder.ts'
     )
 
-    shell.exec('npm set-script db:seed "ts-node ./src/database/seeds/dbSeeder.ts"')
+    shell.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
   }
 
   installAuth(dbType: DbType) {
