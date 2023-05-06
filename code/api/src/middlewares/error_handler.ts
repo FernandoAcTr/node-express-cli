@@ -18,7 +18,7 @@ export class UnauthorizedError extends HTTPError {
 }
 
 export const handleErrorMiddleware = (err: HTTPError | Error, req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof ErrorHandler) {
+  if (err instanceof HTTPError) {
     const { statusCode, message } = err
     logger.error(`Error ${statusCode}: ${message}`)
     res.status(statusCode).json({
@@ -26,7 +26,7 @@ export const handleErrorMiddleware = (err: HTTPError | Error, req: Request, res:
       message,
     })
   } else {
-    logger.error(`Error de servidor ${err}`)
+    logger.error(`Server Error ${err}`)
     res.status(500).json({
       statusCode: 500,
       message: 'Internal Server Error',

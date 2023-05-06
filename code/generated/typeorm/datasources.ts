@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm'
 import { settings } from '@config/settings'
+import migrations from './migrations'
 
 const { DB } = settings
 
@@ -13,5 +14,5 @@ export const AppDataSource = new DataSource({
   synchronize: false,
   logging: false,
   entities: [],
-  migrations: [],
+  migrations: migrations,
 })

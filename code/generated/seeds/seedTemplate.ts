@@ -1,4 +1,4 @@
-import { Seed } from './seed'
+import { Seed } from '../seed'
 export class __ClassName__ implements Seed {
   name: string = ''
 

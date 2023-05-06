@@ -1,7 +1,19 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn, BaseEntity } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  BaseEntity,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm'
+import { Token } from './token.entity'
+import { Role } from './role.entity'
 
 @Entity()
-export class User extends BaseEntity{
+export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number
 
@@ -19,6 +31,13 @@ export class User extends BaseEntity{
 
   @UpdateDateColumn()
   updated_at: Date
+
+  @OneToOne(() => Token, (token) => token.user)
+  refresh_token?: Token
+
+  @ManyToOne(() => Role, (role) => role.id)
+  @JoinColumn({ name: 'role_id', referencedColumnName: 'id' })
+  role: Role
 
   toJSON(): any {
     const { password, ...other } = this as any

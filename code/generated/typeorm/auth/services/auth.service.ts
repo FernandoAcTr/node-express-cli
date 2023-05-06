@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken'
 import { AppDataSource } from '@database/datasources'
 import { User } from '@entities/user.entity'
-import { ErrorHandler } from '@middlewares/error_handler'
+import { HTTPError } from '@middlewares/error_handler'
 import { Repository } from 'typeorm'
 import { PasswordEncrypter } from './passsword_encripter'
 import { settings } from '@config/settings'
@@ -17,7 +17,7 @@ export class AuthService {
 
   async signup(user: User) {
     const dbUser = await this.repository.findOne({ where: { email: user.email } })
-    if (dbUser) throw new ErrorHandler(400, 'Email already exists')
+    if (dbUser) throw new HTTPError(400, 'Email already exists')
 
     const newUser = new User()
     newUser.email = user.email
@@ -32,10 +32,10 @@ export class AuthService {
 
   async login(email: string, password: string) {
     const dbUser = await this.repository.findOne({ where: { email } })
-    if (!dbUser) throw new ErrorHandler(400, 'Bad credentials')
+    if (!dbUser) throw new HTTPError(400, 'Bad credentials')
 
     const match = this.passwordEncrypter.compare(password, dbUser.password)
-    if (!match) throw new ErrorHandler(400, 'Bad credentials')
+    if (!match) throw new HTTPError(400, 'Bad credentials')
 
     const token = this.createToken(dbUser)
 

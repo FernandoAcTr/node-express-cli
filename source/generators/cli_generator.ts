@@ -88,6 +88,11 @@ export class CliGenerator {
         './src/database/migrations/0000000000000-seeds.ts'
       )
 
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', 'index.ts'),
+        './src/database/migrations/index.ts'
+      )
+
       console.log("Please add the line 'import reflect-metadata' at the top of your index.ts".green)
       console.log('You must install specific database driver like mysql or pg'.green)
       console.log(

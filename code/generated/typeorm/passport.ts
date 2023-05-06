@@ -1,7 +1,9 @@
-import { Strategy, ExtractJwt } from 'passport-jwt'
-import { settings } from '@config/settings'
 import passport from 'passport'
 import jwt from 'jsonwebtoken'
+import { NextFunction, Request, Response } from 'express'
+import { Strategy, ExtractJwt } from 'passport-jwt'
+import { settings } from '@config/settings'
+import { HTTPError, UnauthorizedError } from './error_handler'
 
 export const JWTStrategy = new Strategy(
   {
@@ -29,16 +31,20 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
 export const authenticateRefresh = (req: Request, res: Response, next: NextFunction) =>
   passport.authenticate('jwt', { session: false }, async (error, user, info, status) => {
-    if (info?.message == 'No auth token') throw new HTTPError(401, 'Unauthorized')
+    try {
+      if (info?.message == 'No auth token') throw new HTTPError(401, 'Unauthorized')
 
-    if (info?.message == 'jwt expired') {
-      const token = req.headers['authorization']?.split(' ')[1]
-      const payload: any = jwt.verify(token!, settings.SECRET, { ignoreExpiration: true })
+      if (info?.message == 'jwt expired') {
+        const token = req.headers['authorization']?.split(' ')[1]
+        const payload: any = jwt.verify(token!, settings.SECRET, { ignoreExpiration: true })
 
-      req.user = { id: payload.user_id }
-      return next()
+        req.user = { id: payload.user_id }
+        return next()
+      }
+
+      req.user = user
+      next()
+    } catch (error) {
+      next(error)
     }
-
-    req.user = user
-    next()
   })(req, res, next)

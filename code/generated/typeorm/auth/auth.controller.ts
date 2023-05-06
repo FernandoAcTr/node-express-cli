@@ -31,7 +31,7 @@ export async function refreshToken(req: Request, res: Response, next: NextFuncti
   const authService = new AuthService()
 
   try {
-    const token = await authService.refreshToken(req.token.id! as any)
+    const token = await authService.refreshToken(req.user.id! as any)
     res.json(token)
   } catch (error) {
     next(error)
