@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { AuthService } from './services'
+import { AuthService } from './services/auth.service'
 
 export async function signup(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authService = new AuthService()
@@ -22,6 +22,17 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
   try {
     const user = await authService.login(body.email, body.password)
     res.json(user)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const authService = new AuthService()
+
+  try {
+    const token = await authService.refreshToken(req.user.id! as any)
+    res.json(token)
   } catch (error) {
     next(error)
   }

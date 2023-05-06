@@ -117,8 +117,10 @@ export class CliGenerator {
 
       shell.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
       shell.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
-      shell.exec('npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
-      shell.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate"')
+      shell.exec(
+        'npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"'
+      )
+      shell.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate --name"')
 
       fs.mkdirSync('./src/entities', {
         recursive: true,
@@ -141,6 +143,21 @@ export class CliGenerator {
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', '.sequelizerc'),
         './.sequelizerc'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'seeder.ts'),
+        './src/database/seeder.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'entities', 'seed.entity.ts'),
+        './src/entities/seed.entity.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '00000000000000-seeds.js'),
+        './src/database/migrations/00000000000000-seeds.js'
       )
 
       console.log('You must install specific database driver like mysql2 or pg'.green)
@@ -212,8 +229,16 @@ export class CliGenerator {
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'auth'), './src/modules/auth')
     } else if (dbType === DbType.SEQUELIZE) {
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'user.entity.ts'),
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'entities', 'user.entity.ts'),
         './src/entities/user.entity.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'entities', 'token.entity.ts'),
+        './src/entities/token.entity.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'entities', 'role.entity.ts'),
+        './src/entities/role.entity.ts'
       )
 
       fs.copyFile(
@@ -222,8 +247,18 @@ export class CliGenerator {
       )
 
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', '20230216034845-users.js'),
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '20230216034845-users.js'),
         './src/database/migrations/20230216034845-users.js'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '20230506165613-tokens.js'),
+        './src/database/migrations/20230506165613-tokens.js'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '20230506170031-reset-password-tokens.js'),
+        './src/database/migrations/20230506170031-reset-password-tokens.js'
       )
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'auth'), './src/modules/auth')

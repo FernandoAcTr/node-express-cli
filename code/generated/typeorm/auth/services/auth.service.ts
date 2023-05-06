@@ -5,6 +5,7 @@ import { HTTPError } from '@middlewares/error_handler'
 import { Repository } from 'typeorm'
 import { PasswordEncrypter } from './passsword_encripter'
 import { settings } from '@config/settings'
+import { Roles } from '@entities/role.entity'
 
 export class AuthService {
   private readonly repository: Repository<User>
@@ -21,6 +22,7 @@ export class AuthService {
 
     const newUser = new User()
     newUser.email = user.email
+    newUser.role_id = Roles.USER
     newUser.password = this.passwordEncrypter.encrypt(user.password)
     newUser.name = user.name
 

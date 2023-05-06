@@ -1,23 +1,30 @@
 import { sequelize } from '@database/datasources'
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model, DataTypes } from 'sequelize'
+import {
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  Model,
+  DataTypes,
+  ForeignKey,
+  NonAttribute,
+} from 'sequelize'
+import { Role } from './role.entity'
 
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
-  declare user_id: CreationOptional<number>
+  declare id: CreationOptional<number>
   declare name: string
   declare email: string
   declare password: string
   declare createdAt: CreationOptional<Date>
   declare updatedAt: CreationOptional<Date>
 
-  toJSON(): any {
-    const { password, ...other } = this as any
-    return other
-  }
+  declare role_id: ForeignKey<number>
+  declare role: NonAttribute<Role>
 }
 
 User.init(
   {
-    user_id: {
+    id: {
       type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,
       primaryKey: true,
@@ -34,8 +41,14 @@ User.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    role_id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      references: { model: Role, key: 'id' },
+    },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },
   { sequelize, tableName: 'users' }
 )
+
+User.belongsTo(Role, { foreignKey: 'id', as: 'role' })
