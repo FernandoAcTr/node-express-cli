@@ -84,8 +84,8 @@ export class CliGenerator {
       )
 
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '0000000000000-seeds.ts'),
-        './src/database/migrations/0000000000000-seeds.ts'
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '1677294697200-seeds.ts'),
+        './src/database/migrations/1677294697200-seeds.ts'
       )
 
       fs.copyFile(

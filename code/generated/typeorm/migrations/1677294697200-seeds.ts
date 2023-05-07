@@ -12,6 +12,7 @@ export class Seeds0000000000000 implements MigrationInterface {
             isPrimary: true,
             isGenerated: true,
             unsigned: true,
+            generationStrategy: 'increment',
           },
           {
             name: 'name',
