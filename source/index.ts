@@ -6,12 +6,13 @@ import { ApiCodeGenerator } from './generators/api_code_generator'
 import { DbType, ProjectType } from './generators/code_generator'
 import { CliGenerator } from './generators/cli_generator'
 import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
+import shell from 'shelljs'
 
 const apiGenerator = new ApiCodeGenerator()
 const grapqlGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
 
-const getConfig = () => JSON.parse(fs.readFileSync('cli.config.json').toString())
+const getConfig = (): { project: string; orm?: DbType } => JSON.parse(fs.readFileSync('cli.config.json').toString())
 const writeConfig = (config: any) => fs.writeFileSync('cli.config.json', JSON.stringify(config))
 
 async function init() {
@@ -64,7 +65,7 @@ async function makeModule() {
   if (moduleName.resp)
     if (config.project === ProjectType.API) {
       const config = getConfig()
-      const dbType = config.orm
+      const dbType = config.orm ?? DbType.TYPEORM
       apiGenerator.makeModule(moduleName.resp, dbType)
     } else if (config.project === ProjectType.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
 }
@@ -86,7 +87,42 @@ async function makeEntity() {
     message: 'Name of entity:',
   })
   const config = getConfig()
-  if (entityName.resp) cliGenerator.makeEntity(entityName.resp, config.orm)
+  const dbType = config.orm ?? DbType.TYPEORM
+  if (entityName.resp) cliGenerator.makeEntity(entityName.resp, dbType)
+}
+
+async function makeFactory() {
+  const { resp: name } = await inquirer.prompt({
+    type: 'input',
+    name: 'resp',
+    message: 'Name of the model that belongs to Factory:',
+  })
+  if (!name) return
+
+  cliGenerator.makeFactory(name)
+}
+
+async function makeMigration() {
+  const config = getConfig()
+  const dbType = config.orm ?? DbType.TYPEORM
+  if (dbType == DbType.MONGO) {
+    console.log('================================'.yellow)
+    console.log("Mongoose doesn't have migrations".yellow)
+    console.log('================================'.yellow)
+  }
+
+  const { resp: name } = await inquirer.prompt({
+    type: 'input',
+    name: 'resp',
+    message: 'Name of migration:',
+  })
+  if (!name) return
+
+  if (dbType == DbType.SEQUELIZE) {
+    shell.exec(`npm run db:make:migration ${name}`)
+  } else if (dbType == DbType.TYPEORM) {
+    shell.exec(`npm run m:create ./src/database/migrations/${name}`)
+  }
 }
 
 async function installSocket() {
@@ -96,6 +132,10 @@ async function installSocket() {
     name: 'resp',
   })
   if (confirm.resp) cliGenerator.installSocket()
+}
+
+async function installTests() {
+  cliGenerator.installTests()
 }
 
 let command = (argv as any)._[0]
@@ -128,7 +168,8 @@ switch (command) {
 
   case 'install:auth':
     const config = getConfig()
-    cliGenerator.installAuth(config.orm)
+    const dbType = config.orm ?? DbType.TYPEORM
+    cliGenerator.installAuth(dbType)
     break
 
   case 'install:mailer':
@@ -141,6 +182,18 @@ switch (command) {
 
   case 'make:entity':
     makeEntity()
+    break
+
+  case 'make:migration':
+    makeMigration()
+    break
+
+  case 'make:factory':
+    makeFactory()
+    break
+
+  case 'install:tests':
+    installTests()
     break
 
   default:

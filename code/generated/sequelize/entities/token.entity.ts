@@ -29,5 +29,5 @@ Token.init(
   { sequelize, createdAt: true, updatedAt: true }
 )
 
-Token.belongsTo(User, { foreignKey: 'id', as: 'user' })
+Token.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
 

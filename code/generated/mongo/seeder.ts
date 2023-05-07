@@ -1,7 +1,7 @@
 import "../alias";
 import logger from "@helpers/logger";
 import { Seed } from "./seed";
-import { Seed as RanSeed } from "../entities/seed.entity";
+import { Seed as RanSeed } from "../models/seed.model";
 
 async function seed(...seeds: Seed[]) {
   for await (const seeder of seeds) {

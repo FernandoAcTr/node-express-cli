@@ -14,6 +14,7 @@ async function seed(...seeds: Seed[]) {
       try {
         logger.debug(`Running ${seeder.name}...`)
         await seeder.seed()
+        await RanSeed.save({ name: seeder.name })
       } catch (error) {
         console.log(error)
         process.exit(1)

@@ -14,6 +14,12 @@ export const argv = yargs.options({
   'make:entity': {
     description: 'Generate a new entity class',
   },
+  'make:migration': {
+    description: 'Generate a new database migration',
+  },
+  'make:factory': {
+    description: 'Generate a new Factory class for a Model',
+  },
   'install:prettier': {
     description: 'Add prettier to the project',
   },
@@ -31,5 +37,8 @@ export const argv = yargs.options({
   },
   'install:mailer': {
     description: 'Add support for send mails via nodemailer library',
+  },
+  'install:tests': {
+    description: 'Add a library to do testing and some examples',
   },
 }).argv

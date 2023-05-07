@@ -106,11 +106,19 @@ export class CliGenerator {
       })
 
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'database.ts'),
-        './src/database/database.ts'
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'datasources.ts'),
+        './src/database/datasources.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'seeder.ts'),
+        './src/database/seeder.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'models', 'seed.model.ts'),
+        './src/models/seed.model.ts'
       )
 
-      console.log('Now you need to import database.ts in your index.ts in order to connect with mongo'.green)
+      console.log('Now you need to import datasources.ts in your index.ts in order to connect with mongo'.green)
     } else if (dbType === DbType.SEQUELIZE) {
       shell.exec('yarn add sequelize')
       shell.exec('yarn add -D sequelize-cli')
@@ -217,8 +225,12 @@ export class CliGenerator {
       )
     } else if (dbType == DbType.MONGO) {
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'user.model.ts'),
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'models', 'user.model.ts'),
         './src/models/user.model.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'models', 'token.model.ts'),
+        './src/models/token.model.ts'
       )
 
       fs.copyFile(
@@ -257,7 +269,16 @@ export class CliGenerator {
       )
 
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '20230506170031-reset-password-tokens.js'),
+        path.resolve(
+          __dirname,
+          '..',
+          '..',
+          'code',
+          'generated',
+          'sequelize',
+          'migrations',
+          '20230506170031-reset-password-tokens.js'
+        ),
         './src/database/migrations/20230506170031-reset-password-tokens.js'
       )
 
@@ -326,5 +347,25 @@ export class CliGenerator {
         .replace(/__EntityName__/g, entityName)
       fs.writeFileSync(`./src/entities/${name.toLowerCase()}.entity.ts`, entity)
     }
+  }
+
+  makeFactory(name: String) {
+    const factoryName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}`
+
+    const entity = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'factory', 'factoryTemplate.ts'))
+      .toString()
+      .replace(/__ClassName__/g, factoryName)
+    fs.writeFileSync(`./src/database/factories/${name.toLowerCase()}.factory.ts`, entity)
+  }
+
+  installTests() {
+    console.log('================= Installing Test dependencies ================='.yellow)
+    shell.exec('yarn add @faker-js/faker')
+    shell.exec('yarn add -D jest @types/jest ts-jest axios')
+
+    fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'tests'), './src/tests')
+    fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'jest.config.js'), './jest.config.js')
+    shell.exec('npm pkg set scripts.test="npx jest"')
   }
 }

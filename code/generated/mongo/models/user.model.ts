@@ -3,10 +3,16 @@ import bcrypt from 'bcrypt'
 import { settings } from '@config/settings'
 import jwt from 'jsonwebtoken'
 
+export enum Role {
+  ADMIN = "admin",
+  USER = "user"
+}
+
 export interface IUser extends Document {
   name: string
   email: string
   password: string
+  role: Role
   created_at: Date
   updated_at: Date
   encryptPassword(password: string): string
@@ -18,6 +24,7 @@ const UserSchema = new mongoose.Schema<IUser>({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true },
+  role: { type: String, required: true, default: Role.USER },
   created_at: { type: Date, default: new Date() },
   updated_at: { type: Date, default: new Date() },
 })
@@ -31,7 +38,7 @@ UserSchema.methods.toJSON = function () {
 UserSchema.methods.createToken = function () {
   const user = this.toObject()
 
-  return jwt.sign({ _id: user._id }, settings.SECRET, {
+  return jwt.sign({ user_id: user._id }, settings.SECRET, {
     expiresIn: 86400,
   })
 }

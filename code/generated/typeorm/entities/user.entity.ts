@@ -26,6 +26,9 @@ export class User extends BaseEntity {
   @Column()
   name: string
 
+  @Column()
+  role_id: number
+
   @CreateDateColumn()
   created_at: Date
 

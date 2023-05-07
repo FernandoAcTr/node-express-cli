@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { AuthService } from './services'
+import { UnauthorizedError } from '@middlewares/error_handler'
 
 export async function signup(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authService = new AuthService()
@@ -26,3 +27,18 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     next(error)
   }
 }
+
+export async function refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const authService = new AuthService()
+
+  if(!req.body.refresh_token) throw new UnauthorizedError()
+
+  try {
+    const token = await authService.refreshToken(req.user.id! as any, req.body.refresh_token)
+    res.json(token)
+  } catch (error) {
+    next(error)
+  }
+}
+
+
