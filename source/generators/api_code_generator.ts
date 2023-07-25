@@ -60,6 +60,7 @@ export class ApiCodeGenerator extends CodeGenerator {
       [DbType.MONGO]: 'mongo',
       [DbType.TYPEORM]: 'typeorm',
       [DbType.SEQUELIZE]: 'sequelize',
+      [DbType.PRISMA]: 'prisma',
     }
     const codeDir = codeDirs[dbType]
 

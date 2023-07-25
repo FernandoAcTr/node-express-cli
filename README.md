@@ -51,7 +51,7 @@ Por ejemplo, una importación se haría de la siguiente manera:
 
 En cuanto a bases de datos actualmente el paquete soporta 2 opciones
 
-- SQL con [TypeORM](https://typeorm.io/#/)
+- SQL con [TypeORM](https://typeorm.io/#/), [Sequelize](https://sequelize.org/) o [Prisma](https://www.prisma.io/typescript) 
 - MongoDB con [Mongoose](https://mongoosejs.com/)
 
 Para agregar una de las dos opciones utiliza el comando `node-express-cli install:database`
@@ -79,10 +79,13 @@ Es muy importante que las entidades de base de datos dentro del directorio src/e
 Nota: TypeORM es solo un ORM, no instala la librería específica de postgres, mysql o cualquier otro manejador de base de datos. Para esto debes ejecutar el comando específico de la librería, como `yarn add pg` o `yarn add mysql`.
 
 ### Migraciones
-Si utiliza TypeORM se agregarán 3 comandos nuevos al package.json
+Si utiliza TypeORM se agregarán 6 comandos nuevos al package.json
 - m:run
 - m:revert
 - m:generate  
+- m:create  
+- m:drop  
+- m:run:fresh  
 
 Cuya función es correr, revertir y generar migraciones, respectivamente. Si desea saber más acerca de las migraciones, visite la [documentación oficial](https://typeorm.io/migrations) de TypeORM
 

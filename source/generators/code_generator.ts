@@ -2,6 +2,7 @@ export enum DbType {
   MONGO = 'mongoose',
   TYPEORM = 'typeorm',
   SEQUELIZE = 'sequelize',
+  PRISMA = 'prisma',
 }
 
 export enum ProjectType {

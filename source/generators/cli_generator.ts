@@ -174,6 +174,37 @@ export class CliGenerator {
           .green
       )
       console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
+    } else if (dbType == DbType.PRISMA) {
+      shell.exec('yarn add @prisma/client')
+      shell.exec('yarn add -D prisma')
+
+      shell.exec('npm pkg set scripts.m:run="npx prisma migrate dev --schema src/database/prisma/schema.prisma"')
+      shell.exec(
+        'npm pkg set scripts.m:run:deploy="npx prisma migrate deploy --schema src/database/prisma/schema.prisma"'
+      )
+      shell.exec('npm pkg set scripts.m:reset="npx prisma migrate reset --schema src/database/prisma/schema.prisma"')
+      shell.exec('npm pkg set scripts.m:generate="npx prisma generate --schema src/database/prisma/schema.prisma"')
+
+      fs.mkdirSync('./src/database/prisma', {
+        recursive: true,
+      })
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'schema.prisma'),
+        './src/database/prisma/schema.prisma'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'seeder.ts'),
+        './src/database/seeder.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'client.ts'),
+        './src/database/client.ts'
+      )
+
+      console.log('You need to create your first migration. Run yarn m:run'.green)
     }
   }
 
@@ -283,6 +314,22 @@ export class CliGenerator {
       )
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'auth'), './src/modules/auth')
+    } else if (dbType == DbType.PRISMA) {
+      //TODO modify PRISMA
+      const authContent = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'schema.prisma.auth'))
+        .toString()
+
+      fs.appendFileSync('./src/database/prisma/schema.prisma', authContent)
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'passport.ts'),
+        './src/middlewares/passport.ts'
+      )
+
+      fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'auth'), './src/modules/auth')
+
+      shell.exec("yarn m:run --name auth")
     }
 
     console.log(
@@ -313,6 +360,12 @@ export class CliGenerator {
   }
 
   makeSeeder(name: string) {
+    if (!fs.existsSync('./src/database/seeds')) {
+      fs.mkdirSync('./src/database/seeds', {
+        recursive: true,
+      })
+    }
+
     const filename = `${name[0].toLowerCase()}${name.substring(1)}.seeder.ts`
     const seederName = `${name[0].toUpperCase()}${name.substring(1)}Seeder`
 
@@ -350,6 +403,12 @@ export class CliGenerator {
   }
 
   makeFactory(name: String) {
+    if (!fs.existsSync('./src/database/factories')) {
+      fs.mkdirSync('./src/database/factories', {
+        recursive: true,
+      })
+    }
+
     const factoryName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}`
 
     const entity = fs

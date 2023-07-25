@@ -9,7 +9,7 @@ import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
 import shell from 'shelljs'
 
 const apiGenerator = new ApiCodeGenerator()
-const grapqlGenerator = new GraphqlCodeGenerator()
+const graphqlGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
 
 const getConfig = (): { project: string; orm?: DbType } => JSON.parse(fs.readFileSync('cli.config.json').toString())
@@ -31,7 +31,7 @@ function generate(typeProject: ProjectType) {
   if (typeProject === ProjectType.API) {
     apiGenerator.init()
   } else if (typeProject === ProjectType.GRAPH) {
-    grapqlGenerator.init()
+    graphqlGenerator.init()
   }
 
   writeConfig({
@@ -64,10 +64,9 @@ async function makeModule() {
 
   if (moduleName.resp)
     if (config.project === ProjectType.API) {
-      const config = getConfig()
       const dbType = config.orm ?? DbType.TYPEORM
       apiGenerator.makeModule(moduleName.resp, dbType)
-    } else if (config.project === ProjectType.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
+    } else if (config.project === ProjectType.GRAPH) graphqlGenerator.makeModule(moduleName.resp)
 }
 
 async function makeSeeder() {
@@ -81,12 +80,21 @@ async function makeSeeder() {
 }
 
 async function makeEntity() {
+  const config = getConfig()
+
+  if (config.orm == DbType.PRISMA) {
+    console.log('================================'.yellow)
+    console.log("Since you are using Prisma you don't need to make entities, Prisma generate them for you.".yellow)
+    console.log('================================'.yellow)
+    return
+  }
+
   const entityName = await inquirer.prompt({
     type: 'input',
     name: 'resp',
     message: 'Name of entity:',
   })
-  const config = getConfig()
+
   const dbType = config.orm ?? DbType.TYPEORM
   if (entityName.resp) cliGenerator.makeEntity(entityName.resp, dbType)
 }
@@ -109,6 +117,13 @@ async function makeMigration() {
     console.log('================================'.yellow)
     console.log("Mongoose doesn't have migrations".yellow)
     console.log('================================'.yellow)
+    return
+  }
+  if (dbType == DbType.PRISMA) {
+    console.log('================================'.yellow)
+    console.log("Prisma doesn't need custom migrations, please use the command to generate them.".yellow)
+    console.log('================================'.yellow)
+    return
   }
 
   const { resp: name } = await inquirer.prompt({
