@@ -8,16 +8,9 @@ export class Seeds0000000000000 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'integer',
-            isPrimary: true,
-            isGenerated: true,
-            unsigned: true,
-            generationStrategy: 'increment',
-          },
-          {
-            name: 'name',
             type: 'varchar(50)',
-            isUnique: true,
+            isPrimary: true,
+            isGenerated: false,
           },
           {
             name: 'created_at',

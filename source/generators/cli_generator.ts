@@ -45,8 +45,6 @@ export class CliGenerator {
       recursive: true,
     })
 
-    fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seed.ts'), './src/database/seed.ts')
-
     if (dbType === DbType.TYPEORM) {
       shell.exec('yarn add typeorm reflect-metadata')
 
@@ -67,6 +65,11 @@ export class CliGenerator {
       fs.mkdirSync('./src/database/migrations', {
         recursive: true,
       })
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'seed.ts'),
+        './src/database/seed.ts'
+      )
 
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'datasources.ts'),
@@ -108,6 +111,10 @@ export class CliGenerator {
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'datasources.ts'),
         './src/database/datasources.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'seed.ts'),
+        './src/database/seed.ts'
       )
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'seeder.ts'),
@@ -164,6 +171,11 @@ export class CliGenerator {
       )
 
       fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'seed.ts'),
+        './src/database/seed.ts'
+      )
+
+      fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '00000000000000-seeds.js'),
         './src/database/migrations/00000000000000-seeds.js'
       )
@@ -188,6 +200,11 @@ export class CliGenerator {
       fs.mkdirSync('./src/database/prisma', {
         recursive: true,
       })
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'seed.ts'),
+        './src/database/seed.ts'
+      )
 
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'schema.prisma'),
@@ -329,7 +346,7 @@ export class CliGenerator {
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'auth'), './src/modules/auth')
 
-      shell.exec("yarn m:run --name auth")
+      shell.exec('yarn m:run --name auth')
     }
 
     console.log(
@@ -359,7 +376,7 @@ export class CliGenerator {
     )
   }
 
-  makeSeeder(name: string) {
+  makeSeeder(name: string, dbType: DbType) {
     if (!fs.existsSync('./src/database/seeds')) {
       fs.mkdirSync('./src/database/seeds', {
         recursive: true,
@@ -369,10 +386,16 @@ export class CliGenerator {
     const filename = `${name[0].toLowerCase()}${name.substring(1)}.seeder.ts`
     const seederName = `${name[0].toUpperCase()}${name.substring(1)}Seeder`
 
-    const seeder = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seedTemplate.ts'))
-      .toString()
-      .replace(/__ClassName__/g, seederName)
+    const seeder =
+      dbType == DbType.PRISMA
+        ? fs
+            .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'seedTemplate.ts'))
+            .toString()
+            .replace(/__ClassName__/g, seederName)
+        : fs
+            .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seedTemplate.ts'))
+            .toString()
+            .replace(/__ClassName__/g, seederName)
 
     fs.writeFileSync(`./src/database/seeds/${filename}`, seeder)
   }

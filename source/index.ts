@@ -70,13 +70,15 @@ async function makeModule() {
 }
 
 async function makeSeeder() {
+  const config = getConfig()
   const seederName = await inquirer.prompt({
     type: 'input',
     name: 'resp',
     message: 'Name of seeder:',
   })
 
-  if (seederName.resp) cliGenerator.makeSeeder(seederName.resp)
+  const dbType = config.orm ?? DbType.TYPEORM
+  if (seederName.resp) cliGenerator.makeSeeder(seederName.resp, dbType)
 }
 
 async function makeEntity() {

@@ -8,13 +8,13 @@ async function seed(...seeds: Seed[]) {
   await AppDataSource.initialize()
 
   for await (const seeder of seeds) {
-    const exists = await RanSeed.count({ where: { name: seeder.name } })
+    const exists = await RanSeed.count({ where: { id: seeder.id } })
 
     if (exists == 0) {
       try {
-        logger.debug(`Running ${seeder.name}...`)
+        logger.debug(`Running ${seeder.id}...`)
         await seeder.seed()
-        await RanSeed.save({ name: seeder.name })
+        await RanSeed.save({ id: seeder.id })
       } catch (error) {
         console.log(error)
         process.exit(1)

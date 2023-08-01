@@ -1,4 +1,4 @@
 export interface Seed {
-  name: string
+  id: string
   seed(): Promise<void>
 }

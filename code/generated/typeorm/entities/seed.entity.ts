@@ -1,12 +1,9 @@
-import { BaseEntity, Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
+import { BaseEntity, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm'
 
 @Entity('seeds')
 export class Seed extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id: number
-
-  @Column()
-  name: string
+  @PrimaryColumn()
+  id: string
 
   @CreateDateColumn()
   created_at: Date
