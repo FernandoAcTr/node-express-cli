@@ -23,13 +23,17 @@
   },
   "dependencies": {
     "colors": "^1.4.0",
+    "figlet": "^1.6.0",
     "fs-extra": "^10.1.0",
+    "gradient-string": "^2.0.2",
     "inquirer": "^8.1.2",
     "shelljs": "^0.8.4",
     "yargs": "^17.0.1"
   },
   "devDependencies": {
+    "@types/figlet": "^1.5.6",
     "@types/fs-extra": "^9.0.13",
+    "@types/gradient-string": "^1.1.2",
     "@types/inquirer": "^7.3.3",
     "@types/shelljs": "^0.8.9",
     "@types/yargs": "^17.0.2",

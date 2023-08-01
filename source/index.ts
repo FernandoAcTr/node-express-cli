@@ -7,6 +7,8 @@ import { DbType, ProjectType } from './interfaces/code.generator'
 import { CliGenerator } from './generators/cli.generator'
 import { GraphqlCodeGenerator } from './generators/graphql.generator'
 import shell from 'shelljs'
+import figlet from 'figlet'
+import gradient from 'gradient-string'
 
 const apiGenerator = new ApiCodeGenerator()
 const graphqlGenerator = new GraphqlCodeGenerator()
@@ -17,6 +19,10 @@ const getConfig = (): { project: ProjectType; orm?: DbType } =>
 const writeConfig = (config: any) => fs.writeFileSync('cli.config.json', JSON.stringify(config))
 
 async function init() {
+  figlet('N-E-C', (err, data) => {
+    console.log(gradient.pastel.multiline(data))
+  })
+
   const type = await inquirer.prompt({
     type: 'list',
     name: 'resp',
