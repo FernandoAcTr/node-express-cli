@@ -2,20 +2,31 @@
 import fs from 'fs'
 import inquirer from 'inquirer'
 import { argv } from './plugins/yargs'
-import { ApiCodeGenerator } from './generators/api_code_generator'
-import { DbType, ProjectType } from './generators/code_generator'
-import { CliGenerator } from './generators/cli_generator'
-import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
+import { ApiCodeGenerator } from './generators/api.generator'
+import { DbType, ProjectType } from './interfaces/code.generator'
+import { CliGenerator } from './generators/cli.generator'
+import { GraphqlCodeGenerator } from './generators/graphql.generator'
 import shell from 'shelljs'
+import figlet from 'figlet'
+import gradient from 'gradient-string'
 
 const apiGenerator = new ApiCodeGenerator()
 const graphqlGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
 
-const getConfig = (): { project: string; orm?: DbType } => JSON.parse(fs.readFileSync('cli.config.json').toString())
+const getConfig = (): { project: ProjectType; orm?: DbType } =>
+  JSON.parse(fs.readFileSync('cli.config.json').toString())
 const writeConfig = (config: any) => fs.writeFileSync('cli.config.json', JSON.stringify(config))
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 async function init() {
+  figlet('Node-Express-CLI', { font: 'Big Money-ne' }, (err, data) => {
+    console.log(gradient.pastel.multiline(data))
+  })
+
+  await sleep(500)
+
   const type = await inquirer.prompt({
     type: 'list',
     name: 'resp',
@@ -62,11 +73,10 @@ async function makeModule() {
     message: 'Name of module:',
   })
 
-  if (moduleName.resp)
-    if (config.project === ProjectType.API) {
-      const dbType = config.orm ?? DbType.TYPEORM
-      apiGenerator.makeModule(moduleName.resp, dbType)
-    } else if (config.project === ProjectType.GRAPH) graphqlGenerator.makeModule(moduleName.resp)
+  if (moduleName.resp) {
+    const dbType = config.orm ?? DbType.TYPEORM
+    cliGenerator.makeModule(moduleName.resp, dbType, config.project)
+  }
 }
 
 async function makeSeeder() {

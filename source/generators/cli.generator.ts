@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import shell from 'shelljs'
 import 'colors'
 import path from 'path'
-import { DbType } from './code_generator'
+import { DbType, ProjectType } from '../interfaces/code.generator'
 
 export class CliGenerator {
   installPrettier() {
@@ -439,6 +439,104 @@ export class CliGenerator {
       .toString()
       .replace(/__ClassName__/g, factoryName)
     fs.writeFileSync(`./src/database/factories/${name.toLowerCase()}.factory.ts`, entity)
+  }
+
+  makeModule(name: string, dbType: DbType, projectType: ProjectType) {
+    if (projectType == ProjectType.API) {
+      const dir = `./src/modules/${name.toLowerCase()}`
+      const servicesDir = `./src/modules/${name.toLowerCase()}/services`
+      const codeDirs = {
+        [DbType.MONGO]: 'mongo',
+        [DbType.TYPEORM]: 'typeorm',
+        [DbType.SEQUELIZE]: 'sequelize',
+        [DbType.PRISMA]: 'prisma',
+      }
+      const codeDir = codeDirs[dbType]
+
+      fs.mkdirSync(dir, {
+        recursive: true,
+      })
+
+      fs.mkdirSync(servicesDir, {
+        recursive: true,
+      })
+
+      const serviceName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}`
+
+      //router
+      const routes = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'routes.ts'))
+        .toString()
+        .replace(/__modulename__/g, name.toLowerCase())
+      fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
+
+      //validator
+      const validator = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'validator.ts'))
+        .toString()
+      fs.writeFileSync(`${dir}/${name.toLowerCase()}.validator.ts`, validator)
+
+      //controller
+      const controller = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'controller.ts'))
+        .toString()
+        .replace(/__ServiceName__/g, serviceName)
+      fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
+
+      //services
+      const service = fs
+        .readFileSync(
+          path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service.ts')
+        )
+        .toString()
+        .replace('__ServiceName__', serviceName)
+      fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}.service.ts`, service)
+
+      const index = fs
+        .readFileSync(
+          path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'index.ts')
+        )
+        .toString()
+        .replace(/__service__/g, name.toLowerCase())
+      fs.writeFileSync(`${servicesDir}/index.ts`, index)
+    } else {
+      const modulename = name.toLowerCase()
+      const entityName = name[0].toUpperCase() + name.substr(1).toLowerCase()
+      const dir = `./src/graphql/modules/${modulename}s`
+      fs.mkdirSync(dir, {
+        recursive: true,
+      })
+      const repository = fs
+        .readFileSync(
+          path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.repository.ts')
+        )
+        .toString()
+        .replace(new RegExp('__EntityName__', 'g'), entityName)
+
+      const schema = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.schema.ts'))
+        .toString()
+        .replace(new RegExp('__EntityName__', 'g'), entityName)
+        .replace(new RegExp('__modulename__', 'g'), modulename)
+      const resolver = fs
+        .readFileSync(
+          path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.resolver.ts')
+        )
+        .toString()
+        .replace(new RegExp('__EntityName__', 'g'), entityName)
+        .replace(new RegExp('__modulename__', 'g'), modulename)
+
+      const index = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.index.ts'))
+        .toString()
+        .replace(new RegExp('__EntityName__', 'g'), entityName)
+        .replace(new RegExp('__modulename__', 'g'), modulename)
+
+      fs.writeFileSync(`${dir}/${modulename}.schema.ts`, schema)
+      fs.writeFileSync(`${dir}/${modulename}.resolver.ts`, resolver)
+      fs.writeFileSync(`${dir}/${modulename}.repository.ts`, repository)
+      fs.writeFileSync(`${dir}/index.ts`, index)
+    }
   }
 
   installTests() {
