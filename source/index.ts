@@ -18,10 +18,14 @@ const getConfig = (): { project: ProjectType; orm?: DbType } =>
   JSON.parse(fs.readFileSync('cli.config.json').toString())
 const writeConfig = (config: any) => fs.writeFileSync('cli.config.json', JSON.stringify(config))
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 async function init() {
-  figlet('N-E-C', (err, data) => {
+  figlet('Node-Express-CLI', { font: 'Big Money-ne' }, (err, data) => {
     console.log(gradient.pastel.multiline(data))
   })
+
+  await sleep(500)
 
   const type = await inquirer.prompt({
     type: 'list',
