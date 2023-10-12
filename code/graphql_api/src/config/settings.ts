@@ -1,27 +1,28 @@
 import dotenv from 'dotenv'
-import dotenvParseVariables from 'dotenv-parse-variables'
+import fs from 'fs'
 
-let env: any = dotenv.config()
-if (env.error) console.log(env.error)
-env = dotenvParseVariables(env.parsed!)
+if (fs.existsSync('.env')) {
+  dotenv.config()
+}
 
 export const settings = {
-  PORT: env.PORT || 3000,
-  SECRET: env.SECRET || 'somesecrettoken',
+  ENV: process.env.ENV || 'develop',
+  PORT: process.env.PORT || 3000,
+  SECRET: process.env.SECRET || 'somesecrettoken',
   DB: {
-    USER: env.DB_USER,
-    PASSWORD: env.DB_PASSWORD,
-    HOST: env.DB_HOST,
-    PORT: env.DB_PORT,
-    NAME: env.DB_NAME,
-    URI: env.DB_URI,
+    USER: process.env.DB_USER,
+    PASSWORD: process.env.DB_PASSWORD,
+    HOST: process.env.DB_HOST,
+    PORT: process.env.DB_PORT,
+    NAME: process.env.DB_NAME,
+    URI: process.env.DB_URI,
   },
   MAILER: {
-    HOST: env.MAIL_HOST,
-    PORT: env.MAIL_PORT,
-    USERNAME: env.MAIL_USERNAME,
-    PASSWORD: env.MAIL_PASSWORD,
-    FROM_ADDRESS: env.MAIL_FROM_ADDRESS,
-    FROM_NAME: env.MAIL_FROM_NAME,
+    HOST: process.env.MAIL_HOST,
+    PORT: process.env.MAIL_PORT,
+    USERNAME: process.env.MAIL_USERNAME,
+    PASSWORD: process.env.MAIL_PASSWORD,
+    FROM_ADDRESS: process.env.MAIL_FROM_ADDRESS,
+    FROM_NAME: process.env.MAIL_FROM_NAME,
   },
 }

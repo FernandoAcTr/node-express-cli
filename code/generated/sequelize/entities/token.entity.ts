@@ -1,4 +1,4 @@
-import { sequelize } from '@database/datasources'
+import { sequelize } from '@/database/datasources'
 import { CreationOptional, InferAttributes, InferCreationAttributes, Model, DataTypes, ForeignKey, NonAttribute } from 'sequelize'
 import { User } from './user.entity'
 

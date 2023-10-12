@@ -1,4 +1,4 @@
-import { prisma } from '@database/client'
+import { prisma } from '@/database/client'
 
 export class __ServiceName__Service {
   async findOne(id: any): Promise<Object> {

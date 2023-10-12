@@ -1,10 +1,11 @@
+import fs from 'fs'
 import handlebars from 'handlebars'
 import appRoot from 'app-root-path'
 import nodemailer from 'nodemailer'
 import Mail from 'nodemailer/lib/mailer'
-import fs from 'fs'
-import logger from '@helpers/logger'
-import { settings } from '@config/settings'
+import logger from '@/helpers/logger'
+import SMTPTransport from 'nodemailer/lib/smtp-transport'
+import { settings } from '@/config/settings'
 
 const { MAILER } = settings
 
@@ -63,16 +64,18 @@ export class Mailer {
   }
 
   private static createTransporter() {
-    const transporter = nodemailer.createTransport({
-      host: MAILER.HOST,
-      port: MAILER.PORT,
+    const options: SMTPTransport.Options = {
+      host: MAILER.HOST!,
+      port: Number(MAILER.PORT),
       secure: false, //true for 465, false for other ports
       auth: {
-        type: 'login',
-        user: MAILER.USERNAME,
-        pass: MAILER.PASSWORD,
+        type: 'LOGIN',
+        user: MAILER.USERNAME!,
+        pass: MAILER.PASSWORD!,
       },
-    })
+    }
+
+    const transporter = nodemailer.createTransport(options)
 
     return transporter
   }

@@ -3,11 +3,12 @@ import shell from 'shelljs'
 import 'colors'
 import path from 'path'
 import { DbType, ProjectType } from '../interfaces/code.generator'
+import { configService } from '../services/config.service'
 
 export class CliGenerator {
   installPrettier() {
     console.log('================= Installing Prettier ================='.yellow)
-    shell.exec('yarn add -D prettier')
+    shell.exec(`${configService.getDevInstallCommand()} prettier`)
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prettier'), './')
     shell.exec('npm pkg set scripts.prettier:fix="prettier --config .prettierrc.json --write src/**/**/*.ts"')
@@ -16,7 +17,7 @@ export class CliGenerator {
   installEslint() {
     console.log('================= Installing Eslint ================='.yellow)
     shell.exec(
-      'yarn add -D eslint eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin'
+      `${configService.getDevInstallCommand()} eslint eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin`
     )
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'eslint'), './')
@@ -27,14 +28,14 @@ export class CliGenerator {
 
   installSocket() {
     console.log('================= Installing Socket.io ================='.yellow)
-    shell.exec('yarn add socket.io')
+    shell.exec(`${configService.getInstallCommand()} socket.io`)
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'socketio'), './src')
   }
 
   installDatabase(dbType: DbType): void {
     console.log('================= Installing ORM ================='.yellow)
-    shell.exec('yarn add @faker-js/faker')
+    shell.exec(`${configService.getInstallCommand()} @faker-js/faker`)
     shell.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
 
     fs.mkdirSync('./src/database/seeds', {
@@ -46,7 +47,7 @@ export class CliGenerator {
     })
 
     if (dbType === DbType.TYPEORM) {
-      shell.exec('yarn add typeorm reflect-metadata')
+      shell.exec(`${configService.getInstallCommand()} typeorm reflect-metadata`)
 
       shell.exec(
         'npm pkg set scripts.typeorm="ts-node -r ./src/alias ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
@@ -102,7 +103,7 @@ export class CliGenerator {
         'You need to initialize the AppDataSource manually. A greet place is in start() method in your index.ts'.green
       )
     } else if (dbType === DbType.MONGO) {
-      shell.exec('yarn add mongoose')
+      shell.exec(`${configService.getInstallCommand()} mongoose`)
 
       fs.mkdirSync('./src/models', {
         recursive: true,
@@ -127,8 +128,8 @@ export class CliGenerator {
 
       console.log('Now you need to import datasources.ts in your index.ts in order to connect with mongo'.green)
     } else if (dbType === DbType.SEQUELIZE) {
-      shell.exec('yarn add sequelize')
-      shell.exec('yarn add -D sequelize-cli')
+      shell.exec(`${configService.getInstallCommand()} sequelize`)
+      shell.exec(`${configService.getDevInstallCommand()} sequelize-cli`)
 
       shell.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
       shell.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
@@ -187,8 +188,8 @@ export class CliGenerator {
       )
       console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
     } else if (dbType == DbType.PRISMA) {
-      shell.exec('yarn add @prisma/client')
-      shell.exec('yarn add -D prisma')
+      shell.exec(`${configService.getInstallCommand()} @prisma/client`)
+      shell.exec(`${configService.getDevInstallCommand()} prisma`)
 
       shell.exec('npm pkg set scripts.m:run="npx prisma migrate dev --schema src/database/prisma/schema.prisma"')
       shell.exec(
@@ -227,8 +228,10 @@ export class CliGenerator {
 
   installAuth(dbType: DbType) {
     console.log('================= Installing auth dependencies ================='.yellow)
-    shell.exec('yarn add bcrypt passport passport-jwt jsonwebtoken')
-    shell.exec('yarn add -D @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken')
+    shell.exec(`${configService.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`)
+    shell.exec(
+      `${configService.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`
+    )
 
     if (dbType === DbType.TYPEORM) {
       fs.copyFile(
@@ -362,8 +365,8 @@ export class CliGenerator {
 
   installMailer() {
     console.log('================= Installing Mail dependencies ================='.yellow)
-    shell.exec('yarn add handlebars nodemailer')
-    shell.exec('yarn add -D @types/nodemailer')
+    shell.exec(`${configService.getInstallCommand()} handlebars nodemailer`)
+    shell.exec(`${configService.getDevInstallCommand()} @types/nodemailer`)
 
     fs.copyFileSync(
       path.resolve(__dirname, '..', '..', 'code', 'generated', 'mailer', 'mailer.ts'),
@@ -541,8 +544,9 @@ export class CliGenerator {
 
   installTests() {
     console.log('================= Installing Test dependencies ================='.yellow)
-    shell.exec('yarn add @faker-js/faker')
-    shell.exec('yarn add -D jest @types/jest ts-jest axios')
+    shell.exec(`${configService.getInstallCommand()} @faker-js/faker`)
+    shell.exec(`${configService.getDevInstallCommand()} jest @types/jest ts-jest axios`)
+
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'tests'), './src/tests')
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'jest.config.js'), './jest.config.js')

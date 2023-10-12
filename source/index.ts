@@ -1,27 +1,24 @@
 #!/usr/bin/env node
-import fs from 'fs'
 import inquirer from 'inquirer'
 import { argv } from './plugins/yargs'
 import { ApiCodeGenerator } from './generators/api.generator'
-import { DbType, ProjectType } from './interfaces/code.generator'
+import { DbType, PackageManager, ProjectType } from './interfaces/code.generator'
 import { CliGenerator } from './generators/cli.generator'
 import { GraphqlCodeGenerator } from './generators/graphql.generator'
 import shell from 'shelljs'
 import figlet from 'figlet'
 import gradient from 'gradient-string'
+import { ConfigService } from './services/config.service'
 
 const apiGenerator = new ApiCodeGenerator()
 const graphqlGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
-
-const getConfig = (): { project: ProjectType; orm?: DbType } =>
-  JSON.parse(fs.readFileSync('cli.config.json').toString())
-const writeConfig = (config: any) => fs.writeFileSync('cli.config.json', JSON.stringify(config))
+const configService = new ConfigService()
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function init() {
-  figlet('Node-Express-CLI', { font: 'Big Money-ne' }, (err, data) => {
+  figlet.text('Node-Express-CLI', { font: 'Standard' }, (err, data) => {
     console.log(gradient.pastel.multiline(data))
   })
 
@@ -34,20 +31,28 @@ async function init() {
     choices: Object.values(ProjectType),
   })
 
-  generate(type.resp)
+  const manager = await inquirer.prompt({
+    type: 'list',
+    name: 'resp',
+    message: 'Choose package manager',
+    choices: Object.values(PackageManager),
+  })
+
+  generate(type.resp, manager.resp)
   console.log("Cool! All ready. The next step is to create an .env file and run the command 'npm run dev'".green)
 }
 
-function generate(typeProject: ProjectType) {
+function generate(typeProject: ProjectType, manager: PackageManager) {
+  configService.writeConfig({
+    project: typeProject,
+    package_manger: manager,
+  })
+
   if (typeProject === ProjectType.API) {
     apiGenerator.init()
   } else if (typeProject === ProjectType.GRAPH) {
     graphqlGenerator.init()
   }
-
-  writeConfig({
-    project: typeProject,
-  })
 }
 
 async function askForDatabase() {
@@ -58,15 +63,15 @@ async function askForDatabase() {
     choices: Object.values(DbType),
   })
 
-  const config = getConfig()
+  const config = configService.getConfig()
   config.orm = question.database
-  writeConfig(config)
+  configService.writeConfig(config)
 
   return question.database
 }
 
 async function makeModule() {
-  const config = getConfig()
+  const config = configService.getConfig()
   const moduleName = await inquirer.prompt({
     type: 'input',
     name: 'resp',
@@ -80,7 +85,7 @@ async function makeModule() {
 }
 
 async function makeSeeder() {
-  const config = getConfig()
+  const config = configService.getConfig()
   const seederName = await inquirer.prompt({
     type: 'input',
     name: 'resp',
@@ -92,7 +97,7 @@ async function makeSeeder() {
 }
 
 async function makeEntity() {
-  const config = getConfig()
+  const config = configService.getConfig()
 
   if (config.orm == DbType.PRISMA) {
     console.log('================================'.yellow)
@@ -123,7 +128,7 @@ async function makeFactory() {
 }
 
 async function makeMigration() {
-  const config = getConfig()
+  const config = configService.getConfig()
   const dbType = config.orm ?? DbType.TYPEORM
   if (dbType == DbType.MONGO) {
     console.log('================================'.yellow)
@@ -194,9 +199,14 @@ switch (command) {
     break
 
   case 'install:auth':
-    const config = getConfig()
-    const dbType = config.orm ?? DbType.TYPEORM
-    cliGenerator.installAuth(dbType)
+    const config = configService.getConfig()
+    if (!config.orm) {
+      console.log('================================'.yellow)
+      console.log("Install first the orm. Please exec node-express-cli install:database".yellow)
+      console.log('================================'.yellow)
+    } else {
+      cliGenerator.installAuth(config.orm)
+    }
     break
 
   case 'install:mailer':

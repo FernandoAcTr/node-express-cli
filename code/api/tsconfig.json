@@ -16,14 +16,7 @@
     "noImplicitAny": false,
     "typeRoots": ["@types", "node_modules/@types"],
     "paths": {
-      "@src/*": ["src/*"],
-      "@database/*": ["database/*"],
-      "@entities/*": ["entities/*"],
-      "@models/*": ["models/*"],
-      "@middlewares/*": ["middlewares/*"],
-      "@helpers/*": ["helpers/*"],
-      "@config/*": ["config/*"],
-      "@modules/*": ["modules/*"]
+      "@/*": ["./*"]
     }
   },
   "exclude": ["node_modules", "build"]

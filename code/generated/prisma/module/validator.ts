@@ -1,6 +1,6 @@
-import { validateBody } from '@middlewares/validator'
+import { bodyValidator } from '@/middlewares/validator'
 import { check } from 'express-validator';
 
-export const storeValidators = [validateBody];
+export const storeValidators = [bodyValidator];
 
-export const updateValidators = [validateBody];
+export const updateValidators = [bodyValidator];

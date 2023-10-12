@@ -1,12 +1,12 @@
 import jwt from "jsonwebtoken";
-import { AppDataSource } from "@database/datasources";
-import { User } from "@entities/user.entity";
-import { HTTPError, UnauthorizedError } from "@middlewares/error_handler";
+import { AppDataSource } from "@/database/datasources";
+import { User } from "@/entities/user.entity";
+import { HTTPError, UnauthorizedError } from "@/middlewares/error_handler";
 import { Repository } from "typeorm";
 import { PasswordEncrypter } from "./passsword_encripter";
-import { settings } from "@config/settings";
-import { Roles } from "@entities/role.entity";
-import { Token } from '@entities/token.entity'
+import { settings } from "@/config/settings";
+import { Roles } from "@/entities/role.entity";
+import { Token } from '@/entities/token.entity'
 
 export class AuthService {
   private readonly repository: Repository<User>;

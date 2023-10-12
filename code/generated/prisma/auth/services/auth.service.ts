@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken'
-import { HTTPError, UnauthorizedError } from '@middlewares/error_handler'
+import { HTTPError, UnauthorizedError } from '@/middlewares/error_handler'
 import { PasswordEncrypter } from './passsword_encripter'
-import { settings } from '@config/settings'
-import { prisma } from '@database/client'
+import { settings } from '@/config/settings'
+import { prisma } from '@/database/client'
 import { User } from '@prisma/client'
 
 export enum Roles {

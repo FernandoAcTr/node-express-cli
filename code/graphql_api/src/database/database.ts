@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm'
-import { settings } from '@config/settings'
+import { settings } from '@/config/settings'
 const { DB } = settings
 
 export const AppDataSource = new DataSource({

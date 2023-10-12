@@ -1,6 +1,6 @@
-import { IUser, User } from '@models/user.model'
-import { HTTPError, UnauthorizedError } from '@middlewares/error_handler'
-import { Token } from '@models/token.model'
+import { IUser, User } from '@/models/user.model'
+import { HTTPError, UnauthorizedError } from '@/middlewares/error_handler'
+import { Token } from '@/models/token.model'
 
 export class AuthService {
   async signup(user: IUser) {

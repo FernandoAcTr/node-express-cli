@@ -10,6 +10,13 @@ export enum ProjectType {
   GRAPH = 'GraphQL API',
 }
 
+export enum PackageManager {
+  NPM = 'npm',
+  YARN = 'yarn',
+  PNPM = 'pnpm',
+  BUN = 'bun',
+}
+
 export abstract class CodeGenerator {
   protected abstract createDirStructure(): void
   protected abstract copyCode(dbType: DbType): void

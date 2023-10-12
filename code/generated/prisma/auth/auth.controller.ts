@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { AuthService } from './services/auth.service'
-import { UnauthorizedError } from '@middlewares/error_handler'
+import { UnauthorizedError } from '@/middlewares/error_handler'
 
 export async function signup(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authService = new AuthService()

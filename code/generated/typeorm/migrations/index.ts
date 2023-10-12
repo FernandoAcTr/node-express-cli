@@ -1,3 +1,3 @@
-import { Seeds0000000000000 } from './0000000000000-seeds'
+import { Seeds1677294697200 } from './1677294697200-seeds'
 
-export default [Seeds0000000000000]
+export default [Seeds1677294697200]

@@ -1,3 +1,4 @@
+import { bodyValidator } from '@/middlewares/validator'
 import { check } from 'express-validator'
 
 export const signupValidators = [
@@ -8,9 +9,11 @@ export const signupValidators = [
     .withMessage('field password is required')
     .isLength({ min: 8 })
     .withMessage('password must be at least 8 characters'),
+  bodyValidator,
 ]
 
 export const loginValidators = [
   check('email').notEmpty().withMessage('field email is required'),
   check('password').notEmpty().withMessage('field password is required'),
+  bodyValidator,
 ]

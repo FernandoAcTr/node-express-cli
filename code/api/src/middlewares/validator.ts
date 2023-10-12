@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { validationResult, Result, ValidationError } from 'express-validator'
 
-export function validateBody(req: Request, res: Response, next: NextFunction) {
+export function bodyValidator(req: Request, res: Response, next: NextFunction) {
   const errors: Result<ValidationError> = validationResult(req)
 
   const arrayErrors = errors.array()

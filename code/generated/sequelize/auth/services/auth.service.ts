@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken'
-import { User } from '@entities/user.entity'
-import { HTTPError, UnauthorizedError } from '@middlewares/error_handler'
+import { User } from '@/entities/user.entity'
+import { HTTPError, UnauthorizedError } from '@/middlewares/error_handler'
 import { PasswordEncrypter } from './passsword_encripter'
-import { settings } from '@config/settings'
-import { Roles } from '@entities/role.entity'
-import { Token } from '@entities/token.entity'
+import { settings } from '@/config/settings'
+import { Roles } from '@/entities/role.entity'
+import { Token } from '@/entities/token.entity'
 
 export class AuthService {
   private passwordEncrypter: PasswordEncrypter

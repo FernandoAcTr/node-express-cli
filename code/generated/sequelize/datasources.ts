@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize'
-import { settings } from '@config/settings'
+import { settings } from '@/config/settings'
 
 const { DB } = settings
 

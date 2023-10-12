@@ -1,4 +1,4 @@
-import { sequelize } from '@database/datasources'
+import { sequelize } from '@/database/datasources'
 import { CreationOptional, InferAttributes, InferCreationAttributes, Model, DataTypes } from 'sequelize'
 
 export class Role extends Model<InferAttributes<Role>, InferCreationAttributes<Role>> {

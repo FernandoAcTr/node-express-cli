@@ -1,8 +1,9 @@
+import 'colors'
 import fs from 'fs-extra'
 import path from 'path'
 import shell from 'shelljs'
-import 'colors'
 import { CodeGenerator } from '../interfaces/code.generator'
+import { configService } from '../services/config.service'
 
 export class ApiCodeGenerator extends CodeGenerator {
   protected createDirStructure() {
@@ -39,11 +40,11 @@ export class ApiCodeGenerator extends CodeGenerator {
   protected installDependencies(): void {
     console.log('================= Installing dependencies ================='.yellow)
     shell.exec(
-      'yarn add app-root-path bcrypt cors dotenv dotenv-parse-variables express express-validator helmet module-alias morgan rate-limiter-flexible winston'
+      `${configService.getInstallCommand()} app-root-path bcrypt cors dotenv express express-validator helmet module-alias morgan rate-limiter-flexible winston`
     )
 
     shell.exec(
-      'yarn add -D @types/app-root-path @types/bcrypt @types/cors @types/dotenv-parse-variables @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch typescript'
+      `${configService.getDevInstallCommand()} @types/app-root-path @types/bcrypt @types/cors @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch typescript`
     )
   }
 

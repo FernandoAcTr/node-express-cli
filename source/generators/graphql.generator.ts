@@ -3,6 +3,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import shell from 'shelljs'
 import { CodeGenerator } from '../interfaces/code.generator'
+import { configService } from '../services/config.service'
 
 export class GraphqlCodeGenerator extends CodeGenerator {
   protected createDirStructure(): void {
@@ -43,10 +44,10 @@ export class GraphqlCodeGenerator extends CodeGenerator {
   protected installDependencies(): void {
     console.log('================= Installing dependencies ================='.yellow)
     shell.exec(
-      'yarn add @graphql-tools/schema apollo-server-express bcrypt cors dotenv dotenv-parse-variables express graphql lodash'
+      `${configService.getInstallCommand()} @graphql-tools/schema apollo-server-express bcrypt cors dotenv express graphql lodash`
     )
     shell.exec(
-      'yarn add -D @types/bcrypt @types/express @types/lodash @types/node @types/dotenv-parse-variables ts-node tsc-watch typescript'
+      `${configService.getDevInstallCommand()} @types/bcrypt @types/express @types/lodash @types/node ts-node tsc-watch typescript`
     )
   }
 

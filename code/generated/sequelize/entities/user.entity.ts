@@ -1,4 +1,4 @@
-import { sequelize } from '@database/datasources'
+import { sequelize } from '@/database/datasources'
 import {
   CreationOptional,
   InferAttributes,

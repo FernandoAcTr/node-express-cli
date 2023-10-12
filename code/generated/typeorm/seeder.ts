@@ -1,5 +1,5 @@
 import '../alias'
-import logger from '@helpers/logger'
+import logger from '@/helpers/logger'
 import { Seed } from './seed'
 import { Seed as RanSeed } from '../entities/seed.entity'
 import { AppDataSource } from './datasources'

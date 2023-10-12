@@ -42,7 +42,7 @@ tipo de proyecto y orm.
 La estructura generada trata de seguir una arquitectura modular, en donde se tiene un directorio para configuraciones, para base de datos, entidades, helpers, middlewares y el más importante modules.
 En este último se contiene cada módulo del proyecto.
 
-Para proyectos API REST se incluyen alias de módulo o lo que es lo mismo, abreviaciones para acceder a cada directorio. De esta manera el directorio middlewares es accedido como @middlewares, services como @services, modules como @modules, etc. (Actualmente esta característica no es soportada para proyectos Web o GraphQL)
+Para proyectos API REST se incluyen alias de módulo o lo que es lo mismo, abreviaciones para acceder a cada directorio. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. (Actualmente esta característica no es soportada para proyectos Web o GraphQL)
 Por ejemplo, una importación se haría de la siguiente manera:
 
 ![Importación](./docs/img/importacion.png)
@@ -109,7 +109,7 @@ Para esto un módulo incluye un archivo de validación en donde se colocan cada 
 
 ![Validators](./docs/img/validacion.png)
 
-Y para utilizarlos se pasan como middleware a una ruta, seguidos del middleware validateBody, encargado de obtener todos los mendajes de error y regresarlos como una respuesta estándar al cliente.
+Y para utilizarlos se pasan como middleware a una ruta, seguidos del middleware bodyValidator, encargado de obtener todos los mendajes de error y regresarlos como una respuesta estándar al cliente.
 
 ![Validators](./docs/img/validators_uso.png)
 
