@@ -2,6 +2,7 @@ export enum DbType {
   MONGO = 'mongoose',
   TYPEORM = 'typeorm',
   SEQUELIZE = 'sequelize',
+  PRISMA = 'prisma',
 }
 
 export enum ProjectType {
@@ -10,10 +11,8 @@ export enum ProjectType {
 }
 
 export abstract class CodeGenerator {
-  abstract createDirStructure(): void
-  abstract copyCode(dbType: DbType): void
-  abstract installDependencies(): void
-
+  protected abstract createDirStructure(): void
+  protected abstract copyCode(dbType: DbType): void
+  protected abstract installDependencies(): void
   abstract init(): void
-  abstract makeModule(name: String, dbType: DbType): void
 }

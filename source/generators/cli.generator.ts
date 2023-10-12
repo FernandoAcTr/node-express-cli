@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import shell from 'shelljs'
 import 'colors'
 import path from 'path'
-import { DbType } from './code_generator'
+import { DbType, ProjectType } from '../interfaces/code.generator'
 
 export class CliGenerator {
   installPrettier() {
@@ -45,8 +45,6 @@ export class CliGenerator {
       recursive: true,
     })
 
-    fs.copyFile(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seed.ts'), './src/database/seed.ts')
-
     if (dbType === DbType.TYPEORM) {
       shell.exec('yarn add typeorm reflect-metadata')
 
@@ -67,6 +65,11 @@ export class CliGenerator {
       fs.mkdirSync('./src/database/migrations', {
         recursive: true,
       })
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'seed.ts'),
+        './src/database/seed.ts'
+      )
 
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'datasources.ts'),
@@ -108,6 +111,10 @@ export class CliGenerator {
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'datasources.ts'),
         './src/database/datasources.ts'
+      )
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'seed.ts'),
+        './src/database/seed.ts'
       )
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'seeder.ts'),
@@ -164,6 +171,11 @@ export class CliGenerator {
       )
 
       fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'seed.ts'),
+        './src/database/seed.ts'
+      )
+
+      fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '00000000000000-seeds.js'),
         './src/database/migrations/00000000000000-seeds.js'
       )
@@ -174,6 +186,42 @@ export class CliGenerator {
           .green
       )
       console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
+    } else if (dbType == DbType.PRISMA) {
+      shell.exec('yarn add @prisma/client')
+      shell.exec('yarn add -D prisma')
+
+      shell.exec('npm pkg set scripts.m:run="npx prisma migrate dev --schema src/database/prisma/schema.prisma"')
+      shell.exec(
+        'npm pkg set scripts.m:run:deploy="npx prisma migrate deploy --schema src/database/prisma/schema.prisma"'
+      )
+      shell.exec('npm pkg set scripts.m:reset="npx prisma migrate reset --schema src/database/prisma/schema.prisma"')
+      shell.exec('npm pkg set scripts.m:generate="npx prisma generate --schema src/database/prisma/schema.prisma"')
+
+      fs.mkdirSync('./src/database/prisma', {
+        recursive: true,
+      })
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'seed.ts'),
+        './src/database/seed.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'schema.prisma'),
+        './src/database/prisma/schema.prisma'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'seeder.ts'),
+        './src/database/seeder.ts'
+      )
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'client.ts'),
+        './src/database/client.ts'
+      )
+
+      console.log('You need to create your first migration. Run yarn m:run'.green)
     }
   }
 
@@ -283,6 +331,22 @@ export class CliGenerator {
       )
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'auth'), './src/modules/auth')
+    } else if (dbType == DbType.PRISMA) {
+      //TODO modify PRISMA
+      const authContent = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'schema.prisma.auth'))
+        .toString()
+
+      fs.appendFileSync('./src/database/prisma/schema.prisma', authContent)
+
+      fs.copyFile(
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'passport.ts'),
+        './src/middlewares/passport.ts'
+      )
+
+      fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'auth'), './src/modules/auth')
+
+      shell.exec('yarn m:run --name auth')
     }
 
     console.log(
@@ -312,14 +376,26 @@ export class CliGenerator {
     )
   }
 
-  makeSeeder(name: string) {
+  makeSeeder(name: string, dbType: DbType) {
+    if (!fs.existsSync('./src/database/seeds')) {
+      fs.mkdirSync('./src/database/seeds', {
+        recursive: true,
+      })
+    }
+
     const filename = `${name[0].toLowerCase()}${name.substring(1)}.seeder.ts`
     const seederName = `${name[0].toUpperCase()}${name.substring(1)}Seeder`
 
-    const seeder = fs
-      .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seedTemplate.ts'))
-      .toString()
-      .replace(/__ClassName__/g, seederName)
+    const seeder =
+      dbType == DbType.PRISMA
+        ? fs
+            .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'seedTemplate.ts'))
+            .toString()
+            .replace(/__ClassName__/g, seederName)
+        : fs
+            .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'seeds', 'seedTemplate.ts'))
+            .toString()
+            .replace(/__ClassName__/g, seederName)
 
     fs.writeFileSync(`./src/database/seeds/${filename}`, seeder)
   }
@@ -350,6 +426,12 @@ export class CliGenerator {
   }
 
   makeFactory(name: String) {
+    if (!fs.existsSync('./src/database/factories')) {
+      fs.mkdirSync('./src/database/factories', {
+        recursive: true,
+      })
+    }
+
     const factoryName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}`
 
     const entity = fs
@@ -357,6 +439,104 @@ export class CliGenerator {
       .toString()
       .replace(/__ClassName__/g, factoryName)
     fs.writeFileSync(`./src/database/factories/${name.toLowerCase()}.factory.ts`, entity)
+  }
+
+  makeModule(name: string, dbType: DbType, projectType: ProjectType) {
+    if (projectType == ProjectType.API) {
+      const dir = `./src/modules/${name.toLowerCase()}`
+      const servicesDir = `./src/modules/${name.toLowerCase()}/services`
+      const codeDirs = {
+        [DbType.MONGO]: 'mongo',
+        [DbType.TYPEORM]: 'typeorm',
+        [DbType.SEQUELIZE]: 'sequelize',
+        [DbType.PRISMA]: 'prisma',
+      }
+      const codeDir = codeDirs[dbType]
+
+      fs.mkdirSync(dir, {
+        recursive: true,
+      })
+
+      fs.mkdirSync(servicesDir, {
+        recursive: true,
+      })
+
+      const serviceName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}`
+
+      //router
+      const routes = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'routes.ts'))
+        .toString()
+        .replace(/__modulename__/g, name.toLowerCase())
+      fs.writeFileSync(`${dir}/${name.toLowerCase()}.routes.ts`, routes)
+
+      //validator
+      const validator = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'validator.ts'))
+        .toString()
+      fs.writeFileSync(`${dir}/${name.toLowerCase()}.validator.ts`, validator)
+
+      //controller
+      const controller = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'controller.ts'))
+        .toString()
+        .replace(/__ServiceName__/g, serviceName)
+      fs.writeFileSync(`${dir}/${name.toLowerCase()}.controller.ts`, controller)
+
+      //services
+      const service = fs
+        .readFileSync(
+          path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'service.ts')
+        )
+        .toString()
+        .replace('__ServiceName__', serviceName)
+      fs.writeFileSync(`${servicesDir}/${name.toLowerCase()}.service.ts`, service)
+
+      const index = fs
+        .readFileSync(
+          path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'module', 'services', 'index.ts')
+        )
+        .toString()
+        .replace(/__service__/g, name.toLowerCase())
+      fs.writeFileSync(`${servicesDir}/index.ts`, index)
+    } else {
+      const modulename = name.toLowerCase()
+      const entityName = name[0].toUpperCase() + name.substr(1).toLowerCase()
+      const dir = `./src/graphql/modules/${modulename}s`
+      fs.mkdirSync(dir, {
+        recursive: true,
+      })
+      const repository = fs
+        .readFileSync(
+          path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.repository.ts')
+        )
+        .toString()
+        .replace(new RegExp('__EntityName__', 'g'), entityName)
+
+      const schema = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.schema.ts'))
+        .toString()
+        .replace(new RegExp('__EntityName__', 'g'), entityName)
+        .replace(new RegExp('__modulename__', 'g'), modulename)
+      const resolver = fs
+        .readFileSync(
+          path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.resolver.ts')
+        )
+        .toString()
+        .replace(new RegExp('__EntityName__', 'g'), entityName)
+        .replace(new RegExp('__modulename__', 'g'), modulename)
+
+      const index = fs
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.index.ts'))
+        .toString()
+        .replace(new RegExp('__EntityName__', 'g'), entityName)
+        .replace(new RegExp('__modulename__', 'g'), modulename)
+
+      fs.writeFileSync(`${dir}/${modulename}.schema.ts`, schema)
+      fs.writeFileSync(`${dir}/${modulename}.resolver.ts`, resolver)
+      fs.writeFileSync(`${dir}/${modulename}.repository.ts`, repository)
+      fs.writeFileSync(`${dir}/index.ts`, index)
+    }
   }
 
   installTests() {

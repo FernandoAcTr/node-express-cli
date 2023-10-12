@@ -2,20 +2,31 @@
 import fs from 'fs'
 import inquirer from 'inquirer'
 import { argv } from './plugins/yargs'
-import { ApiCodeGenerator } from './generators/api_code_generator'
-import { DbType, ProjectType } from './generators/code_generator'
-import { CliGenerator } from './generators/cli_generator'
-import { GraphqlCodeGenerator } from './generators/graphql_code_generator'
+import { ApiCodeGenerator } from './generators/api.generator'
+import { DbType, ProjectType } from './interfaces/code.generator'
+import { CliGenerator } from './generators/cli.generator'
+import { GraphqlCodeGenerator } from './generators/graphql.generator'
 import shell from 'shelljs'
+import figlet from 'figlet'
+import gradient from 'gradient-string'
 
 const apiGenerator = new ApiCodeGenerator()
-const grapqlGenerator = new GraphqlCodeGenerator()
+const graphqlGenerator = new GraphqlCodeGenerator()
 const cliGenerator = new CliGenerator()
 
-const getConfig = (): { project: string; orm?: DbType } => JSON.parse(fs.readFileSync('cli.config.json').toString())
+const getConfig = (): { project: ProjectType; orm?: DbType } =>
+  JSON.parse(fs.readFileSync('cli.config.json').toString())
 const writeConfig = (config: any) => fs.writeFileSync('cli.config.json', JSON.stringify(config))
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 async function init() {
+  figlet('Node-Express-CLI', { font: 'Big Money-ne' }, (err, data) => {
+    console.log(gradient.pastel.multiline(data))
+  })
+
+  await sleep(500)
+
   const type = await inquirer.prompt({
     type: 'list',
     name: 'resp',
@@ -31,7 +42,7 @@ function generate(typeProject: ProjectType) {
   if (typeProject === ProjectType.API) {
     apiGenerator.init()
   } else if (typeProject === ProjectType.GRAPH) {
-    grapqlGenerator.init()
+    graphqlGenerator.init()
   }
 
   writeConfig({
@@ -62,31 +73,40 @@ async function makeModule() {
     message: 'Name of module:',
   })
 
-  if (moduleName.resp)
-    if (config.project === ProjectType.API) {
-      const config = getConfig()
-      const dbType = config.orm ?? DbType.TYPEORM
-      apiGenerator.makeModule(moduleName.resp, dbType)
-    } else if (config.project === ProjectType.GRAPH) grapqlGenerator.makeModule(moduleName.resp)
+  if (moduleName.resp) {
+    const dbType = config.orm ?? DbType.TYPEORM
+    cliGenerator.makeModule(moduleName.resp, dbType, config.project)
+  }
 }
 
 async function makeSeeder() {
+  const config = getConfig()
   const seederName = await inquirer.prompt({
     type: 'input',
     name: 'resp',
     message: 'Name of seeder:',
   })
 
-  if (seederName.resp) cliGenerator.makeSeeder(seederName.resp)
+  const dbType = config.orm ?? DbType.TYPEORM
+  if (seederName.resp) cliGenerator.makeSeeder(seederName.resp, dbType)
 }
 
 async function makeEntity() {
+  const config = getConfig()
+
+  if (config.orm == DbType.PRISMA) {
+    console.log('================================'.yellow)
+    console.log("Since you are using Prisma you don't need to make entities, Prisma generate them for you.".yellow)
+    console.log('================================'.yellow)
+    return
+  }
+
   const entityName = await inquirer.prompt({
     type: 'input',
     name: 'resp',
     message: 'Name of entity:',
   })
-  const config = getConfig()
+
   const dbType = config.orm ?? DbType.TYPEORM
   if (entityName.resp) cliGenerator.makeEntity(entityName.resp, dbType)
 }
@@ -109,6 +129,13 @@ async function makeMigration() {
     console.log('================================'.yellow)
     console.log("Mongoose doesn't have migrations".yellow)
     console.log('================================'.yellow)
+    return
+  }
+  if (dbType == DbType.PRISMA) {
+    console.log('================================'.yellow)
+    console.log("Prisma doesn't need custom migrations, please use the command to generate them.".yellow)
+    console.log('================================'.yellow)
+    return
   }
 
   const { resp: name } = await inquirer.prompt({
