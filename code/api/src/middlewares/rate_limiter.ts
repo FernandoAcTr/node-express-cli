@@ -13,7 +13,7 @@ export const rateLimiterMiddleware = (
   next: NextFunction
 ) => {
   rateLimiter
-    .consume(req.ip)
+    .consume(req.ip!)
     .then(() => {
       next()
     })
