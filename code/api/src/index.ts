@@ -20,7 +20,7 @@ class Server {
 
   middlewares() {
     this.app.use(morgan('[:date[iso]] (:status) ":method :url HTTP/:http-version" :response-time ms - [:res[content-length]]'))
-    this.app.use(cors())
+    this.app.use(cors({origin: '*'}))
     this.app.use(rateLimiterMiddleware)
     this.app.use(helmet())
     this.app.use(express.json())
