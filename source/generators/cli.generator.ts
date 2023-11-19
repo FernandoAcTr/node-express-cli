@@ -97,11 +97,13 @@ export class CliGenerator {
         './src/database/migrations/index.ts'
       )
 
-      console.log("Please add the line 'import reflect-metadata' at the top of your index.ts".green)
+      console.log('-------------------------------------------------------------------------------------------'.green)
+      console.log("Please add the line: import 'reflect-metadata' at the top of your index.ts".green)
       console.log('You must install specific database driver like mysql or pg'.green)
       console.log(
         'You need to initialize the AppDataSource manually. A greet place is in start() method in your index.ts'.green
       )
+      console.log('-------------------------------------------------------------------------------------------'.green)
     } else if (dbType === DbType.MONGO) {
       shell.exec(`${configService.getInstallCommand()} mongoose`)
 
@@ -126,7 +128,9 @@ export class CliGenerator {
         './src/models/seed.model.ts'
       )
 
+      console.log('-------------------------------------------------------------------------------------------'.green)
       console.log('Now you need to import datasources.ts in your index.ts in order to connect with mongo'.green)
+      console.log('-------------------------------------------------------------------------------------------'.green)
     } else if (dbType === DbType.SEQUELIZE) {
       shell.exec(`${configService.getInstallCommand()} sequelize`)
       shell.exec(`${configService.getDevInstallCommand()} sequelize-cli`)
@@ -181,12 +185,14 @@ export class CliGenerator {
         './src/database/migrations/00000000000000-seeds.js'
       )
 
+      console.log('-------------------------------------------------------------------------------------------'.green)
       console.log('You must install specific database driver like mysql2 or pg'.green)
       console.log(
         `You can use the .authenticate() function to test if the connection is OK. A greet place is in start() method in your index.ts`
           .green
       )
       console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
+      console.log('-------------------------------------------------------------------------------------------'.green)
     } else if (dbType == DbType.PRISMA) {
       shell.exec(`${configService.getInstallCommand()} @prisma/client`)
       shell.exec(`${configService.getDevInstallCommand()} prisma`)
@@ -222,7 +228,9 @@ export class CliGenerator {
         './src/database/client.ts'
       )
 
+      console.log('-------------------------------------------------------------------------------------------'.green)
       console.log('You need to create your first migration. Run yarn m:run'.green)
+      console.log('-------------------------------------------------------------------------------------------'.green)
     }
   }
 
@@ -352,6 +360,7 @@ export class CliGenerator {
       shell.exec('yarn m:run --name auth')
     }
 
+    console.log('-------------------------------------------------------------------------------------------'.green)
     console.log(
       'Now you need to add passport.initialize() and passport.use(JWTStrategy) in your middlewares section on index.ts'
         .green
@@ -361,6 +370,7 @@ export class CliGenerator {
       'You need to run the database migrations. Depending on the ORM you chose it is necessary to run an specific command'
         .green
     )
+    console.log('-------------------------------------------------------------------------------------------'.green)
   }
 
   installMailer() {
