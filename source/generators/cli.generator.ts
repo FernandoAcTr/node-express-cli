@@ -547,7 +547,6 @@ export class CliGenerator {
     shell.exec(`${configService.getInstallCommand()} @faker-js/faker`)
     shell.exec(`${configService.getDevInstallCommand()} jest @types/jest ts-jest axios`)
 
-
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'tests'), './src/tests')
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'jest.config.js'), './jest.config.js')
     shell.exec('npm pkg set scripts.test="npx jest"')

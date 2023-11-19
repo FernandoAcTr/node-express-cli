@@ -9,7 +9,6 @@ import SocketIO from './socket'
 import { Server } from 'http'
 import logger from './helpers/logger'
 
-
 //importing routes
 import routes from './router'
 
@@ -29,8 +28,10 @@ class App {
   config() {}
 
   middlewares() {
-    this.app.use(morgan('[:date[iso]] (:status) ":method :url HTTP/:http-version" :response-time ms - [:res[content-length]]'))
-    this.app.use(cors({origin: '*'}))
+    this.app.use(
+      morgan('[:date[iso]] (:status) ":method :url HTTP/:http-version" :response-time ms - [:res[content-length]]')
+    )
+    this.app.use(cors({ origin: '*' }))
     this.app.use(rateLimiterMiddleware)
     this.app.use(helmet())
     this.app.use(express.json())
