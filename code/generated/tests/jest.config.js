@@ -5,4 +5,9 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  testPathIgnorePatterns: ['.d.ts', '.js'],
+  roots: ['<rootDir>/src'],
+  verbose: true,
+  forceExit: true,
+  maxWorkers: 1,
 }

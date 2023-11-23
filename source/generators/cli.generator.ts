@@ -555,7 +555,7 @@ export class CliGenerator {
   installTests() {
     console.log('================= Installing Test dependencies ================='.yellow)
     shell.exec(`${configService.getInstallCommand()} @faker-js/faker`)
-    shell.exec(`${configService.getDevInstallCommand()} jest @types/jest ts-jest axios`)
+    shell.exec(`${configService.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`)
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'tests'), './src/tests')
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'jest.config.js'), './jest.config.js')

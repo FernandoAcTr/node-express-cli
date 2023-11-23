@@ -1,9 +1,12 @@
-import { loginAsAdmin } from './constants'
+import { closePort, request } from './helpers'
+
+afterAll(async () => {
+  closePort()
+})
 
 describe('Example collection of request', () => {
   test('Example Request', async () => {
-    const axios = await loginAsAdmin()
-    const { status } = await axios.get('/')
+    const { status } = await request().get('/')
     expect(status).toBe(200)
   })
 })
