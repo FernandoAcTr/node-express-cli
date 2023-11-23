@@ -9,7 +9,7 @@ import { rateLimiterMiddleware } from './middlewares/rate_limiter'
 import { settings } from './config/settings'
 import { handleErrorMiddleware } from './middlewares/error_handler'
 
-class Server {
+class App {
   public app: express.Application
 
   constructor() {
@@ -35,11 +35,11 @@ class Server {
   }
 
   start() {
-    this.app.listen(settings.PORT, () => {
+    return this.app.listen(settings.PORT, () => {
       logger.info('🚀 Server listen on port ' + settings.PORT)
     })
   }
 }
 
-const server = new Server()
-server.start()
+const app = new App()
+export const server = app.start()
