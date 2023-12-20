@@ -1,10 +1,7 @@
 import { makeExecutableSchema } from '@graphql-tools/schema'
-import { merge } from 'lodash'
-
-//Import Schemas
-import { Default } from './modules/default'
+import { helloWorld } from './modules/hello-world'
 
 export const schema = makeExecutableSchema({
-  typeDefs: [Default.typeDef],
-  resolvers: merge(Default.resolver),
+  typeDefs: [helloWorld.typeDef],
+  resolvers: [helloWorld.resolver],
 })

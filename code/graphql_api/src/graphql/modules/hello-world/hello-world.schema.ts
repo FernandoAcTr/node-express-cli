@@ -4,14 +4,10 @@
  * for queries (Query) and
  * mutations (Mutation).
  */
-import { gql } from 'apollo-server-express'
+import gql from 'graphql-tag'
 
 export const typeDef = gql`
   type Query {
-    greet: String
-  }
-
-  type Mutation {
-    greetPerson(name: String!): String!
+    salute: String
   }
 `
