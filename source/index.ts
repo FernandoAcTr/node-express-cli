@@ -5,10 +5,11 @@ import { ApiCodeGenerator } from './generators/api.generator'
 import { DbType, PackageManager, ProjectType } from './interfaces/code.generator'
 import { CliGenerator } from './generators/cli.generator'
 import { GraphqlCodeGenerator } from './generators/graphql.generator'
-import shell from 'shelljs'
 import figlet from 'figlet'
 import gradient from 'gradient-string'
+
 import { ConfigService } from './services/config.service'
+import { shellService } from './services/shell.service'
 
 const apiGenerator = new ApiCodeGenerator()
 const graphqlGenerator = new GraphqlCodeGenerator()
@@ -38,20 +39,22 @@ async function init() {
     choices: Object.values(PackageManager),
   })
 
-  generate(type.resp, manager.resp)
+  await generate(type.resp, manager.resp)
+  console.log('-------------------------------------------------------------------------------------------'.green)
   console.log("Cool! All ready. The next step is to create an .env file and run the command 'npm run dev'".green)
+  console.log('-------------------------------------------------------------------------------------------'.green)
 }
 
-function generate(typeProject: ProjectType, manager: PackageManager) {
+async function generate(typeProject: ProjectType, manager: PackageManager) {
   configService.writeConfig({
     project: typeProject,
     package_manger: manager,
   })
 
   if (typeProject === ProjectType.API) {
-    apiGenerator.init()
+    await apiGenerator.init()
   } else if (typeProject === ProjectType.GRAPH) {
-    graphqlGenerator.init()
+    await graphqlGenerator.init()
   }
 }
 
@@ -151,9 +154,9 @@ async function makeMigration() {
   if (!name) return
 
   if (dbType == DbType.SEQUELIZE) {
-    shell.exec(`npm run db:make:migration ${name}`)
+    shellService.exec(`npm run db:make:migration ${name}`)
   } else if (dbType == DbType.TYPEORM) {
-    shell.exec(`npm run m:create ./src/database/migrations/${name}`)
+    shellService.exec(`npm run m:create ./src/database/migrations/${name}`)
   }
 }
 

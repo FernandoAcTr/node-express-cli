@@ -1,9 +1,10 @@
 import 'colors'
 import fs from 'fs-extra'
 import path from 'path'
-import shell from 'shelljs'
 import { CodeGenerator } from '../interfaces/code.generator'
 import { configService } from '../services/config.service'
+import ora from 'ora'
+import { shellService } from '../services/shell.service'
 
 export class ApiCodeGenerator extends CodeGenerator {
   protected createDirStructure() {
@@ -37,20 +38,23 @@ export class ApiCodeGenerator extends CodeGenerator {
     fs.rename('./gitignore', './.gitignore')
   }
 
-  protected installDependencies(): void {
-    console.log('================= Installing dependencies ================='.yellow)
-    shell.exec(
+  protected async installDependencies(): Promise<void> {
+    const spinner = ora('================= Installing dependencies ================='.yellow)
+    spinner.color = 'yellow'
+    spinner.start()
+
+    await shellService.execAsync(
       `${configService.getInstallCommand()} app-root-path bcrypt cors dotenv express express-validator helmet module-alias morgan rate-limiter-flexible winston`
     )
-
-    shell.exec(
+    await shellService.execAsync(
       `${configService.getDevInstallCommand()} @types/app-root-path @types/bcrypt @types/cors @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch typescript`
     )
+    spinner.succeed()
   }
 
-  init() {
+  async init() {
     this.createDirStructure()
     this.copyCode()
-    this.installDependencies()
+    await this.installDependencies()
   }
 }
