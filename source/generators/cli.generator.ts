@@ -229,7 +229,20 @@ export class CliGenerator {
       )
 
       console.log('-------------------------------------------------------------------------------------------'.green)
-      console.log('You need to create your first migration. Run yarn m:run'.green)
+      console.log(
+        `You need to create your first migration. Run ${configService.getConfig().package_manger} run m:run`.green
+      )
+      console.log('Please add the next configuration in your package.json'.green)
+      console.log(
+        `prisma: ${JSON.stringify(
+          {
+            schema: './src/database/prisma/schema.prisma',
+            seed: 'ts-node src/database/prisma/seed.ts',
+          },
+          null,
+          2
+        )}`.green
+      )
       console.log('-------------------------------------------------------------------------------------------'.green)
     }
   }
@@ -424,12 +437,16 @@ export class CliGenerator {
     const entityName = `${name[0].toUpperCase()}${name.substring(1).toLowerCase()}`
 
     if (dbType == DbType.MONGO) {
+      if (!fs.existsSync('./src/models')) fs.mkdirSync('./src/models')
+
       const model = fs
         .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'model.ts'))
         .toString()
         .replace(/__EntityName__/g, entityName)
       fs.writeFileSync(`./src/models/${name.toLowerCase()}.model.ts`, model)
     } else {
+      if (!fs.existsSync('./src/entities')) fs.mkdirSync('./src/entities')
+
       const entity = fs
         .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', codeDir, 'entity.ts'))
         .toString()
@@ -514,14 +531,14 @@ export class CliGenerator {
       fs.writeFileSync(`${servicesDir}/index.ts`, index)
     } else {
       const modulename = name.toLowerCase()
-      const entityName = name[0].toUpperCase() + name.substr(1).toLowerCase()
-      const dir = `./src/graphql/modules/${modulename}s`
-      fs.mkdirSync(dir, {
-        recursive: true,
-      })
-      const repository = fs
+      const entityName = name[0].toUpperCase() + name.substring(1).toLowerCase()
+      const moduleDir = `./src/graphql/modules/${modulename}s`
+
+      fs.mkdirSync(moduleDir, { recursive: true })
+
+      const service = fs
         .readFileSync(
-          path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.repository.ts')
+          path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'services', 'module.service.ts')
         )
         .toString()
         .replace(new RegExp('__EntityName__', 'g'), entityName)
@@ -531,6 +548,7 @@ export class CliGenerator {
         .toString()
         .replace(new RegExp('__EntityName__', 'g'), entityName)
         .replace(new RegExp('__modulename__', 'g'), modulename)
+
       const resolver = fs
         .readFileSync(
           path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.resolver.ts')
@@ -540,15 +558,15 @@ export class CliGenerator {
         .replace(new RegExp('__modulename__', 'g'), modulename)
 
       const index = fs
-        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'module.index.ts'))
+        .readFileSync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'graphql', 'module', 'index.ts'))
         .toString()
         .replace(new RegExp('__EntityName__', 'g'), entityName)
         .replace(new RegExp('__modulename__', 'g'), modulename)
 
-      fs.writeFileSync(`${dir}/${modulename}.schema.ts`, schema)
-      fs.writeFileSync(`${dir}/${modulename}.resolver.ts`, resolver)
-      fs.writeFileSync(`${dir}/${modulename}.repository.ts`, repository)
-      fs.writeFileSync(`${dir}/index.ts`, index)
+      fs.writeFileSync(`${moduleDir}/${modulename}.schema.ts`, schema)
+      fs.writeFileSync(`${moduleDir}/${modulename}.resolver.ts`, resolver)
+      fs.writeFileSync(`${moduleDir}/services/${modulename}.service.ts`, service)
+      fs.writeFileSync(`${moduleDir}/index.ts`, index)
     }
   }
 

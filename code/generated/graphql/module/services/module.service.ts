@@ -1,4 +1,4 @@
-export class __EntityName__Repository {
+export class __EntityName__Service {
   async store(body: any): Promise<Object> {
     return {}
   }

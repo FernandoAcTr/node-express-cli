@@ -23,15 +23,11 @@ export class GraphqlCodeGenerator extends CodeGenerator {
       recursive: true,
     })
 
-    fs.mkdirSync('./src/graphql/modules/default', {
+    fs.mkdirSync('./src/graphql/modules/hello-world', {
       recursive: true,
     })
 
     fs.mkdirSync('./src/config', {
-      recursive: true,
-    })
-
-    fs.mkdirSync('./src/interfaces', {
       recursive: true,
     })
   }
@@ -44,10 +40,10 @@ export class GraphqlCodeGenerator extends CodeGenerator {
   protected installDependencies(): void {
     console.log('================= Installing dependencies ================='.yellow)
     shell.exec(
-      `${configService.getInstallCommand()} @graphql-tools/schema apollo-server-express bcrypt cors dotenv express graphql lodash`
+      `${configService.getInstallCommand()} app-root-path bcrypt cors dotenv express module-alias winston graphql graphql-tag @apollo/server @graphql-tools/schema`
     )
     shell.exec(
-      `${configService.getDevInstallCommand()} @types/bcrypt @types/express @types/lodash @types/node ts-node tsc-watch typescript`
+      `${configService.getDevInstallCommand()} @types/app-root-path @types/bcrypt @types/cors @types/express @types/module-alias @types/node ts-node tsc-watch typescript`
     )
   }
 
