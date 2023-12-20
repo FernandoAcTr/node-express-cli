@@ -3,7 +3,7 @@ export class __EntityName__Service {
     return {}
   }
 
-  async findOne(): Promise<Object> {
+  async findOne(id: any): Promise<Object> {
     return {}
   }
 

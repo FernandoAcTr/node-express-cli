@@ -535,6 +535,7 @@ export class CliGenerator {
       const moduleDir = `./src/graphql/modules/${modulename}s`
 
       fs.mkdirSync(moduleDir, { recursive: true })
+      fs.mkdirSync(`${moduleDir}/services`, { recursive: true })
 
       const service = fs
         .readFileSync(

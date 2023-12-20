@@ -3,6 +3,7 @@ import express from 'express'
 import http from 'http'
 import cors from 'cors'
 import logger from './helpers/logger'
+import { resolve } from 'path'
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer'
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled'
 import { ApolloServer } from '@apollo/server'
@@ -14,7 +15,7 @@ import { schema } from './graphql'
 import { settings } from './config/settings'
 
 class App {
-  public app: Express
+  public app: express.Express
 
   constructor() {
     this.app = express()
@@ -23,14 +24,9 @@ class App {
 
   middlewares() {
     this.app.use(cors({ origin: '*' }))
-    this.app.use(
-      '/graphql',
-      expressMiddleware(server, {
-        context: async ({ req }) => ({
-          token: req.headers.token,
-        }),
-      })
-    )
+    this.app.use(express.json())
+    this.app.use(express.urlencoded({ extended: false }))
+    this.app.get('/graphql', (req, res) => res.sendFile(resolve('welcome.html')))
   }
 
   async start() {
@@ -43,6 +39,15 @@ class App {
 
     await server.start()
     logger.info('🚀 GraphQL server started')
+
+    this.app.use(
+      '/graphql',
+      expressMiddleware(server, {
+        context: async ({ req }) => ({
+          token: req.headers.token,
+        }),
+      })
+    )
 
     return httpServer.listen(settings.PORT, () => {
       logger.info(`🚀 Server listen on port ${settings.PORT}`)
