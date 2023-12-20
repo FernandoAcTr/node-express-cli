@@ -1,9 +1,10 @@
 import 'colors'
 import fs from 'fs-extra'
 import path from 'path'
-import shell from 'shelljs'
+import ora from 'ora'
 import { CodeGenerator } from '../interfaces/code.generator'
 import { configService } from '../services/config.service'
+import { shellService } from '../services/shell.service'
 
 export class GraphqlCodeGenerator extends CodeGenerator {
   protected createDirStructure(): void {
@@ -37,19 +38,22 @@ export class GraphqlCodeGenerator extends CodeGenerator {
     fs.rename('./gitignore', './.gitignore')
   }
 
-  protected installDependencies(): void {
-    console.log('================= Installing dependencies ================='.yellow)
-    shell.exec(
+  protected async installDependencies(): Promise<void> {
+    const spinner = ora('================= Installing dependencies ================='.yellow)
+    spinner.color = 'yellow'
+    spinner.start()
+    await shellService.execAsync(
       `${configService.getInstallCommand()} app-root-path bcrypt cors dotenv express module-alias winston graphql graphql-tag @apollo/server @graphql-tools/schema`
     )
-    shell.exec(
+    await shellService.execAsync(
       `${configService.getDevInstallCommand()} @types/app-root-path @types/bcrypt @types/cors @types/express @types/module-alias @types/node ts-node tsc-watch typescript`
     )
+    spinner.succeed()
   }
 
-  init() {
+  async init() {
     this.createDirStructure()
     this.copyCode()
-    this.installDependencies()
+    await this.installDependencies()
   }
 }

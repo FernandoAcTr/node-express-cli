@@ -1,42 +1,50 @@
 import fs from 'fs-extra'
-import shell from 'shelljs'
 import 'colors'
 import path from 'path'
 import { DbType, ProjectType } from '../interfaces/code.generator'
 import { configService } from '../services/config.service'
+import ora from 'ora'
+import { shellService } from '../services/shell.service'
 
 export class CliGenerator {
   installPrettier() {
     console.log('================= Installing Prettier ================='.yellow)
-    shell.exec(`${configService.getDevInstallCommand()} prettier`)
+    shellService.exec(`${configService.getDevInstallCommand()} prettier`)
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prettier'), './')
-    shell.exec('npm pkg set scripts.prettier:fix="prettier --config .prettierrc.json --write src/**/**/*.ts"')
+    shellService.exec('npm pkg set scripts.prettier:fix="prettier --config .prettierrc.json --write src/**/**/*.ts"')
   }
 
-  installEslint() {
+  async installEslint() {
     console.log('================= Installing Eslint ================='.yellow)
-    shell.exec(
+    await shellService.execAsync(
       `${configService.getDevInstallCommand()} eslint eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin`
     )
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'eslint'), './')
 
-    shell.exec('npm pkg set scripts.lint="eslint . --ext .ts"')
-    shell.exec('npm pkg set scripts.lint:fix="eslint . --ext .ts --fix"')
+    shellService.exec('npm pkg set scripts.lint="eslint . --ext .ts"')
+    shellService.exec('npm pkg set scripts.lint:fix="eslint . --ext .ts --fix"')
   }
 
   installSocket() {
-    console.log('================= Installing Socket.io ================='.yellow)
-    shell.exec(`${configService.getInstallCommand()} socket.io`)
+    const spinner = ora('================= Installing Socket.io ================='.yellow)
+    spinner.color = 'yellow'
+    spinner.start()
 
-    fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'socketio'), './src')
+    shellService.execAsync(`${configService.getInstallCommand()} socket.io`).then(() => {
+      fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'socketio'), './src')
+      spinner.succeed()
+    })
   }
 
-  installDatabase(dbType: DbType): void {
-    console.log('================= Installing ORM ================='.yellow)
-    shell.exec(`${configService.getInstallCommand()} @faker-js/faker`)
-    shell.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
+  async installDatabase(dbType: DbType): Promise<void> {
+    const spinner = ora('================= Installing ORM ================='.yellow)
+    spinner.color = 'yellow'
+    spinner.start()
+
+    await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
+    shellService.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
 
     fs.mkdirSync('./src/database/seeds', {
       recursive: true,
@@ -47,17 +55,17 @@ export class CliGenerator {
     })
 
     if (dbType === DbType.TYPEORM) {
-      shell.exec(`${configService.getInstallCommand()} typeorm reflect-metadata`)
+      await shellService.execAsync(`${configService.getInstallCommand()} typeorm reflect-metadata`)
 
-      shell.exec(
+      shellService.exec(
         'npm pkg set scripts.typeorm="ts-node -r ./src/alias ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
       )
-      shell.exec('npm pkg set scripts.m:run="npm run typeorm migration:run"')
-      shell.exec('npm pkg set scripts.m:revert="npm run typeorm migration:revert"')
-      shell.exec('npm pkg set scripts.m:generate="npm run typeorm migration:generate"')
-      shell.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
-      shell.exec('npm pkg set scripts.m:drop="npm run typeorm schema:drop"')
-      shell.exec('npm pkg set scripts.m:run:fresh="npm run m:drop && npm run m:run && npm run db:seed"')
+      shellService.exec('npm pkg set scripts.m:run="npm run typeorm migration:run"')
+      shellService.exec('npm pkg set scripts.m:revert="npm run typeorm migration:revert"')
+      shellService.exec('npm pkg set scripts.m:generate="npm run typeorm migration:generate"')
+      shellService.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
+      shellService.exec('npm pkg set scripts.m:drop="npm run typeorm schema:drop"')
+      shellService.exec('npm pkg set scripts.m:run:fresh="npm run m:drop && npm run m:run && npm run db:seed"')
 
       fs.mkdirSync('./src/entities', {
         recursive: true,
@@ -105,7 +113,7 @@ export class CliGenerator {
       )
       console.log('-------------------------------------------------------------------------------------------'.green)
     } else if (dbType === DbType.MONGO) {
-      shell.exec(`${configService.getInstallCommand()} mongoose`)
+      await shellService.execAsync(`${configService.getInstallCommand()} mongoose`)
 
       fs.mkdirSync('./src/models', {
         recursive: true,
@@ -132,15 +140,15 @@ export class CliGenerator {
       console.log('Now you need to import datasources.ts in your index.ts in order to connect with mongo'.green)
       console.log('-------------------------------------------------------------------------------------------'.green)
     } else if (dbType === DbType.SEQUELIZE) {
-      shell.exec(`${configService.getInstallCommand()} sequelize`)
-      shell.exec(`${configService.getDevInstallCommand()} sequelize-cli`)
+      await shellService.execAsync(`${configService.getInstallCommand()} sequelize`)
+      await shellService.execAsync(`${configService.getDevInstallCommand()} sequelize-cli`)
 
-      shell.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
-      shell.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
-      shell.exec(
+      shellService.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
+      shellService.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
+      shellService.exec(
         'npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"'
       )
-      shell.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate --name"')
+      shellService.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate --name"')
 
       fs.mkdirSync('./src/entities', {
         recursive: true,
@@ -194,15 +202,15 @@ export class CliGenerator {
       console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
       console.log('-------------------------------------------------------------------------------------------'.green)
     } else if (dbType == DbType.PRISMA) {
-      shell.exec(`${configService.getInstallCommand()} @prisma/client`)
-      shell.exec(`${configService.getDevInstallCommand()} prisma`)
+      await shellService.execAsync(`${configService.getInstallCommand()} @prisma/client`)
+      await shellService.execAsync(`${configService.getDevInstallCommand()} prisma`)
 
-      shell.exec('npm pkg set scripts.m:run="npx prisma migrate dev --schema src/database/prisma/schema.prisma"')
-      shell.exec(
+      shellService.exec('npm pkg set scripts.m:run="npx prisma migrate dev --schema src/database/prisma/schema.prisma"')
+      shellService.exec(
         'npm pkg set scripts.m:run:deploy="npx prisma migrate deploy --schema src/database/prisma/schema.prisma"'
       )
-      shell.exec('npm pkg set scripts.m:reset="npx prisma migrate reset --schema src/database/prisma/schema.prisma"')
-      shell.exec('npm pkg set scripts.m:generate="npx prisma generate --schema src/database/prisma/schema.prisma"')
+      shellService.exec('npm pkg set scripts.m:reset="npx prisma migrate reset --schema src/database/prisma/schema.prisma"')
+      shellService.exec('npm pkg set scripts.m:generate="npx prisma generate --schema src/database/prisma/schema.prisma"')
 
       fs.mkdirSync('./src/database/prisma', {
         recursive: true,
@@ -245,14 +253,19 @@ export class CliGenerator {
       )
       console.log('-------------------------------------------------------------------------------------------'.green)
     }
+
+    spinner.succeed()
   }
 
-  installAuth(dbType: DbType) {
-    console.log('================= Installing auth dependencies ================='.yellow)
-    shell.exec(`${configService.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`)
-    shell.exec(
+  async installAuth(dbType: DbType) {
+    const spinner = ora('================= Installing auth dependencies ================='.yellow)
+    spinner.color = 'yellow'
+    spinner.start()
+    await shellService.execAsync(`${configService.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`)
+    await shellService.execAsync(
       `${configService.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`
     )
+    spinner.succeed()
 
     if (dbType === DbType.TYPEORM) {
       fs.copyFile(
@@ -370,7 +383,7 @@ export class CliGenerator {
 
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'prisma', 'auth'), './src/modules/auth')
 
-      shell.exec('yarn m:run --name auth')
+      shellService.exec('yarn m:run --name auth')
     }
 
     console.log('-------------------------------------------------------------------------------------------'.green)
@@ -386,10 +399,12 @@ export class CliGenerator {
     console.log('-------------------------------------------------------------------------------------------'.green)
   }
 
-  installMailer() {
-    console.log('================= Installing Mail dependencies ================='.yellow)
-    shell.exec(`${configService.getInstallCommand()} handlebars nodemailer`)
-    shell.exec(`${configService.getDevInstallCommand()} @types/nodemailer`)
+  async installMailer() {
+    const spinner = ora('================= Installing Mail dependencies ================='.yellow)
+    spinner.color = 'yellow'
+    spinner.start()
+    await shellService.execAsync(`${configService.getInstallCommand()} handlebars nodemailer`)
+    await shellService.execAsync(`${configService.getDevInstallCommand()} @types/nodemailer`)
 
     fs.copyFileSync(
       path.resolve(__dirname, '..', '..', 'code', 'generated', 'mailer', 'mailer.ts'),
@@ -400,6 +415,7 @@ export class CliGenerator {
       "A new class called mailer has been installed inside helpers directory. You can use it to send emails and notifications via the notification template or create your own email's templates"
         .green
     )
+    spinner.succeed()
   }
 
   makeSeeder(name: string, dbType: DbType) {
@@ -571,13 +587,16 @@ export class CliGenerator {
     }
   }
 
-  installTests() {
-    console.log('================= Installing Test dependencies ================='.yellow)
-    shell.exec(`${configService.getInstallCommand()} @faker-js/faker`)
-    shell.exec(`${configService.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`)
+  async installTests() {
+    const spinner = ora('================= Installing Test dependencies ================='.yellow)
+    spinner.color = 'yellow'
+    spinner.start()
+    await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
+    await shellService.execAsync(`${configService.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`)
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'tests'), './src/tests')
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'jest.config.js'), './jest.config.js')
-    shell.exec('npm pkg set scripts.test="npx jest"')
+    shellService.exec('npm pkg set scripts.test="npx jest"')
+    spinner.succeed()
   }
 }
