@@ -3,7 +3,6 @@ import fs from 'fs-extra'
 import path from 'path'
 import { CodeGenerator } from '../interfaces/code.generator'
 import { configService } from '../services/config.service'
-import ora from 'ora'
 import { shellService } from '../services/shell.service'
 
 export class ApiCodeGenerator extends CodeGenerator {
@@ -39,9 +38,7 @@ export class ApiCodeGenerator extends CodeGenerator {
   }
 
   protected async installDependencies(): Promise<void> {
-    const spinner = ora('================= Installing dependencies ================='.yellow)
-    spinner.color = 'yellow'
-    spinner.start()
+    console.log('================= Installing dependencies ================='.yellow)
 
     await shellService.execAsync(
       `${configService.getInstallCommand()} app-root-path bcrypt cors dotenv express express-validator helmet module-alias morgan rate-limiter-flexible winston`
@@ -49,7 +46,6 @@ export class ApiCodeGenerator extends CodeGenerator {
     await shellService.execAsync(
       `${configService.getDevInstallCommand()} @types/app-root-path @types/bcrypt @types/cors @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch typescript`
     )
-    spinner.succeed()
   }
 
   async init() {

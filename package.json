@@ -1,6 +1,6 @@
 {
   "name": "node-express-cli",
-  "version": "2.7.8",
+  "version": "2.8.3",
   "description": "Simple express cli generator",
   "main": "dist/index.js",
   "bin": "dist/index.js",
@@ -28,7 +28,6 @@
     "fs-extra": "^10.1.0",
     "gradient-string": "^2.0.2",
     "inquirer": "^8.1.2",
-    "ora": "^7.0.1",
     "shelljs": "^0.8.4",
     "yargs": "^17.0.1"
   },

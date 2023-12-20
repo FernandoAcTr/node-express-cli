@@ -3,7 +3,6 @@ import 'colors'
 import path from 'path'
 import { DbType, ProjectType } from '../interfaces/code.generator'
 import { configService } from '../services/config.service'
-import ora from 'ora'
 import { shellService } from '../services/shell.service'
 
 export class CliGenerator {
@@ -28,20 +27,15 @@ export class CliGenerator {
   }
 
   installSocket() {
-    const spinner = ora('================= Installing Socket.io ================='.yellow)
-    spinner.color = 'yellow'
-    spinner.start()
+    console.log('================= Installing Socket.io ================='.yellow)
 
     shellService.execAsync(`${configService.getInstallCommand()} socket.io`).then(() => {
       fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'socketio'), './src')
-      spinner.succeed()
     })
   }
 
   async installDatabase(dbType: DbType): Promise<void> {
-    const spinner = ora('================= Installing ORM ================='.yellow)
-    spinner.color = 'yellow'
-    spinner.start()
+    console.log('================= Installing ORM ================='.yellow)
 
     await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
     shellService.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
@@ -209,8 +203,12 @@ export class CliGenerator {
       shellService.exec(
         'npm pkg set scripts.m:run:deploy="npx prisma migrate deploy --schema src/database/prisma/schema.prisma"'
       )
-      shellService.exec('npm pkg set scripts.m:reset="npx prisma migrate reset --schema src/database/prisma/schema.prisma"')
-      shellService.exec('npm pkg set scripts.m:generate="npx prisma generate --schema src/database/prisma/schema.prisma"')
+      shellService.exec(
+        'npm pkg set scripts.m:reset="npx prisma migrate reset --schema src/database/prisma/schema.prisma"'
+      )
+      shellService.exec(
+        'npm pkg set scripts.m:generate="npx prisma generate --schema src/database/prisma/schema.prisma"'
+      )
 
       fs.mkdirSync('./src/database/prisma', {
         recursive: true,
@@ -253,19 +251,14 @@ export class CliGenerator {
       )
       console.log('-------------------------------------------------------------------------------------------'.green)
     }
-
-    spinner.succeed()
   }
 
   async installAuth(dbType: DbType) {
-    const spinner = ora('================= Installing auth dependencies ================='.yellow)
-    spinner.color = 'yellow'
-    spinner.start()
+    console.log('================= Installing auth dependencies ================='.yellow)
     await shellService.execAsync(`${configService.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`)
     await shellService.execAsync(
       `${configService.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`
     )
-    spinner.succeed()
 
     if (dbType === DbType.TYPEORM) {
       fs.copyFile(
@@ -400,9 +393,7 @@ export class CliGenerator {
   }
 
   async installMailer() {
-    const spinner = ora('================= Installing Mail dependencies ================='.yellow)
-    spinner.color = 'yellow'
-    spinner.start()
+    console.log('================= Installing Mail dependencies ================='.yellow)
     await shellService.execAsync(`${configService.getInstallCommand()} handlebars nodemailer`)
     await shellService.execAsync(`${configService.getDevInstallCommand()} @types/nodemailer`)
 
@@ -415,7 +406,6 @@ export class CliGenerator {
       "A new class called mailer has been installed inside helpers directory. You can use it to send emails and notifications via the notification template or create your own email's templates"
         .green
     )
-    spinner.succeed()
   }
 
   makeSeeder(name: string, dbType: DbType) {
@@ -588,15 +578,14 @@ export class CliGenerator {
   }
 
   async installTests() {
-    const spinner = ora('================= Installing Test dependencies ================='.yellow)
-    spinner.color = 'yellow'
-    spinner.start()
+    console.log('================= Installing Test dependencies ================='.yellow)
     await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
-    await shellService.execAsync(`${configService.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`)
+    await shellService.execAsync(
+      `${configService.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`
+    )
 
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'tests'), './src/tests')
     fs.copySync(path.resolve(__dirname, '..', '..', 'code', 'generated', 'tests', 'jest.config.js'), './jest.config.js')
     shellService.exec('npm pkg set scripts.test="npx jest"')
-    spinner.succeed()
   }
 }
