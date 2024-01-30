@@ -34,7 +34,7 @@ export class AuthService {
     const refreshToken = createRefreshToken(newUser)
 
     await prisma.refreshToken.create({
-      data: { user_id: newUser.id, token: refreshToken },
+      data: { user_id: newUser.id, token: refreshToken, expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
     })
 
     return { user: newUser, token: token, refresh_token: refreshToken }
@@ -54,6 +54,7 @@ export class AuthService {
       data: {
         user_id: dbUser.id,
         token: refreshToken,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     })
 
@@ -74,18 +75,13 @@ export class AuthService {
       data: {
         user_id: user.id,
         token: refreshToken,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     })
 
     await prisma.refreshToken.delete({ where: { id: token.id } })
 
     return { token: newToken, refresh_token: refreshToken }
-  }
-
-  private createToken(user: User) {
-    return jwt.sign({ user_id: user.id }, settings.SECRET, {
-      expiresIn: '1h',
-    })
   }
 }
 

@@ -30,6 +30,7 @@ model RefreshToken {
   token      String
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
+  expires_at DateTime
 
   @@map("refresh_tokens")
 }
