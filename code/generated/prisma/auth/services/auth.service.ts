@@ -65,6 +65,7 @@ export class AuthService {
     const token = await prisma.refreshToken.findFirst({ where: { user_id: user_id, token: refresh_token } })
 
     if (!user || !token) throw new UnauthorizedError()
+    if (token.expires_at < new Date()) throw new UnauthorizedError()
 
     const newToken = createToken(user)
     const refreshToken = createRefreshToken(user)

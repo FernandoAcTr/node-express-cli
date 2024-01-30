@@ -46,6 +46,7 @@ export class AuthService {
     const token = await RefreshToken.findOne({ user_id, refresh_token })
 
     if (!user || !token) throw new UnauthorizedError()
+    if (token.expires_at < new Date()) throw new UnauthorizedError()
 
     const newToken = user.createToken()
     const refreshToken = user.createRefreshToken()
