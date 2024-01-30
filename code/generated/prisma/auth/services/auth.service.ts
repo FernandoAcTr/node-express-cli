@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { HTTPError, UnauthorizedError } from '@/middlewares/error_handler'
+import { HTTPError, Unauthorized } from '@/middlewares/error_handler'
 import { PasswordEncrypter } from './passsword_encripter'
 import { settings } from '@/config/settings'
 import { prisma } from '@/database/client'
@@ -65,8 +65,8 @@ export class AuthService {
     const user = await prisma.user.findFirst({ where: { id: user_id } })
     const token = await prisma.refreshToken.findFirst({ where: { user_id: user_id, token: refresh_token } })
 
-    if (!user || !token) throw new UnauthorizedError()
-    if (token.expires_at < new Date()) throw new UnauthorizedError()
+    if (!user || !token) throw Unauthorized()
+    if (token.expires_at < new Date()) throw Unauthorized()
 
     const newToken = createToken(user)
     const refreshToken = createRefreshToken(user)

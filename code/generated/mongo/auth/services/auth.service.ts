@@ -1,5 +1,5 @@
 import { IUser, User } from '@/models/user.model'
-import { HTTPError, UnauthorizedError } from '@/middlewares/error_handler'
+import { HTTPError, Unauthorized } from '@/middlewares/error_handler'
 import { RefreshToken } from '@/models/refresh_token.model'
 
 export class AuthService {
@@ -47,8 +47,8 @@ export class AuthService {
     const user = await User.findOne({ _id: user_id })
     const token = await RefreshToken.findOne({ user_id, refresh_token })
 
-    if (!user || !token) throw new UnauthorizedError()
-    if (token.expires_at < new Date()) throw new UnauthorizedError()
+    if (!user || !token) throw Unauthorized()
+    if (token.expires_at < new Date()) throw Unauthorized()
 
     const newToken = user.createToken()
     const refreshToken = user.createRefreshToken()

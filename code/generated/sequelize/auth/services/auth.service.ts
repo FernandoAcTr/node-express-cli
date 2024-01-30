@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { User } from '@/entities/user.entity'
-import { HTTPError, UnauthorizedError } from '@/middlewares/error_handler'
+import { HTTPError, Unauthorized } from '@/middlewares/error_handler'
 import { PasswordEncrypter } from './passsword_encripter'
 import { settings } from '@/config/settings'
 import { Roles } from '@/entities/role.entity'
@@ -59,8 +59,8 @@ export class AuthService {
     const user = await User.findOne({ where: { id: user_id } })
     const token = await RefreshToken.findOne({ where: { user_id: user_id, refresh_token } })
 
-    if (!user || !token) throw new UnauthorizedError()
-    if (token.expiresAt < new Date()) throw new UnauthorizedError()
+    if (!user || !token) throw Unauthorized()
+    if (token.expiresAt < new Date()) throw Unauthorized()
 
     const newToken = createToken(user)
     const refreshToken = createRefreshToken(user)
