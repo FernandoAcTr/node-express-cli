@@ -12,7 +12,7 @@ export class RefreshToken extends BaseEntity {
   @Column()
   user_id: number
 
-  @OneToOne(() => User, (user) => user.refresh_token)
+  @OneToOne(() => User)
   @JoinColumn({ name: 'user_id', referencedColumnName: 'id' })
   user: User
 

@@ -34,7 +34,6 @@ export class refreshTokens1677304667455 implements MigrationInterface {
           {
             name: 'expires_at',
             type: 'datetime(6)',
-            default: 'DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 7 DAY)',
           },
         ],
         foreignKeys: [

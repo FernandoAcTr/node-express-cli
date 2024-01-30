@@ -9,7 +9,6 @@ import {
   ManyToOne,
   OneToOne,
 } from 'typeorm'
-import { RefreshToken } from './refresh_token.entity'
 import { Role } from './role.entity'
 
 @Entity()
