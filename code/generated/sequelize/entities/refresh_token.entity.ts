@@ -8,6 +8,7 @@ export class RefreshToken extends Model<InferAttributes<RefreshToken>, InferCrea
   declare user_id: ForeignKey<number>
   declare user: NonAttribute<User>
   declare createdAt: CreationOptional<Date>
+  declare expiresAt: Date
 }
 
 RefreshToken.init(
@@ -25,6 +26,7 @@ RefreshToken.init(
       references: { model: User, key: 'id' },
     },
     createdAt: DataTypes.DATE,
+    expiresAt: DataTypes.DATE,
   },
   { sequelize, createdAt: true, updatedAt: true }
 )

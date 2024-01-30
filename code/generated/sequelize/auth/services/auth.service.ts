@@ -30,6 +30,7 @@ export class AuthService {
     await RefreshToken.create({
       user_id: newUser.id,
       refresh_token: refreshToken,
+      expiresAt: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000),
     })
 
     return { user: newUser, token: token, refresh_token: refreshToken }
@@ -48,6 +49,7 @@ export class AuthService {
     await RefreshToken.create({
       user_id: dbUser.id,
       refresh_token: refreshToken,
+      expiresAt: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000),
     })
 
     return { user: dbUser, token: token, refresh_token: refreshToken }
@@ -58,7 +60,7 @@ export class AuthService {
     const token = await RefreshToken.findOne({ where: { user_id: user_id, refresh_token } })
 
     if (!user || !token) throw new UnauthorizedError()
-    if (token.expires_at < new Date()) throw new UnauthorizedError()
+    if (token.expiresAt < new Date()) throw new UnauthorizedError()
 
     const newToken = createToken(user)
     const refreshToken = createRefreshToken(user)
@@ -66,9 +68,10 @@ export class AuthService {
     await RefreshToken.create({
       user_id: user.id,
       refresh_token: createToken(user),
+      expiresAt: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000),
     })
 
-    await token.remove()
+    await token.destroy()
 
     return { token: newToken, refresh_token: refreshToken }
   }

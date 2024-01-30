@@ -24,7 +24,6 @@ module.exports = {
       expiresAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal("NOW() + INTERVAL 7 DAYS"),
       },
     });
   },
