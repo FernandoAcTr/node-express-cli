@@ -6,7 +6,7 @@ import { Repository } from "typeorm";
 import { PasswordEncrypter } from "./passsword_encripter";
 import { settings } from "@/config/settings";
 import { Roles } from "@/entities/role.entity";
-import { Token } from '@/entities/token.entity'
+import { RefreshToken } from '@/entities/refresh_token.entity'
 
 export class AuthService {
   private readonly repository: Repository<User>;
@@ -30,10 +30,10 @@ export class AuthService {
     newUser.name = user.name;
 
     const saved = await this.repository.save(newUser);
-    const token = this.createToken(saved);
-    const refreshToken = this.createToken(saved)
+    const token = createToken(saved);
+    const refreshToken = createRefreshToken(saved)
 
-    await Token.save({
+    await RefreshToken.save({
       user_id: saved.id,
       refresh_token: refreshToken,
     })
@@ -48,33 +48,39 @@ export class AuthService {
     const match = this.passwordEncrypter.compare(password, dbUser.password);
     if (!match) throw new HTTPError(400, "Bad credentials");
 
-    const token = this.createToken(dbUser);
+    const token = createToken(dbUser);
+    const refreshToken = createRefreshToken(dbUser)
 
-    let refreshToken = await Token.findOne({ where: { user_id: dbUser.id } })
-    if (!refreshToken) {
-      refreshToken = await Token.save({
-        user_id: dbUser.id,
-        refresh_token: this.createToken(dbUser),
-      })
-    }
+    await RefreshToken.save({ user_id: dbUser.id, refresh_token: refreshToken })
 
-    return { user: dbUser, token: token, refresh_token: refreshToken.refresh_token }
+    return { user: dbUser, token: token, refresh_token: refreshToken }
   }
 
   async refreshToken(user_id: number, refresh_token: string) {
-    const user = await User.findOne({
-      where: { id: user_id, refresh_token: { refresh_token } },
-    });
-    if(!user) throw new UnauthorizedError()
+    const user = await User.findOne({ where: { id: user_id } })
+    const token = await RefreshToken.findOne({ where: { user_id, refresh_token } })
+    
+    if (!user || !token) throw new UnauthorizedError()
+    if (token.expires_at < new Date()) throw new UnauthorizedError()
 
-    const token = this.createToken(user);
+    const newToken = createToken(user);
+    const refreshToken = createRefreshToken(user)
 
-    return { token };
+    await RefreshToken.save({ user_id: user.id, refresh_token: refreshToken })
+
+    await token.remove()
+
+    return { token: newToken, refresh_token: refreshToken }
   }
+}
 
-  private createToken(user: User) {
-    return jwt.sign({ user_id: user.id }, settings.SECRET, {
-      expiresIn: '1h',
-    });
-  }
+function createToken(user: User) {
+  return jwt.sign({ user_id: user.id }, settings.SECRET, {
+    expiresIn: '1h',
+  })
+}
+function createRefreshToken(user: User) {
+  return jwt.sign({ user_id: user.id, _: Math.random() }, settings.SECRET, {
+    expiresIn: '7d',
+  })
 }

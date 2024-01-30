@@ -9,7 +9,7 @@ import {
   NonAttribute,
 } from 'sequelize'
 import { Role } from './role.entity'
-import { Token } from './token.entity'
+import { RefreshToken } from './refresh_token.entity'
 
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare id: CreationOptional<number>
@@ -21,7 +21,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
 
   declare role_id: ForeignKey<number>
   declare role: NonAttribute<Role>
-  declare token: NonAttribute<Token>
+  declare token: NonAttribute<RefreshToken>
 }
 
 User.init(
@@ -54,4 +54,4 @@ User.init(
 )
 
 User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' })
-User.hasOne(Token, { foreignKey: 'id', as: 'role' })
+User.hasOne(RefreshToken, { foreignKey: 'id', as: 'role' })

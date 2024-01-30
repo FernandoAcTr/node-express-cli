@@ -18,6 +18,7 @@ export interface IUser extends Document {
   encryptPassword(password: string): string
   comparePassword(password: string): boolean
   createToken(): string
+  createRefreshToken(): string
 }
 
 const UserSchema = new mongoose.Schema<IUser>({
@@ -39,6 +40,14 @@ UserSchema.methods.createToken = function () {
   const user = this.toObject()
 
   return jwt.sign({ user_id: user._id }, settings.SECRET, {
+    expiresIn: 86400,
+  })
+}
+
+UserSchema.methods.createRefreshToken = function () {
+  const user = this.toObject()
+
+  return jwt.sign({ user_id: user._id, _: Math.random() }, settings.SECRET, {
     expiresIn: 86400,
   })
 }

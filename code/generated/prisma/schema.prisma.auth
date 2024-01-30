@@ -17,7 +17,7 @@ model User {
   role                Role                 @relation(fields: [role_id], references: [id], onUpdate: Cascade, onDelete: Restrict)
   created_at          DateTime             @default(now())
   updated_at          DateTime             @default(now()) @updatedAt
-  RefreshToken        RefreshToken?
+  RefreshTokens       RefreshToken[]
   ResetPasswordTokens ResetPasswordToken[]
 
   @@map("users")
@@ -30,6 +30,7 @@ model RefreshToken {
   token      String
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
+  expires_at DateTime
 
   @@map("refresh_tokens")
 }

@@ -20,14 +20,7 @@ export const JWTStrategy = new Strategy(
 )
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) =>
-  passport.authenticate('jwt', { session: false }, (error, user, info, status) => {
-    if (info?.message == 'jwt expired') throw new HTTPError(401, 'Expired')
-
-    if (!user) throw new UnauthorizedError()
-
-    req.user = user
-    next()
-  })(req, res, next)
+  passport.authenticate('jwt', { session: false })
 
 export const authenticateRefresh = (req: Request, res: Response, next: NextFunction) =>
   passport.authenticate('jwt', { session: false }, async (error, user, info, status) => {

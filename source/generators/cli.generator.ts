@@ -266,8 +266,8 @@ export class CliGenerator {
         './src/entities/user.entity.ts'
       )
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'token.entity.ts'),
-        './src/entities/token.entity.ts'
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'refresh_token.entity.ts'),
+        './src/entities/refresh_token.entity.ts'
       )
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'entities', 'role.entity.ts'),
@@ -285,8 +285,8 @@ export class CliGenerator {
         './src/database/migrations/1677294697210-users.ts'
       )
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '1677304667455-tokens.ts'),
-        './src/database/migrations/1677304667455-tokens.ts'
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'typeorm', 'migrations', '1677304667455-refresh-tokens.ts'),
+        './src/database/migrations/1677304667455-refresh-tokens.ts'
       )
       fs.copyFile(
         path.resolve(
@@ -307,8 +307,8 @@ export class CliGenerator {
         './src/models/user.model.ts'
       )
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'models', 'token.model.ts'),
-        './src/models/token.model.ts'
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'mongo', 'models', 'refresh_token.model.ts'),
+        './src/models/refresh_token.model.ts'
       )
 
       fs.copyFile(
@@ -323,8 +323,8 @@ export class CliGenerator {
         './src/entities/user.entity.ts'
       )
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'entities', 'token.entity.ts'),
-        './src/entities/token.entity.ts'
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'entities', 'refresh_token.entity.ts'),
+        './src/entities/refresh_token.entity.ts'
       )
       fs.copyFile(
         path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'entities', 'role.entity.ts'),
@@ -342,8 +342,8 @@ export class CliGenerator {
       )
 
       fs.copyFile(
-        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '20230506165613-tokens.js'),
-        './src/database/migrations/20230506165613-tokens.js'
+        path.resolve(__dirname, '..', '..', 'code', 'generated', 'sequelize', 'migrations', '20230506165613-refresh-tokens.js'),
+        './src/database/migrations/20230506165613-refresh-tokens.js'
       )
 
       fs.copyFile(

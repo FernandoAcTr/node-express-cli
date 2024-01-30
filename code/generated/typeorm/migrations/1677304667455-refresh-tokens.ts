@@ -1,12 +1,12 @@
 import { MigrationInterface, QueryRunner, Table } from 'typeorm'
 
-export class tokens1677304667455 implements MigrationInterface {
-  name = 'tokens1677304667455'
+export class refreshTokens1677304667455 implements MigrationInterface {
+  name = 'refreshTokens1677304667455'
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
       new Table({
-        name: 'tokens',
+        name: 'refresh_tokens',
         columns: [
           {
             name: 'id',
@@ -31,6 +31,10 @@ export class tokens1677304667455 implements MigrationInterface {
             type: 'datetime(6)',
             default: 'CURRENT_TIMESTAMP(6)',
           },
+          {
+            name: 'expires_at',
+            type: 'datetime(6)',
+          },
         ],
         foreignKeys: [
           {
@@ -46,6 +50,6 @@ export class tokens1677304667455 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable('tokens')
+    await queryRunner.dropTable('refresh_tokens')
   }
 }
