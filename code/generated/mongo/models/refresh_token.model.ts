@@ -1,13 +1,13 @@
 import mongoose, { Document, Types } from 'mongoose'
 
-export interface IToken extends Document {
+export interface IRefreshToken extends Document {
   refresh_token: string
   user_id: Types.ObjectId
   created_at: Date
   updated_at: Date
 }
 
-const TokenSchema = new mongoose.Schema<IToken>({
+const RefreshTokenSchema = new mongoose.Schema<IRefreshToken>({
   refresh_token: { type: String },
   created_at: { type: Date, default: new Date() },
   updated_at: { type: Date, default: new Date() },
@@ -17,4 +17,4 @@ const TokenSchema = new mongoose.Schema<IToken>({
   }
 })
 
-export const Token = mongoose.model<IToken>('Token', TokenSchema)
+export const RefreshToken = mongoose.model<IRefreshToken>('RefreshToken', RefreshTokenSchema)

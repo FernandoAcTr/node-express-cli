@@ -30,8 +30,8 @@ export class AuthService {
       },
     })
 
-    const token = this.createToken(newUser)
-    const refreshToken = this.createToken(newUser)
+    const token = createToken(newUser)
+    const refreshToken = createRefreshToken(newUser)
 
     await prisma.refreshToken.create({
       data: { user_id: newUser.id, token: refreshToken },
@@ -47,30 +47,38 @@ export class AuthService {
     const match = this.passwordEncrypter.compare(password, dbUser.password)
     if (!match) throw new HTTPError(400, 'Bad credentials')
 
-    const token = this.createToken(dbUser)
+    const token = createToken(dbUser)
+    const refreshToken = createRefreshToken(dbUser)
 
-    let refreshToken = await prisma.refreshToken.findFirst({ where: { user_id: dbUser.id } })
-    if (!refreshToken) {
-      refreshToken = await prisma.refreshToken.create({
-        data: {
-          user_id: dbUser.id,
-          token: this.createToken(dbUser),
-        },
-      })
-    }
+    await prisma.refreshToken.create({
+      data: {
+        user_id: dbUser.id,
+        token: refreshToken,
+      },
+    })
 
-    return { user: dbUser, token: token, refresh_token: refreshToken.token }
+    return { user: dbUser, token: token, refresh_token: refreshToken }
   }
 
   async refreshToken(user_id: number, refresh_token: string) {
-    const user = await prisma.user.findFirst({
-      where: { id: user_id, RefreshToken: { token: refresh_token } },
+    const user = await prisma.user.findFirst({ where: { id: user_id } })
+    const token = await prisma.refreshToken.findFirst({ where: { user_id: user_id, token: refresh_token } })
+
+    if (!user || !token) throw new UnauthorizedError()
+
+    const newToken = createToken(user)
+    const refreshToken = createRefreshToken(user)
+
+    await prisma.refreshToken.create({
+      data: {
+        user_id: user.id,
+        token: refreshToken,
+      },
     })
-    if (!user) throw new UnauthorizedError()
 
-    const token = this.createToken(user)
+    await prisma.refreshToken.delete({ where: { id: token.id } })
 
-    return { token }
+    return { token: newToken, refresh_token: refreshToken }
   }
 
   private createToken(user: User) {
@@ -78,4 +86,15 @@ export class AuthService {
       expiresIn: '1h',
     })
   }
+}
+
+function createToken(user: User) {
+  return jwt.sign({ user_id: user.id }, settings.SECRET, {
+    expiresIn: '1h',
+  })
+}
+function createRefreshToken(user: User) {
+  return jwt.sign({ user_id: user.id, _: Math.random() }, settings.SECRET, {
+    expiresIn: '7d',
+  })
 }

@@ -43,6 +43,14 @@ UserSchema.methods.createToken = function () {
   })
 }
 
+UserSchema.methods.createRefreshToken = function () {
+  const user = this.toObject()
+
+  return jwt.sign({ user_id: user._id, _: Math.random() }, settings.SECRET, {
+    expiresIn: 86400,
+  })
+}
+
 UserSchema.methods.encryptPassword = function (password: string) {
   return bcrypt.hashSync(password, bcrypt.genSaltSync(10))
 }

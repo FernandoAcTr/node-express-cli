@@ -9,7 +9,7 @@ import {
   ManyToOne,
   OneToOne,
 } from 'typeorm'
-import { Token } from './token.entity'
+import { RefreshToken } from './refresh_token.entity'
 import { Role } from './role.entity'
 
 @Entity()
@@ -35,10 +35,7 @@ export class User extends BaseEntity {
   @UpdateDateColumn()
   updated_at: Date
 
-  @OneToOne(() => Token, (token) => token.user)
-  refresh_token?: Token
-
-  @ManyToOne(() => Role, (role) => role.id)
+  @ManyToOne(() => Role)
   @JoinColumn({ name: 'role_id', referencedColumnName: 'id' })
   role: Role
 

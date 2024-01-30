@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("tokens", {
+    await queryInterface.createTable("refresh_tokens", {
       id: {
         type: Sequelize.INTEGER.UNSIGNED,
         autoIncrement: true,
@@ -21,10 +21,15 @@ module.exports = {
         type: Sequelize.DATE,
         defaultValue: Sequelize.fn("now"),
       },
+      expiresAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal("NOW() + INTERVAL 7 DAYS"),
+      },
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("tokens");
+    await queryInterface.dropTable("refresh_tokens");
   },
 };
