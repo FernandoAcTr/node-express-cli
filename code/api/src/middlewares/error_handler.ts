@@ -11,11 +11,9 @@ export class HTTPError extends Error {
     this.message = message
   }
 }
-export class UnauthorizedError extends HTTPError {
-  constructor() {
-    super(401, 'Unauthorized')
-  }
-}
+export const NotFound = (message: string = 'Not Found') => new HTTPError(404, message)
+export const Unauthorized = (message: string = 'Unauthorized') => new HTTPError(401, message)
+export const Forbidden = (message: string = 'Forbidden') => new HTTPError(403, message)
 
 export const handleErrorMiddleware = (err: HTTPError | Error, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof HTTPError) {

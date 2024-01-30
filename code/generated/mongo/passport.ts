@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken'
 import { NextFunction, Request, Response } from 'express'
 import { Strategy, ExtractJwt } from 'passport-jwt'
 import { settings } from '@/config/settings'
-import { HTTPError, UnauthorizedError } from './error_handler'
+import { HTTPError, Unauthorized } from './error_handler'
 
 export const JWTStrategy = new Strategy(
   {
