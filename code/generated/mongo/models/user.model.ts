@@ -18,6 +18,7 @@ export interface IUser extends Document {
   encryptPassword(password: string): string
   comparePassword(password: string): boolean
   createToken(): string
+  createRefreshToken(): string
 }
 
 const UserSchema = new mongoose.Schema<IUser>({

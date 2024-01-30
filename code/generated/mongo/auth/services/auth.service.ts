@@ -15,7 +15,7 @@ export class AuthService {
     const token = newUser.createToken()
     const refreshToken = newUser.createRefreshToken()
 
-    await RefreshToken.save({
+    await RefreshToken.create({
       user_id: newUser._id,
       refresh_token: refreshToken,
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -34,7 +34,7 @@ export class AuthService {
     const token = dbUser.createToken()
     const refreshToken = dbUser.createRefreshToken()
 
-    await RefreshToken.save({
+    await RefreshToken.create({
       user_id: dbUser._id,
       refresh_token: dbUser.createToken(),
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -53,7 +53,7 @@ export class AuthService {
     const newToken = user.createToken()
     const refreshToken = user.createRefreshToken()
 
-    await RefreshToken.save({
+    await RefreshToken.create({
       user_id: user._id,
       refresh_token: user.createToken(),
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),

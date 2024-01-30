@@ -5,7 +5,7 @@ import { Seed as RanSeed } from '../models/seed.model'
 
 async function seed(...seeds: Seed[]) {
   for await (const seeder of seeds) {
-    const exists = await RanSeed.count({ where: { id: seeder.id } })
+    const exists = await RanSeed.countDocuments({ where: { id: seeder.id } })
 
     if (exists == 0) {
       try {
