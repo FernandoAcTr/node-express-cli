@@ -23,11 +23,11 @@
     "url": "https://github.com/FernandoAcTr/node-express-cli"
   },
   "dependencies": {
+    "@inquirer/prompts": "^5.3.6",
     "colors": "^1.4.0",
     "figlet": "^1.7.0",
     "fs-extra": "^11.2.0",
     "gradient-string": "^2.0.2",
-    "inquirer": "^8.2.6",
     "shelljs": "^0.8.5",
     "yargs": "^17.7.2"
   },
