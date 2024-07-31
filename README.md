@@ -1,13 +1,13 @@
 # node-express-cli
 
-node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/), inspirado fuertemente en la arquitectura de Nest pero sin la complejidad que este framework implica y en la cli de Laravel para generar nuevos archivos.
+`node-express-cli` es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/), inspirado fuertemente en la arquitectura de Nest pero sin la complejidad que este framework implica y en la cli de Laravel para generar nuevos archivos.
 node-express-cli actualmente ofrece las siguientes caracteristicas.
 
-node-express-cli no es un framework en sí mismo, sino una herramienta que te ayudaraá a generar toda la estructura inicial de un proyecto, brindándote una arquitectura sólida y escalable, asì como una cli que te ayudará a generar nuevos archivos como migraciones, servicios, entidades, módulos, etc. 
+`node-express-cli` no es un framework en sí mismo, sino una herramienta que te ayudaraá a generar toda la estructura inicial de un proyecto, brindándote una arquitectura sólida y escalable, asì como una cli que te ayudará a generar nuevos archivos como migraciones, servicios, entidades, módulos, etc. 
 
 ## Uso
 
-Lo primero que debes ejecutar es el comando `npm install -g node-express-cli` para instalarlo como dependencia global. Posteriormente se debe ejecutar el siguiente comando dentro de un directorio vacío que será la raíz del proyecto.
+Lo primero que debes ejecutar es el comando `npm install -g node-express-cli` para instalarlo como dependencia global. Posteriormente se debe ejecutar el siguiente comando **dentro de un directorio vacío**, que será la raíz del proyecto.
 
 ```bash
 node-express-cli init
@@ -86,24 +86,22 @@ Para el caso de Typeorm las nuevas entidades deben ser agregadas como parte del 
 Nota: TypeORM es solo un ORM, no instala la librería específica de postgres, mysql o cualquier otro manejador de base de datos. Para esto debes ejecutar el comando específico de la librería, como `yarn add pg` o `yarn add mysql`.
 
 ### Migraciones
-Si utiliza TypeORM se agregarán 6 comandos nuevos al package.json
+Si utiliza [TypeORM](https://typeorm.io/) se agregarán 6 comandos nuevos al package.json, cuya función es correr, revertir y generar migraciones, respectivamente. Si desea saber más acerca de las migraciones, visite la [documentación oficial](https://typeorm.io/migrations) de TypeORM
 - m:run
 - m:revert
 - m:generate  
 - m:create  
 - m:drop  
-- m:run:fresh  
+- m:run:fresh 
 
-Cuya función es correr, revertir y generar migraciones, respectivamente. Si desea saber más acerca de las migraciones, visite la [documentación oficial](https://typeorm.io/migrations) de TypeORM
-
-Para el caso de Sequelize también se incluyen una lista de comandos en el package.json
+Para el caso de [Sequelize](https://sequelize.org) también se incluyen una lista de comandos en el package.json
 
 - db:migrate
 - db:migrate:undo
 - db:migrate:fresh
 - db:make:migration
 
-Prisma por su parte no ocupa crear migraciones manualmente, ya que estas deberán ser creadas a partir de su schema. La lista de comandos para prisma es la siguiente:
+[Prisma](https://www.prisma.io/typescript) por su parte no ocupa crear migraciones manualmente, ya que estas deberán ser creadas a partir de su schema. La lista de comandos para prisma es la siguiente:
 
 - m:run
 - m:run:deploy
@@ -111,7 +109,7 @@ Prisma por su parte no ocupa crear migraciones manualmente, ya que estas deberá
 - m:generate
 
 ## Creación de módulos
-Un módulo comprende un controlador, un archivo de rutas, un servicio y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
+Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
 Para conectar las rutas de un módulo es necesario agregar el router del módulo al router principal del servidor, router.ts.
 
 ```TS
@@ -156,6 +154,7 @@ export const updateValidators = [
 ```
 
 Y para utilizarlos se pasan como middleware, ya que express permite pasar un array de middlewares a una ruta.
+Puedes escribir validadores personalizados, reuitilizables, agregándolos en el archivo `src/middlewares/express_validator.ts`, para más información acerca del uso de express validator visita la [documentación oficial](https://express-validator.github.io/docs/)
 
 ```TS
 import { storeValidators } from './user.validators';
@@ -176,12 +175,14 @@ logger.warn('Advertencia');
 logger.error('Error', error);
 ```
 
+Por defecto el logger escribe en la consola y en un archivo llamado `app.log` dentro del directorio logs. Puedes personalizar el logger en el archivo `src/helpers/logger.ts` para que escriba en otros destinos o con otros formatos.
+
 ## Manejo de errores 
 El proyecto incluye un middleware manejador de errores llamado handleErrorMiddleware dentro de /src/middlewares/error_handler.ts, con el propósito de generar respuestas de error estándar al cliente. Este middleware ya está configurado y será ejecutado si una función controladora llama a next(error). 
 
 `error` debe contener una instancia de la clase `HTTPError`. Se incluyen tambien una serie de métodos de utilidad dentro del `error_handler` que nos ayudarán a generar estas instancias. 
 
-El patrón propuesto es que el servicio sea el que lance los errores y el controlador solo los controle para pasarlos a la siguiente capa.
+El patrón propuesto es que el servicio sea el que lance los errores y el controlador solo los controle para pasarlos a la siguiente capa, de esta manera evitamos que el controlador tenga lógica de negocio y mantenemos la separación de responsabilidades. 
 
 ### Servicio
 ```TS	
@@ -216,6 +217,7 @@ node-express-cli install:socket
 ```
 
 Es importante que esta acción se realice antes de personalizar el archivo principal del servidor index.ts, pues reemplazará todo su contenido con la nueva configuración para soportar el socket.
+Se agregarán además dos archivos: socket.ts y socket.controller.ts, los cuales contienen la configuración y la lógica para el manejo de los sockets.
 
 ## Instalación de Prettier y ESlint
 La instalación de [Prettier](https://prettier.io/) y [ESlint](https://eslint.org/) se incluyen como opciones separadas para ofrecer una configuración más granular. 
@@ -233,7 +235,7 @@ Es necesario instalar prettier para poder instalar eslint.
 Es posible instalar un módulo de autenticación con lo básico necesario para autenticar un usuario con JWT, haciendo uso de la conocida librería [Passport](https://www.npmjs.com/package/passport).  
 Para instalarlo utiliza el comando `node-express-cli install:auth`.
 Esta acción creará un modelo básico de usuario, una estrategia de passport y un módulo de autenticación. 
-Solamente deberás agregar las rutas del módulo auth al router principal de la aplicación y crear/ejecutar las migraciones para la base de datos si estás utilizando TypeORM
+Solamente deberás agregar las rutas del módulo auth al router principal de la aplicación y crear/ejecutar las migraciones para la base de datos, de ser necesario. 
 
 ## Envío de Emails
 Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  
