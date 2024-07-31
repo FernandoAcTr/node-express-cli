@@ -279,3 +279,7 @@ Para iniciar el servidor compilado utilizar el comando:
 npm start
 ```
 
+## Variables de entorno
+
+Las variables de entorno son manejadas usando el paquete [dotenv](https://www.npmjs.com/package/dotenv). Para esto debe agregarse un archivo .env en la raíz del proyecto con las variables de entorno necesarias.
+El proyecto incluye un archivo .env.example que contiene las variables de entorno necesarias para el correcto funcionamiento del servidor. Estas variables son después concentradas (y te sugerimos que así lo hagas) en un objeto global dentro de `src/config/settings.ts` para ser utilizadas en cualquier parte del proyecto y disfrutar del auto completado de typescript.
