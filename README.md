@@ -1,9 +1,8 @@
 # node-express-cli
 
-`node-express-cli` es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/), inspirado fuertemente en la arquitectura de Nest pero sin la complejidad que este framework implica y en la cli de Laravel para generar nuevos archivos.
-node-express-cli actualmente ofrece las siguientes caracteristicas.
+`node-express-cli` es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/), inspirado fuertemente en la arquitectura de [Nest](https://nestjs.com/) pero sin la complejidad que este framework implica y en la cli de Laravel para generar nuevos archivos.
 
-`node-express-cli` no es un framework en sí mismo, sino una herramienta que te ayudaraá a generar toda la estructura inicial de un proyecto, brindándote una arquitectura sólida y escalable, asì como una cli que te ayudará a generar nuevos archivos como migraciones, servicios, entidades, módulos, etc. 
+`node-express-cli` no es un framework en sí mismo, sino una herramienta que te ayudará a generar toda la estructura inicial de un proyecto, brindándote una arquitectura sólida y escalable, así como una cli que te ayudará a generar nuevos archivos como migraciones, servicios, entidades, módulos, etc. 
 
 ## Uso
 
