@@ -1,15 +1,9 @@
 # node-express-cli
 
-node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/), inpirado fuertemente en Nest pero sin la complejidad que este framework implica. Es util para generar proyectos API REST y API's GraphQL.
+node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/), inspirado fuertemente en la arquitectura de Nest pero sin la complejidad que este framework implica y en la cli de Laravel para generar nuevos archivos.
 node-express-cli actualmente ofrece las siguientes caracteristicas.
 
-- Creación de la configuración inicial del proyecto (estructura de directorios, scripts, dependencias de desarrollo, etc.)
-- Instalación de Prettier
-- Instalación de Eslint
-- Creación de módulos
-- Instalación de Socket con socket.io
-
-node-express-cli no es un framework en sí mismo, sino una herramienta que te ayudaraá a generar toda la estructura inicial de un proyecto, brindándote una arquitectura sólida y escalable.
+node-express-cli no es un framework en sí mismo, sino una herramienta que te ayudaraá a generar toda la estructura inicial de un proyecto, brindándote una arquitectura sólida y escalable, asì como una cli que te ayudará a generar nuevos archivos como migraciones, servicios, entidades, módulos, etc. 
 
 ## Uso
 
@@ -29,11 +23,11 @@ Cada una generará una configuración diferente en cuanto a middlewares y depend
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
 
 El proyecto ahora incluye y debe incluir un archivo llamado cli.config.json con las opciones seleccionadas para cada tipo de proyecto y orm. 
-```
+```JSON
 {
-  "project": "GraphQL API", -> opciones disponibles:  REST API | GraphQL API
-  "orm": "mongo", -> opciones disponibles: mongoose | typeorm | sequelize
-  "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
+    "project": "GraphQL API", -> opciones disponibles:  REST API | GraphQL API
+    "orm": "mongo", -> opciones disponibles: mongoose | typeorm | sequelize
+    "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
 }
 ```
 
@@ -43,7 +37,7 @@ El proyecto ahora incluye y debe incluir un archivo llamado cli.config.json con 
 
 La estructura generada trata de seguir una arquitectura modular, en donde se tiene un directorio para configuraciones, para base de datos, entidades, helpers, middlewares y el más importante: modules, el cual contiene cada módulo del proyecto.
 
-Para proyectos API REST se incluyen alias de módulo o lo que es lo mismo, una abreviación para acceder al directorio src desde cualquier ubicación dentro del mismo. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. (Actualmente esta característica no es soportada para proyectos Web o GraphQL)
+Para proyectos API REST se incluyen alias de módulo o lo que es lo mismo, una abreviación para acceder al directorio src desde cualquier ubicación dentro del mismo; para esto se utiliza el paquete `module-alias`. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. (Actualmente esta característica no es soportada para proyectos Web o GraphQL)
 Por ejemplo, una importación se haría de la siguiente manera:
 
 ```TS
@@ -56,6 +50,8 @@ en lugar de
 import { logger } from '../../../helpers/logger';
 ```
 
+
+Si lo deseas puedes extender estos alias modificando el archivo alias.ts y la configuración de typescript en tsconfig.json
 
 ## Base de datos
 
@@ -84,7 +80,8 @@ Si usas mongoose basta con importar el módulo de conexión al inicio del index.
 ```TS
 import './database/database';
 ```
-Es muy importante que las entidades de base de datos dentro del directorio src/entities/ terminen con extensión .entity.ts, de lo contrario no podrán ser accedidas por typeorm al realizar el proceso de introspección y se generará un error al arrancar el servidor. 
+
+Para el caso de Typeorm las nuevas entidades deben ser agregadas como parte del array de entidades en el archivo src/database/datasource.ts, pero para mayor información visita la [documentación oficial](https://typeorm.io/)
 
 Nota: TypeORM es solo un ORM, no instala la librería específica de postgres, mysql o cualquier otro manejador de base de datos. Para esto debes ejecutar el comando específico de la librería, como `yarn add pg` o `yarn add mysql`.
 
@@ -98,6 +95,20 @@ Si utiliza TypeORM se agregarán 6 comandos nuevos al package.json
 - m:run:fresh  
 
 Cuya función es correr, revertir y generar migraciones, respectivamente. Si desea saber más acerca de las migraciones, visite la [documentación oficial](https://typeorm.io/migrations) de TypeORM
+
+Para el caso de Sequelize también se incluyen una lista de comandos en el package.json
+
+- db:migrate
+- db:migrate:undo
+- db:migrate:fresh
+- db:make:migration
+
+Prisma por su parte no ocupa crear migraciones manualmente, ya que estas deberán ser creadas a partir de su schema. La lista de comandos para prisma es la siguiente:
+
+- m:run
+- m:run:deploy
+- m:reset
+- m:generate
 
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, un servicio y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
