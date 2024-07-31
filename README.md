@@ -1,7 +1,7 @@
 # node-express-cli
 
-node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/). Es util para generar proyectos API REST y API's GraphQL.
-node-express-cli actualmente ofrece las siguientes caracteristicas
+node-express-cli es un CLI simple y opinado para generar la configuración inicial de un proyecto en express utilizando [Typescript](https://www.typescriptlang.org/), inpirado fuertemente en Nest pero sin la complejidad que este framework implica. Es util para generar proyectos API REST y API's GraphQL.
+node-express-cli actualmente ofrece las siguientes caracteristicas.
 
 - Creación de la configuración inicial del proyecto (estructura de directorios, scripts, dependencias de desarrollo, etc.)
 - Instalación de Prettier
@@ -9,11 +9,13 @@ node-express-cli actualmente ofrece las siguientes caracteristicas
 - Creación de módulos
 - Instalación de Socket con socket.io
 
+node-express-cli no es un framework en sí mismo, sino una herramienta que te ayudaraá a generar toda la estructura inicial de un proyecto, brindándote una arquitectura sólida y escalable.
+
 ## Uso
 
 Lo primero que debes ejecutar es el comando `npm install -g node-express-cli` para instalarlo como dependencia global. Posteriormente se debe ejecutar el siguiente comando dentro de un directorio vacío que será la raíz del proyecto.
 
-```
+```bash
 node-express-cli init
 ```
 
@@ -26,8 +28,7 @@ Cada una generará una configuración diferente en cuanto a middlewares y depend
 
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
 
-El proyecto ahora incluye y debe incluir un archivo llamado cli.config.json con las opciones seleccionadas para 
-tipo de proyecto y orm. 
+El proyecto ahora incluye y debe incluir un archivo llamado cli.config.json con las opciones seleccionadas para cada tipo de proyecto y orm. 
 ```
 {
   "project": "GraphQL API", -> opciones disponibles:  REST API | GraphQL API
@@ -40,13 +41,21 @@ tipo de proyecto y orm.
 
 ![Estructura](./docs/img/estructura.png)
 
-La estructura generada trata de seguir una arquitectura modular, en donde se tiene un directorio para configuraciones, para base de datos, entidades, helpers, middlewares y el más importante modules.
-En este último se contiene cada módulo del proyecto.
+La estructura generada trata de seguir una arquitectura modular, en donde se tiene un directorio para configuraciones, para base de datos, entidades, helpers, middlewares y el más importante: modules, el cual contiene cada módulo del proyecto.
 
-Para proyectos API REST se incluyen alias de módulo o lo que es lo mismo, abreviaciones para acceder a cada directorio. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. (Actualmente esta característica no es soportada para proyectos Web o GraphQL)
+Para proyectos API REST se incluyen alias de módulo o lo que es lo mismo, una abreviación para acceder al directorio src desde cualquier ubicación dentro del mismo. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. (Actualmente esta característica no es soportada para proyectos Web o GraphQL)
 Por ejemplo, una importación se haría de la siguiente manera:
 
-![Importación](./docs/img/importacion.png)
+```TS
+import { logger } from '@/helpers/logger';
+```
+
+en lugar de 
+
+```TS
+import { logger } from '../../../helpers/logger';
+```
+
 
 ## Base de datos
 
@@ -63,7 +72,7 @@ Cuando los parámetros sean correctos debes llamar la conexión en el archivo pr
 
 Si usas Typeorm, agrega esto en el método start() del index.ts
 
-```
+```TS
 AppDataSource.initialize()
       .then(() => {
         logger.info('🚀 Database conection is online...')
@@ -72,7 +81,7 @@ AppDataSource.initialize()
 ```
 Si usas mongoose basta con importar el módulo de conexión al inicio del index.ts
 
-```
+```TS
 import './database/database';
 ```
 Es muy importante que las entidades de base de datos dentro del directorio src/entities/ terminen con extensión .entity.ts, de lo contrario no podrán ser accedidas por typeorm al realizar el proceso de introspección y se generará un error al arrancar el servidor. 
@@ -94,49 +103,104 @@ Cuya función es correr, revertir y generar migraciones, respectivamente. Si des
 Un módulo comprende un controlador, un archivo de rutas, un servicio y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
 Para conectar las rutas de un módulo es necesario agregar el router del módulo al router principal del servidor, router.ts.
 
-![Modulo](./docs/img/modulo.png)
+```TS
+import { Router } from 'express';
+import myRoutes from '@/modules/myModule/myModule.routes';
+
+const router = Router();
+router.use('/my-optional-prefix', myRoutes);
+
+export default router;
+```
 
 Con esto y sin mayor configuración adicional, las rutas del módulo ya estarán disponibles. Pues el router principal ya está siendo cargado en el archivo principal del servidor. 
 
 Para crear un módulo se utiliza el comando:
-```
+```bash
 node-express-cli make:module
 ```
-Cada que se crea un módulo debes asignarle un nombre y de qué tipo será: Rest o GraphQL. Asegurate de seleccionar la misma opción que utilizaste para crear el proyecto, pues el módulo varia ligeramente entre cada tipo de configuración. 
+Cada que se crea un módulo debes asignarle un nombre.
 
 ## Validación de Request
 El body de un request puede ser validado utilizando la librería [express-validator](https://www.npmjs.com/package/express-validator). 
-Para esto un módulo incluye un archivo de validación en donde se colocan cada conjunto de validaciones dentro de un array.
+Para esto un módulo incluye un archivo de validación en donde se colocan cada conjunto de validaciones dentro de un array y en la última posición se coloca el middleware bodyValidator, el cual se encarga de obtener los mensajes de error generados por express-validator y devolverlos como una respuesta estándar al cliente.
 
-![Validators](./docs/img/validacion.png)
+```TS
+import { check } from 'express-validator';
+import { bodyValidator } from '@/middlewares/validator';
 
-Y para utilizarlos se pasan como middleware a una ruta, seguidos del middleware bodyValidator, encargado de obtener todos los mendajes de error y regresarlos como una respuesta estándar al cliente.
+export const storeValidators = [
+  check('name').isString().isLength({ min: 3, max: 255 }),
+  check('email').isEmail(),
+  check('password').isString().isLength({ min: 6, max: 255 }),
+  bodyValidator,
+];
 
-![Validators](./docs/img/validators_uso.png)
+export const updateValidators = [
+  check('name').isString().isLength({ min: 3, max: 255 }),
+  check('email').isEmail(),
+  check('password').isString().isLength({ min: 6, max: 255 }),
+  bodyValidator,
+];
+```
+
+Y para utilizarlos se pasan como middleware, ya que express permite pasar un array de middlewares a una ruta.
+
+```TS
+import { storeValidators } from './user.validators';
+router.post('/', storeValidators, userController.store);
+```
 
 ## Logger
 
 Un proyecto REST incluye un Logguer utilizando la librería [winston](https://www.npmjs.com/package/winston). Este logger puede ser utilizado de la siguiente manera: 
 
-![Log](./docs/img/log.png)
+```TS
+import { logger } from '@/helpers/logger';
+
+logger.log('Some Log');
+logger.info('Información');
+logger.error('Error');
+logger.warn('Advertencia');
+logger.error('Error', error);
+```
 
 ## Manejo de errores 
 El proyecto incluye un middleware manejador de errores llamado handleErrorMiddleware dentro de /src/middlewares/error_handler.ts, con el propósito de generar respuestas de error estándar al cliente. Este middleware ya está configurado y será ejecutado si una función controladora llama a next(error). 
 
-error debe contener una instancia de la clase ErrorHandler.
+`error` debe contener una instancia de la clase `HTTPError`. Se incluyen tambien una serie de métodos de utilidad dentro del `error_handler` que nos ayudarán a generar estas instancias. 
 
 El patrón propuesto es que el servicio sea el que lance los errores y el controlador solo los controle para pasarlos a la siguiente capa.
 
 ### Servicio
-![Log](./docs/img/error_servicio.png)
+```TS	
+import { Forbidden, InternalServerError, NotFound } from '@/middlewares/error_handler';
+
+export async function someService() {
+  if (someCondition){
+    throw NotFound('Some message');
+  }
+}
+```
 
 ### Controlador
-![Log](./docs/img/error_controlador.png)
+```TS
+export async function destroy (req: Request, res: Response, next: NextFunction): Promise<void> {
+  import { someService } from '@/services/someService';
+
+  try {
+    const response = await someService();
+    res.json(response)
+  } catch (error: any) {
+    next(error)
+  }
+}
+```
 
 ## Instalación de Socket
 Adicionalmente después de crear el servidor es posible instalar el uso de sockets mediante la librería [https://socket.io/](socket.io). 
 Para ello utilizar el comando 
-```
+```bash
 node-express-cli install:socket
 ```
 
@@ -145,11 +209,11 @@ Es importante que esta acción se realice antes de personalizar el archivo princ
 ## Instalación de Prettier y ESlint
 La instalación de [Prettier](https://prettier.io/) y [ESlint](https://eslint.org/) se incluyen como opciones separadas para ofrecer una configuración más granular. 
 Para instalar prettier: 
-```
+```bash
 node-express-cli install:prettier
 ```
 Para instalar ESlint
-```
+```bash
 node-express-cli install:eslint
 ```
 Es necesario instalar prettier para poder instalar eslint. 
@@ -165,7 +229,7 @@ Es posible agregar soporte para envío de emails vía nodemailer, utilizando el 
 Esta acción instalará una clase Mailer, dentro del directorio helpers, la cual tiene la lógina necesaria para envío de emails y notificaciones.  
 Se instala además un template básico html para las notificaciones, el cuál es compilado mediante handlebars. Un ejemplo de envío de una notificación es: 
 
-```
+```TS
 Mailer.sendNotification({
     to: 'joe@gmail.com',
     subject: 'Asunto del mensaje',
@@ -184,7 +248,7 @@ Mailer.sendNotification({
 ### Desarrollo
 Para levantar el servidor en desarrollo usar el script "dev"
 
-```
+```bash
 npm run dev
 ```
 Si no existe el directorio build antes de ejecutar este comando, es posible que sea necesario parar y ejecutar el comando nuevamente.
@@ -192,13 +256,13 @@ Si no existe el directorio build antes de ejecutar este comando, es posible que 
 ### Producción
 
 Para compilar el proyecto utilizar el comando: 
-```
+```bash
 npm run build
 ```
 
 Para iniciar el servidor compilado utilizar el comando:
 
-```
+```bash
 npm start
 ```
 
