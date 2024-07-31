@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import inquirer from '@inquirer/prompts'
+import * as inquirer from '@inquirer/prompts'
 import figlet from 'figlet'
 import gradient from 'gradient-string'
 import { argv } from './plugins/yargs'
