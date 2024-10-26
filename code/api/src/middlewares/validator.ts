@@ -7,10 +7,11 @@ export function bodyValidator(req: Request, res: Response, next: NextFunction) {
   const arrayErrors = errors.array()
 
   if (!errors.isEmpty()) {
-    return res.status(400).json({
+    res.status(400).json({
       errors: arrayErrors,
       message: arrayErrors[0]?.msg,
     })
+    return
   }
 
   next()
