@@ -12,6 +12,12 @@ Lo primero que debes ejecutar es el comando `npm install -g node-express-cli` pa
 node-express-cli init
 ```
 
+o en su versión corta, la cuál puedes usar para ejecutar cualquier comando que se describe en esta documentación, `node-express-cli` y `nec` son equivalentes.
+
+```bash
+nec init
+```
+
 Este comando te preguntará el nombre de tu proyecto y creará un nuevo directorio con ese nombre, el cuál contendrá todo el código fuente.
 
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
