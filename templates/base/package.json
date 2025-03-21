@@ -1,0 +1,24 @@
+{
+  "name": "newproject",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsc-watch --onSuccess \"npm run restart\"",
+    "restart": "tsc && tsc-alias && node build/index",
+    "clean": "rm -rf build",
+    "build": "tsc",
+    "start": "node build",
+    "prettier:fix": "prettier --config .prettierrc.json --write src/**/**/*.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+   
+  },
+  "devDependencies": {
+    
+  }
+}

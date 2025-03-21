@@ -1,3 +1,5 @@
 node_modules
 dist
 .vscode
+test-project
+logs

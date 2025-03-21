@@ -6,27 +6,22 @@
 
 ## Uso
 
-Lo primero que debes ejecutar es el comando `npm install -g node-express-cli` para instalarlo como dependencia global. Posteriormente se debe ejecutar el siguiente comando **dentro de un directorio vacío**, que será la raíz del proyecto.
+Lo primero que debes ejecutar es el comando `npm install -g node-express-cli` para instalarlo como dependencia global. Posteriormente se debe ejecutar el siguiente comando.
 
 ```bash
 node-express-cli init
 ```
 
-Existen 2 opciones para generar el proyecto:
-
-- API Rest
-- GraphQL
-
-Cada una generará una configuración diferente en cuanto a middlewares y dependencias de desarrollo. Además la manera en que se configura el archivo index.ts del servidor es diferente para cada una.
+Este comando te preguntará el nombre de tu proyecto y creará un nuevo directorio con ese nombre, el cuál contendrá todo el código fuente.
 
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
 
-El proyecto ahora incluye y debe incluir un archivo llamado cli.config.json con las opciones seleccionadas para cada tipo de proyecto y orm. 
+El proyecto incluye y debe incluir un archivo llamado cli.config.json con las opciones seleccionadas. 
 ```JSON
 {
-    "project": "GraphQL API", -> opciones disponibles:  REST API | GraphQL API
     "orm": "mongo", -> opciones disponibles: mongoose | typeorm | sequelize
     "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
+    "fileBasedRouting": false, -> opciones disponibles: true | false
 }
 ```
 
@@ -34,38 +29,33 @@ El proyecto ahora incluye y debe incluir un archivo llamado cli.config.json con 
 
 ![Estructura](./docs/img/estructura.png)
 
-La estructura generada trata de seguir una arquitectura modular, en donde se tiene un directorio para configuraciones, para base de datos, entidades, helpers, middlewares y el más importante: modules, el cual contiene cada módulo del proyecto.
+La estructura generada trata de seguir una arquitectura n-capas pero con una base modular, en donde se tiene un directorio para configuraciones, para base de datos, entidades, utils, middlewares, etc y el más importante: modules, el cual contiene cada módulo del proyecto.
 
-Para proyectos API REST se incluyen alias de módulo o lo que es lo mismo, una abreviación para acceder al directorio src desde cualquier ubicación dentro del mismo; para esto se utiliza el paquete `module-alias`. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. (Actualmente esta característica no es soportada para proyectos Web o GraphQL)
+El proyecto generado está configurado para usar alias de módulo o lo que es lo mismo, una abreviación para acceder al directorio src desde cualquier ubicación dentro del mismo; para esto se utiliza el paquete `module-alias`. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. 
 Por ejemplo, una importación se haría de la siguiente manera:
 
 ```TS
-import { logger } from '@/helpers/logger';
+import { logger } from '@/utils/logger';
 ```
 
 en lugar de 
 
 ```TS
-import { logger } from '../../../helpers/logger';
+import { logger } from '../../../utils/logger';
 ```
-
-
-Si lo deseas puedes extender estos alias modificando el archivo alias.ts y la configuración de typescript en tsconfig.json
 
 ## Base de datos
 
-En cuanto a bases de datos actualmente el paquete soporta 2 opciones
+En cuanto a bases de datos actualmente el paquete soporta la instalación de 4 ORMs diferentes:
 
 - SQL con [TypeORM](https://typeorm.io/#/), [Sequelize](https://sequelize.org/) o [Prisma](https://www.prisma.io/typescript) 
 - MongoDB con [Mongoose](https://mongoosejs.com/)
 
-Para agregar una de las dos opciones utiliza el comando `node-express-cli install:database`
+Para agregar una de las dos opciones utiliza el comando `node-express-cli install:orm`
 
 Una vez creado el proyecto, debes configurar los parámetros de la base de datos dentro del archivo .env
-Mismos que serán leídos dentro del archivo src/database/database.ts para crear la conexión. Este último debes personalizarlo también, dependiendo el SGDB que deseas utilizar.
+Mismos que serán leídos dentro del archivo src/database/datasources.ts para crear la conexión. Este último debes personalizarlo también, dependiendo el SGDB que deseas utilizar.
 Cuando los parámetros sean correctos debes llamar la conexión en el archivo principal del servidor index.ts  
-
-Si usas Typeorm, agrega esto en el método start() del index.ts
 
 ```TS
 AppDataSource.initialize()
@@ -77,15 +67,15 @@ AppDataSource.initialize()
 Si usas mongoose basta con importar el módulo de conexión al inicio del index.ts
 
 ```TS
-import './database/database';
+import './database/datasources';
 ```
 
-Para el caso de Typeorm las nuevas entidades deben ser agregadas como parte del array de entidades en el archivo src/database/datasource.ts, pero para mayor información visita la [documentación oficial](https://typeorm.io/)
+Para el caso de Typeorm las nuevas entidades deben ser agregadas como parte del array de entidades en el archivo src/database/datasources.ts, pero para mayor información visita la [documentación oficial](https://typeorm.io/)
 
-Nota: TypeORM es solo un ORM, no instala la librería específica de postgres, mysql o cualquier otro manejador de base de datos. Para esto debes ejecutar el comando específico de la librería, como `yarn add pg` o `yarn add mysql`.
+Nota: TypeORM, Sequelize o Prisma son solo ORM's, no incluyen la librería específica de postgres, mysql o cualquier otro manejador de base de datos. Para esto debes ejecutar el comando específico de la librería, como `npm i pg` o `npm i mysql`.
 
 ### Migraciones
-Si utiliza [TypeORM](https://typeorm.io/) se agregarán 6 comandos nuevos al package.json, cuya función es correr, revertir y generar migraciones, respectivamente. Si desea saber más acerca de las migraciones, visite la [documentación oficial](https://typeorm.io/migrations) de TypeORM
+Si utilizas [TypeORM](https://typeorm.io/) se agregarán 6 comandos nuevos al package.json, cuya función es correr, revertir y generar migraciones, respectivamente. Si desea saber más acerca de las migraciones, visite la [documentación oficial](https://typeorm.io/migrations) de TypeORM
 - m:run
 - m:revert
 - m:generate  
@@ -109,19 +99,21 @@ Para el caso de [Sequelize](https://sequelize.org) también se incluyen una list
 
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
-Para conectar las rutas de un módulo es necesario agregar el router del módulo al router principal del servidor, router.ts.
+El archivo de rutas será creado en el diretorio routes dentro de src, es el único archivo que vive fuera del módulo. Los archivos dentro del direcotio `routes` son importados dinámicamente dentro del punto de entrada de la aplicación, `index.ts`, por lo que lo único que se necesita hacer dentro de un archivo de rutas es exportar por defecto un router de express. E.g
 
 ```TS
 import { Router } from 'express';
-import myRoutes from '@/modules/myModule/myModule.routes';
 
 const router = Router();
-router.use('/my-optional-prefix', myRoutes);
+
+router.get('/api/products', (req, res) => {
+  res.send('Hello World');
+});
 
 export default router;
 ```
 
-Con esto y sin mayor configuración adicional, las rutas del módulo ya estarán disponibles. Pues el router principal ya está siendo cargado en el archivo principal del servidor. 
+Con esto y sin mayor configuración adicional, las rutas del módulo ya estarán disponibles.
 
 Para crear un módulo se utiliza el comando:
 ```bash
@@ -131,29 +123,29 @@ Cada que se crea un módulo debes asignarle un nombre.
 
 ## Validación de Request
 El body de un request puede ser validado utilizando la librería [express-validator](https://www.npmjs.com/package/express-validator). 
-Para esto un módulo incluye un archivo de validación en donde se colocan cada conjunto de validaciones dentro de un array y en la última posición se coloca el middleware bodyValidator, el cual se encarga de obtener los mensajes de error generados por express-validator y devolverlos como una respuesta estándar al cliente.
+Para esto un módulo incluye un archivo de validación en donde se colocan cada conjunto de validaciones dentro de un array y en la última posición se coloca el middleware requestValidator, el cual se encarga de obtener los mensajes de error generados por express-validator y devolverlos como una respuesta estándar al cliente.
 
 ```TS
 import { check } from 'express-validator';
-import { bodyValidator } from '@/middlewares/validator';
+import { requestValidator } from '@/middlewares/validator';
 
 export const storeValidators = [
   check('name').isString().isLength({ min: 3, max: 255 }),
   check('email').isEmail(),
   check('password').isString().isLength({ min: 6, max: 255 }),
-  bodyValidator,
+  requestValidator,
 ];
 
 export const updateValidators = [
   check('name').isString().isLength({ min: 3, max: 255 }),
   check('email').isEmail(),
   check('password').isString().isLength({ min: 6, max: 255 }),
-  bodyValidator,
+  requestValidator,
 ];
 ```
 
 Y para utilizarlos se pasan como middleware, ya que express permite pasar un array de middlewares a una ruta.
-Puedes escribir validadores personalizados, reuitilizables, agregándolos en el archivo `src/middlewares/express_validator.ts`, para más información acerca del uso de express validator visita la [documentación oficial](https://express-validator.github.io/docs/)
+Para más información acerca del uso de express validator visita la [documentación oficial](https://express-validator.github.io/docs/)
 
 ```TS
 import { storeValidators } from './user.validators';
@@ -165,7 +157,7 @@ router.post('/', storeValidators, userController.store);
 Un proyecto REST incluye un Logguer utilizando la librería [winston](https://www.npmjs.com/package/winston). Este logger puede ser utilizado de la siguiente manera: 
 
 ```TS
-import { logger } from '@/helpers/logger';
+import { logger } from '@/utils/logger';
 
 logger.log('Some Log');
 logger.info('Información');
@@ -174,7 +166,7 @@ logger.warn('Advertencia');
 logger.error('Error', error);
 ```
 
-Por defecto el logger escribe en la consola y en un archivo llamado `app.log` dentro del directorio logs. Puedes personalizar el logger en el archivo `src/helpers/logger.ts` para que escriba en otros destinos o con otros formatos.
+Por defecto el logger escribe en la consola y en un archivo llamado `app.log` dentro del directorio logs. Puedes personalizar el logger en el archivo `src/utils/logger.ts` para que escriba en otros destinos o con otros formatos.
 
 ## Manejo de errores 
 El proyecto incluye un middleware manejador de errores llamado handleErrorMiddleware dentro de /src/middlewares/error_handler.ts, con el propósito de generar respuestas de error estándar al cliente. Este middleware ya está configurado y será ejecutado si una función controladora llama a next(error). 
@@ -238,7 +230,7 @@ Solamente deberás agregar las rutas del módulo auth al router principal de la 
 
 ## Envío de Emails
 Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  
-Esta acción instalará una clase Mailer, dentro del directorio helpers, la cual tiene la lógina necesaria para envío de emails y notificaciones.  
+Esta acción instalará una clase Mailer, dentro del directorio utils, la cual tiene la lógina necesaria para envío de emails y notificaciones.  
 Se instala además un template básico html para las notificaciones, el cuál es compilado mediante handlebars. Un ejemplo de envío de una notificación es: 
 
 ```TS
@@ -253,6 +245,89 @@ Mailer.sendNotification({
       url: 'http://www.my-site.com',
     },
 })
+```
+
+## Ruteo basado en archivos
+Al crear un proyecto puedes elegir si deseas que las rutas sean manejadas con base en tu sistema de archivos (similar a lo que hace Next.js) o si prefieres manejarlas de manera manual, eportando un router de express en cada archivo de rutas (como se mencionó en la sección de módulos).
+El ruteo basado en archivos es una opción que permite que las rutas sean manejadas de manera automática, sin necesidad de importarlas manualmente en el archivo principal del servidor. Las rutas serán creadas basandose en los nombres de los archivos y directorios dentro de la carpeta routes. Ejemplo: 
+
+La siguiente estructura de archivos:
+
+```
+routes
+│   index.ts
+│
+└───api
+│   │
+│   └───users
+│   |    │   index.ts
+│   |    │----[id]
+|   |          │   index.ts
+|   |---products
+|        |   index.ts
+|        |   [id].ts
+│
+└───auth
+    │   login.ts
+    │   register.ts
+```
+
+Generará las siguientes rutas:
+
+```
+GET /
+POST /
+
+GET /api/users
+POST /api/users
+GET /api/users/:id
+PUT /api/users/:id
+DELETE /api/users/:id
+
+POST /auth/login
+POST /auth/register
+
+GET /api/products
+POST /api/products
+GET /api/products/:id
+PUT /api/products/:id
+DELETE /api/products/:id
+``` 
+
+La ruta final será la concatenación de los nombres de los directorios y archivos, separados por un slash, partiendo desde el directorio raíz de las rutas (/) hasta un archivo index.ts o un archivo con cualquier otro nombre.
+Si un archivo es llamado `index.ts` se el final de la ruta será el nombre del directorio padre, mientras que si un archivo tiene cualquier otro nombre, este será el final de la ruta.
+Para utilizar segmentos dinámicos (parámetros de ruta) se debe crear un directorio con el nombre del parámetro entre corchetes.
+
+Los archivos de rutas deben exportar por defecto un objeto que contenga los handlers que serán ehecutados para cada método HTTP. E.g
+
+```TS
+import { Request, Response } from 'express'
+
+function GET(req: Request, res: Response) {
+  res.json({ status: 'ok' })
+}
+
+export default {
+  GET
+} satisfies RestController
+```
+
+Cada handler puede ser una función o un array de funciones, en cuyo caso se ejecutarán en orden. E.g
+
+```TS
+import { Request, Response } from 'express'
+
+function middleware(req: Request, res: Response, next: NextFunction) {
+  console.log('Middleware')
+  next()
+}
+function GET(req: Request, res: Response) {
+  res.json({ status: 'ok' })
+}
+export default {
+  GET: [middleware, GET]
+} satisfies RestController
+
 ```
 
 ## Levantar el servidor 
@@ -281,4 +356,4 @@ npm start
 ## Variables de entorno
 
 Las variables de entorno son manejadas usando el paquete [dotenv](https://www.npmjs.com/package/dotenv). Para esto debe agregarse un archivo .env en la raíz del proyecto con las variables de entorno necesarias.
-El proyecto incluye un archivo .env.example que contiene las variables de entorno necesarias para el correcto funcionamiento del servidor. Estas variables son después concentradas (y te sugerimos que así lo hagas) en un objeto global dentro de `src/config/settings.ts` para ser utilizadas en cualquier parte del proyecto y disfrutar del auto completado de typescript.
+El proyecto incluye un archivo .env.example que contiene las variables de entorno necesarias para el correcto funcionamiento del servidor. Estas variables son después concentradas (y te sugerimos que así lo hagas) en un objeto global dentro de `src/config/config.ts` para ser utilizadas en cualquier parte del proyecto y disfrutar del auto completado de typescript.
