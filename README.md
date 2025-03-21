@@ -54,7 +54,7 @@ En cuanto a bases de datos actualmente el paquete soporta la instalación de 4 O
 Para agregar una de las dos opciones utiliza el comando `node-express-cli install:orm`
 
 Una vez creado el proyecto, debes configurar los parámetros de la base de datos dentro del archivo .env
-Mismos que serán leídos dentro del archivo src/database/datasources.ts para crear la conexión. Este último debes personalizarlo también, dependiendo el SGDB que deseas utilizar.
+Mismos que serán leídos dentro del archivo src/database/datasources.ts para crear la conexión. Este último debes personalizarlo también, dependiendo el SGBD que deseas utilizar.
 Cuando los parámetros sean correctos debes llamar la conexión en el archivo principal del servidor index.ts  
 
 ```TS
@@ -99,7 +99,7 @@ Para el caso de [Sequelize](https://sequelize.org) también se incluyen una list
 
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
-El archivo de rutas será creado en el diretorio routes dentro de src, es el único archivo que vive fuera del módulo. Los archivos dentro del direcotio `routes` son importados dinámicamente dentro del punto de entrada de la aplicación, `index.ts`, por lo que lo único que se necesita hacer dentro de un archivo de rutas es exportar por defecto un router de express. E.g
+El archivo de rutas será creado en el directorio routes dentro de src, es el único archivo que vive fuera del módulo. Los archivos dentro del directorio `routes` son importados dinámicamente dentro del punto de entrada de la aplicación, `index.ts`, por lo que lo único que se necesita hacer dentro de un archivo de rutas es exportar por defecto un router de express. E.g
 
 ```TS
 import { Router } from 'express';
@@ -201,7 +201,7 @@ export async function destroy (req: Request, res: Response, next: NextFunction):
 ```
 
 ## Instalación de Socket
-Adicionalmente después de crear el servidor es posible instalar el uso de sockets mediante la librería [https://socket.io/](socket.io). 
+Adicionalmente después de crear el servidor es posible instalar el uso de sockets mediante la librería [Socket.io](https://socket.io/). 
 Para ello utilizar el comando 
 ```bash
 node-express-cli install:socket
@@ -230,7 +230,7 @@ Solamente deberás agregar las rutas del módulo auth al router principal de la 
 
 ## Envío de Emails
 Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  
-Esta acción instalará una clase Mailer, dentro del directorio utils, la cual tiene la lógina necesaria para envío de emails y notificaciones.  
+Esta acción instalará una clase Mailer, dentro del directorio utils, la cual tiene la lógica necesaria para envío de emails y notificaciones.  
 Se instala además un template básico html para las notificaciones, el cuál es compilado mediante handlebars. Un ejemplo de envío de una notificación es: 
 
 ```TS
@@ -248,8 +248,8 @@ Mailer.sendNotification({
 ```
 
 ## Ruteo basado en archivos
-Al crear un proyecto puedes elegir si deseas que las rutas sean manejadas con base en tu sistema de archivos (similar a lo que hace Next.js) o si prefieres manejarlas de manera manual, eportando un router de express en cada archivo de rutas (como se mencionó en la sección de módulos).
-El ruteo basado en archivos es una opción que permite que las rutas sean manejadas de manera automática, sin necesidad de importarlas manualmente en el archivo principal del servidor. Las rutas serán creadas basandose en los nombres de los archivos y directorios dentro de la carpeta routes. Ejemplo: 
+Al crear un proyecto puedes elegir si deseas que las rutas sean manejadas con base en tu sistema de archivos (similar a lo que hace Next.js) o si prefieres manejarlas de manera manual, exportando un router de express en cada archivo de rutas (como se mencionó en la sección de módulos).
+El ruteo basado en archivos es una opción que permite que las rutas sean manejadas de manera automática, sin necesidad de importarlas manualmente en el archivo principal del servidor. Las rutas serán creadas basándose en los nombres de los archivos y directorios dentro de la carpeta routes. Ejemplo: 
 
 La siguiente estructura de archivos:
 
@@ -298,7 +298,7 @@ La ruta final será la concatenación de los nombres de los directorios y archiv
 Si un archivo es llamado `index.ts` se el final de la ruta será el nombre del directorio padre, mientras que si un archivo tiene cualquier otro nombre, este será el final de la ruta.
 Para utilizar segmentos dinámicos (parámetros de ruta) se debe crear un directorio con el nombre del parámetro entre corchetes.
 
-Los archivos de rutas deben exportar por defecto un objeto que contenga los handlers que serán ehecutados para cada método HTTP. E.g
+Los archivos de rutas deben exportar por defecto un objeto que contenga los handlers que serán ejecutados para cada método HTTP. E.g
 
 ```TS
 import { Request, Response } from 'express'
