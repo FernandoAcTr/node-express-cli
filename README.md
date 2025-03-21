@@ -17,9 +17,9 @@ Este comando te preguntará el nombre de tu proyecto y creará un nuevo director
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
 
 El proyecto incluye y debe incluir un archivo llamado cli.config.json con las opciones seleccionadas. 
-```JSON
+```Text
 {
-    "orm": "mongo", -> opciones disponibles: mongoose | typeorm | sequelize
+    "orm": "mongoose", -> opciones disponibles: mongoose | typeorm | sequelize | prisma
     "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
     "fileBasedRouting": false, -> opciones disponibles: true | false
 }
