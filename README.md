@@ -154,7 +154,7 @@ router.post('/', storeValidators, userController.store);
 
 ## Logger
 
-Un proyecto REST incluye un Logguer utilizando la librería [winston](https://www.npmjs.com/package/winston). Este logger puede ser utilizado de la siguiente manera: 
+Un proyecto REST incluye un Logger utilizando la librería [winston](https://www.npmjs.com/package/winston). Este logger puede ser utilizado de la siguiente manera: 
 
 ```TS
 import { logger } from '@/utils/logger';
