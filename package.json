@@ -1,15 +1,17 @@
 {
   "name": "node-express-cli",
-  "version": "2.9.2",
+  "version": "3.0.0",
   "description": "Simple express cli generator",
   "main": "dist/index.js",
-  "bin": "dist/index.js",
+  "bin": {
+    "node-express-cli": "dist/index.js",
+    "nec": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index",
-    "dev": "tsc-watch",
     "prepare": "npm run build",
-    "prettier:fix": "prettier --config .prettierrc.json --write source/**/**/*.ts && prettier --config .prettierrc.json --write code/**//**/*.ts"
+    "prettier:fix": "prettier --config .prettierrc.json --write src/**/**/*.ts && prettier --config .prettierrc.json"
   },
   "keywords": [
     "express",
@@ -26,7 +28,7 @@
     "@inquirer/prompts": "^5.3.6",
     "colors": "^1.4.0",
     "figlet": "^1.7.0",
-    "fs-extra": "^11.2.0",
+    "fs-extra": "^11.3.0",
     "gradient-string": "^2.0.2",
     "shelljs": "^0.8.5",
     "yargs": "^17.7.2"
@@ -36,9 +38,6 @@
     "@types/fs-extra": "^11.0.4",
     "@types/gradient-string": "^1.1.2",
     "@types/shelljs": "^0.8.15",
-    "@types/yargs": "^17.0.32",
-    "prettier": "^3.1.0",
-    "tsc-watch": "^4.4.0",
-    "typescript": "^4.7.3"
+    "@types/yargs": "^17.0.32"
   }
 }

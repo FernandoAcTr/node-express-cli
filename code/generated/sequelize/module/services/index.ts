@@ -1,1 +1,0 @@
-export * from './__service__.service'
