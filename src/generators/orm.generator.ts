@@ -98,12 +98,12 @@ export class OrmGenerator implements IGenerator {
     console.log('================= Installing ORM ================='.yellow)
 
     await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
-    shellService.exec('npm pkg set scripts.db:seed="ts-node ./src/database/seeder.ts"')
+    shellService.exec('npm pkg set scripts.db:seed="npm run build && node build/database/seeder.js"')
 
     if (this.orm == DbType.TYPEORM) {
       await shellService.execAsync(`${configService.getInstallCommand()} typeorm reflect-metadata`)
       shellService.exec(
-        'npm pkg set scripts.typeorm="ts-node -r module-alias/register.js ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
+        'npm pkg set scripts.typeorm="node ./node_modules/typeorm/cli.js -d build/database/datasources.js"'
       )
       shellService.exec('npm pkg set scripts.m:run="npm run typeorm migration:run"')
       shellService.exec('npm pkg set scripts.m:revert="npm run typeorm migration:revert"')

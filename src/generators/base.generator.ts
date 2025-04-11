@@ -92,7 +92,7 @@ export class BaseGenerator implements IGenerator {
     await shellService.execAsync(
       `${configService.getDevInstallCommand()} --prefix ${
         this.projectName
-      } @types/app-root-path @types/cors @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch tsc-alias`
+      } @types/app-root-path @types/cors @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch tsc-alias rimraf`
     )
   }
 
