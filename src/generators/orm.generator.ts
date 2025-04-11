@@ -40,7 +40,6 @@ export class OrmGenerator implements IGenerator {
 
     if (this.orm == DbType.TYPEORM) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/typeorm/datasources.ts'), './src/database/datasources.ts')
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/typeorm/index.ts'), './src/database/migrations/index.ts')
     } else if (this.orm == DbType.SEQUELIZE) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/sequelize/datasources.ts'), './src/database/datasources.ts')
       fs.copyFileSync(
@@ -104,7 +103,7 @@ export class OrmGenerator implements IGenerator {
     if (this.orm == DbType.TYPEORM) {
       await shellService.execAsync(`${configService.getInstallCommand()} typeorm reflect-metadata`)
       shellService.exec(
-        'npm pkg set scripts.typeorm="ts-node -r ./src/alias ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
+        'npm pkg set scripts.typeorm="ts-node -r module-alias/register.js ./node_modules/typeorm/cli.js -d ./src/database/datasources.ts"'
       )
       shellService.exec('npm pkg set scripts.m:run="npm run typeorm migration:run"')
       shellService.exec('npm pkg set scripts.m:revert="npm run typeorm migration:revert"')

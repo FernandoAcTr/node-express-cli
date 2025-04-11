@@ -20,5 +20,8 @@
   },
   "devDependencies": {
     
+  },
+  "_moduleAliases": {
+    "@": "build"
   }
 }
