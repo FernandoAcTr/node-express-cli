@@ -98,19 +98,16 @@ export class OrmGenerator implements IGenerator {
     console.log('================= Installing ORM ================='.yellow)
 
     await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
-    shellService.exec('npm pkg set scripts.db:seed="npm run build && node build/database/seeder.js"')
 
     if (this.orm == DbType.TYPEORM) {
       await shellService.execAsync(`${configService.getInstallCommand()} typeorm reflect-metadata`)
-      shellService.exec(
-        'npm pkg set scripts.typeorm="node ./node_modules/typeorm/cli.js -d build/database/datasources.js"'
-      )
-      shellService.exec('npm pkg set scripts.m:run="npm run typeorm migration:run"')
-      shellService.exec('npm pkg set scripts.m:revert="npm run typeorm migration:revert"')
-      shellService.exec('npm pkg set scripts.m:generate="npm run typeorm migration:generate"')
+      shellService.exec('npm pkg set scripts.typeorm="node ./node_modules/typeorm/cli.js -d build/database/datasources.js"')
+      shellService.exec('npm pkg set scripts.m:run="npm run build && npm run typeorm migration:run"')
+      shellService.exec('npm pkg set scripts.m:revert="npm run build && npm run typeorm migration:revert"')
+      shellService.exec('npm pkg set scripts.m:generate="npm run build && npm run typeorm migration:generate"')
       shellService.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
-      shellService.exec('npm pkg set scripts.m:drop="npm run typeorm schema:drop"')
-      shellService.exec('npm pkg set scripts.m:run:fresh="npm run m:drop && npm run m:run && npm run db:seed"')
+      shellService.exec('npm pkg set scripts.m:drop="npm run build && npm run typeorm schema:drop"')
+      shellService.exec('npm pkg set scripts.m:run:fresh="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run"')
     } else if (this.orm == DbType.SEQUELIZE) {
       await shellService.execAsync(`${configService.getInstallCommand()} sequelize`)
       await shellService.execAsync(`${configService.getDevInstallCommand()} sequelize-cli`)
@@ -128,5 +125,7 @@ export class OrmGenerator implements IGenerator {
     } else if (this.orm == DbType.MONGO) {
       await shellService.execAsync(`${configService.getInstallCommand()} mongoose`)
     }
+
+    shellService.exec('npm pkg set scripts.db:seed="npm run build && node build/database/seeder.js"')
   }
 }

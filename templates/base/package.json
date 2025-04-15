@@ -5,9 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsc-watch --onSuccess \"npm run restart\"",
-    "restart": "tsc && tsc-alias && node build/index",
-    "clean": "rimraf build",
+    "dev": "rimraf build && tsc-watch --noClear --onFirstSuccess tsc-alias --onSuccess \"node build\"",
+    "clean": "rimraf build && rimraf logs",
     "build": "rimraf build && tsc && tsc-alias",
     "start": "node build",
     "prettier:fix": "prettier --config .prettierrc.json --write src/**/**/*.ts"
