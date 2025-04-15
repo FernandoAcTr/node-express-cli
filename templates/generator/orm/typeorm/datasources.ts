@@ -1,6 +1,5 @@
 import { DataSource } from 'typeorm'
 import { config } from '@/config'
-import migrations from './migrations'
 import fs from 'fs'
 import path from 'path'
 

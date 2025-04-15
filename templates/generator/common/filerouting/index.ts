@@ -1,4 +1,3 @@
-import 'module-alias/register.js'
 import fs from 'fs'
 import express, { Router } from 'express'
 import morgan from 'morgan'

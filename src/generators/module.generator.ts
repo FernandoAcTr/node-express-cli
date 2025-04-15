@@ -78,7 +78,7 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
       const routes = fs
         .readFileSync(path.resolve(__dirname, `../../templates/generator/module/routes.template.ts`), 'utf-8')
         .replace(/__modulename__/g, this.moduleName)
-      fs.writeFileSync(`./src/routes/${this.moduleName}.routes.ts`, routes)
+      fs.writeFileSync(`${dir}/routes.ts`, routes)
     }
   }
 }

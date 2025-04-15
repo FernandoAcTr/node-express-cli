@@ -53,13 +53,13 @@ export class BaseGenerator implements IGenerator {
   async createDirectories() {
     fs.mkdirSync(`./${this.projectName}/src`, { recursive: true })
     fs.mkdirSync(`./${this.projectName}/src/database`, { recursive: true })
-    fs.mkdirSync(`./${this.projectName}/src/routes`, { recursive: true })
     fs.mkdirSync(`./${this.projectName}/src/entities`, { recursive: true })
     fs.mkdirSync(`./${this.projectName}/src/middlewares`, { recursive: true })
     fs.mkdirSync(`./${this.projectName}/src/modules`, { recursive: true })
     fs.mkdirSync(`./${this.projectName}/src/config`, { recursive: true })
     fs.mkdirSync(`./${this.projectName}/src/utils`, { recursive: true })
     if (this.fileBasedRouting) {
+      fs.mkdirSync(`./${this.projectName}/src/routes`, { recursive: true })
       fs.mkdirSync(`./${this.projectName}/src/@types`, { recursive: true })
     }
   }
@@ -77,7 +77,7 @@ export class BaseGenerator implements IGenerator {
         path.resolve(__dirname, '../../templates/generator/common/filerouting/healthcheck.ts'),
         `./${this.projectName}/src/routes/healthcheck.ts`
       )
-      fs.rmSync(`./${this.projectName}/src/routes/healthcheck.routes.ts`)
+      fs.rmSync(`./${this.projectName}/src/modules/healthcheck/routes.ts`)
     }
   }
 
@@ -87,12 +87,12 @@ export class BaseGenerator implements IGenerator {
     await shellService.execAsync(
       `${configService.getInstallCommand()} --prefix ${
         this.projectName
-      } app-root-path cors dotenv express express-validator helmet module-alias morgan rate-limiter-flexible winston`
+      } app-root-path cors dotenv express express-validator helmet morgan rate-limiter-flexible winston`
     )
     await shellService.execAsync(
       `${configService.getDevInstallCommand()} --prefix ${
         this.projectName
-      } @types/app-root-path @types/cors @types/express @types/module-alias @types/morgan @types/node ts-node tsc-watch tsc-alias rimraf`
+      } @types/app-root-path @types/cors @types/express @types/morgan @types/node ts-node tsc-watch tsc-alias rimraf`
     )
   }
 

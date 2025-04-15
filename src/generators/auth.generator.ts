@@ -46,7 +46,7 @@ export class AuthGenerator implements IGenerator {
       const files = fs.readdirSync(routes)
       files.forEach((file) => fs.copyFileSync(path.resolve(routes, file), `./src/routes/auth/${file}`))
     } else {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/auth/common/auth.routes.ts'), `./src/routes/auth.routes.ts`)
+      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/auth/common/auth.routes.ts'), `./src/modules/auth/routes.ts`)
     }
 
     fs.copyFileSync(

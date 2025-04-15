@@ -1,4 +1,3 @@
-import 'module-alias/register.js'
 import fs from 'fs'
 import express, { Router } from 'express'
 import morgan from 'morgan'
@@ -13,12 +12,12 @@ import SocketIO from './socket'
 console.debug('Applied config: ', config)
 
 async function initRoutes(router: Router, path: string[]) {
-  const BASE_FILE_PATH = `${__dirname}/routes`
+  const BASE_FILE_PATH = `${__dirname}/modules`
   const currentDir = [BASE_FILE_PATH, ...path].join('/').replace('//', '/')
   for await (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       initRoutes(router, [...path, entry.name])
-    } else if (entry.name.endsWith('.js')) {
+    } else if (entry.name.includes('routes')) {
       const r = (await import(`${currentDir}/${entry.name}` + '')).default as Router
       r.stack.forEach((layer) => {
         const controller = layer.route?.stack[layer.route?.stack.length - 1]

@@ -37,7 +37,7 @@ El proyecto incluye y debe incluir un archivo llamado cli.config.json con las op
 
 La estructura generada trata de seguir una arquitectura n-capas pero con una base modular, en donde se tiene un directorio para configuraciones, para base de datos, entidades, utils, middlewares, etc y el más importante: modules, el cual contiene cada módulo del proyecto.
 
-El proyecto generado está configurado para usar alias de módulo o lo que es lo mismo, una abreviación para acceder al directorio src desde cualquier ubicación dentro del mismo; para esto se utiliza el paquete `module-alias`. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. 
+El proyecto generado está configurado para usar alias de módulo o lo que es lo mismo, una abreviación para acceder al directorio src desde cualquier ubicación dentro del mismo; para esto se utiliza el paquete `tsc-alias`. De esta manera el directorio middlewares es accedido como @/middlewares, services como @/services, modules como @/modules, etc. 
 Por ejemplo, una importación se haría de la siguiente manera:
 
 ```TS
@@ -105,7 +105,7 @@ Para el caso de [Sequelize](https://sequelize.org) también se incluyen una list
 
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
-El archivo de rutas será creado en el directorio routes dentro de src, es el único archivo que vive fuera del módulo. Los archivos dentro del directorio `routes` son importados dinámicamente dentro del punto de entrada de la aplicación, `index.ts`, por lo que lo único que se necesita hacer dentro de un archivo de rutas es exportar por defecto un router de express. E.g
+El archivo de rutas deben exportar por defecto una instancia de un `Router` de `express` porque será leído automáticamente en el archivo principal del servidor `index.ts`. Ejemplo:
 
 ```TS
 import { Router } from 'express';
@@ -118,6 +118,8 @@ router.get('/api/products', (req, res) => {
 
 export default router;
 ```
+
+Como un módulo puede contener varios archivos de código, para identificar el archivo de rutas, este debe contener la palabra `routes` en su nombre, por ejemplo `products.routes.ts` o `products_routes.ts`, `routes.ts`, etc.
 
 Con esto y sin mayor configuración adicional, las rutas del módulo ya estarán disponibles.
 
