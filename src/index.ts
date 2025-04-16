@@ -6,9 +6,9 @@ import { EslintGenerator } from './generators/eslint.generator'
 import { ModuleGenerator } from './generators/module.generator'
 import { OrmGenerator } from './generators/orm.generator'
 import { PrettierGenerator } from './generators/prettier.generator'
-import { run } from './generators/run'
+import { run } from './run'
 import { SocketsGenerator } from './generators/sockets.generator'
-import { Generator } from './interfaces/generator.interface'
+import { Command, Generator } from './interfaces/generator.interface'
 import { configService } from './services/config.service'
 import { argv } from './utils/yargs'
 import { MailerGenerator } from './generators/mailer.generator'
@@ -17,10 +17,11 @@ import { EntityGenerator } from './generators/entity.generator'
 import { MigrationGenerator } from './generators/migration.generator'
 import { FactoryGenerator } from './generators/factory.generator'
 import { TestGenerator } from './generators/tests.generator'
+import { RouteListCommand } from './commands/route_list.command'
 
 let command = (argv as any)._[0]
 
-let g: Generator | null = null
+let g: Generator | Command | null = null
 
 switch (command) {
   case 'init':
@@ -80,6 +81,11 @@ switch (command) {
 
   case 'install:tests':
     g = new TestGenerator()
+    break
+
+  case 'route:list':
+    const omitParam = argv['omit']
+    g = new RouteListCommand(omitParam)
     break
 
   default:

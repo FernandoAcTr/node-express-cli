@@ -14,6 +14,11 @@ export interface IPostGenerator {
 export interface IInstallerGenerator {
   installDependencies(): Promise<void>
 }
+
+export interface Command {
+  run(): Promise<void>
+}
+
 export interface IGenerator extends IFileSystemGenerator, IPreGenerator, IPostGenerator, IInstallerGenerator {}
 
 export type Generator = IFileSystemGenerator | IPreGenerator | IPostGenerator | IInstallerGenerator

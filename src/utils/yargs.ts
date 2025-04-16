@@ -41,4 +41,7 @@ export const argv = yargs.options({
   'install:tests': {
     description: 'Add a library to do testing and some examples',
   },
+  'route:list': {
+    description: 'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',
+  }
 }).argv
