@@ -20,7 +20,7 @@ async function listFilebasedRoutes(paths: string[] = [], routeGroups: Record<str
   const currentDir = [BASE_FILE_PATH, ...paths].join('/').replace('//', '/')
   const entries = fs.readdirSync(currentDir, { withFileTypes: true })
 
-  for await (const entry of entries) {
+  for (const entry of entries) {
     if (entry.isDirectory()) {
       await listFilebasedRoutes([...paths, entry.name], routeGroups, omit)
     } else if (entry.name.endsWith('.ts')) {
