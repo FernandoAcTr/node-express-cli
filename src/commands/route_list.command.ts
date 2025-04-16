@@ -167,9 +167,9 @@ export class RouteListCommand implements Command {
   async run(): Promise<void> {
     const config = configService.getConfig()
     if (config.fileBasedRouting) {
-      listFilebasedRoutes([], {}, this.omit)
+      await listFilebasedRoutes([], {}, this.omit)
     } else {
-      listRoutes()
+      await listRoutes()
     }
   }
 }
