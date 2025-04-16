@@ -1,6 +1,6 @@
-import { Generator } from '../interfaces/generator.interface'
+import { Command, Generator } from './interfaces/generator.interface'
 
-export async function run(generator: Generator) {
+export async function run(generator: Generator | Command) {
   if ('pre' in generator) {
     await generator.pre()
   }
@@ -16,5 +16,9 @@ export async function run(generator: Generator) {
 
   if ('post' in generator) {
     await generator.post()
+  }
+
+  if ('run' in generator) {
+    await generator.run()
   }
 }
