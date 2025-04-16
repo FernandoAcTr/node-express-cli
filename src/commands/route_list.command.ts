@@ -89,8 +89,8 @@ function extractRoutesFromFile(filePath: string): Route[] {
       if (
         node.callee.type === 'MemberExpression' &&
         node.callee.object.type === 'Identifier' &&
-        node.callee.object.name === 'router' &&
-        node.callee.property.type === 'Identifier'
+        node.callee.property.type === 'Identifier' &&
+        node.callee.property.name.match(/^(get|post|put|delete|patch|head|options)$/)
       ) {
         const method = node.callee.property.name
         const arg0 = node.arguments[0]
