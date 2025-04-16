@@ -84,7 +84,9 @@ switch (command) {
     break
 
   case 'route:list':
-    g = new RouteListCommand()
+    const omitParam = argv['omit']
+    g = new RouteListCommand(omitParam)
+    break
 
   default:
     console.log('Please enter --help to see a list of commands')
