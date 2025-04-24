@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "rimraf build && tsc-watch --noClear --onFirstSuccess tsc-alias --onSuccess \"node build\"",
+    "dev": "rimraf build && tsc-watch --noClear --onCompilationComplete tsc-alias --onFirstSuccess tsc-alias --onSuccess \"npm run start:compile\"",
+    "start": "node build",
+    "start:compile": "tsc-alias && node build/main.js",
     "clean": "rimraf build && rimraf logs",
     "build": "rimraf build && tsc && tsc-alias",
-    "start": "node build",
     "prettier:fix": "prettier --config .prettierrc.json --write src/**/**/*.ts"
   },
   "keywords": [],

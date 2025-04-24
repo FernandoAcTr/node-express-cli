@@ -101,7 +101,7 @@ export class OrmGenerator implements IGenerator {
 
     if (this.orm == DbType.TYPEORM) {
       await shellService.execAsync(`${configService.getInstallCommand()} typeorm reflect-metadata`)
-      shellService.exec('npm pkg set scripts.typeorm="node ./node_modules/typeorm/cli.js -d build/database/datasources.js"')
+      shellService.exec('npm pkg set scripts.typeorm="node ./node_modules/typeorm/cli.js"')
       shellService.exec('npm pkg set scripts.m:run="npm run build && npm run typeorm migration:run"')
       shellService.exec('npm pkg set scripts.m:revert="npm run build && npm run typeorm migration:revert"')
       shellService.exec('npm pkg set scripts.m:generate="npm run build && npm run typeorm migration:generate"')
