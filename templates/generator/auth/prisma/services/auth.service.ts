@@ -5,7 +5,7 @@ import { config } from '@/config'
 import { prisma } from '@/database/client'
 import { User } from '@prisma/client'
 
-export enum Roles {
+export enum Role {
   ADMIN = 1,
   USER = 2,
 }
@@ -18,7 +18,7 @@ export class AuthService {
     const newUser = await prisma.user.create({
       data: {
         email: user.email,
-        role_id: Roles.USER,
+        role_id: Role.USER,
         password: hash.hash(user.password),
         name: user.name,
       },

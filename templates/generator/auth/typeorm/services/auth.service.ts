@@ -5,7 +5,7 @@ import { BadRequest, Unauthorized } from "@/middlewares/error_handler";
 import { Repository } from "typeorm";
 import { hash } from '@/utils/hash'
 import { config } from "@/config";
-import { Roles } from "@/entities/role.entity";
+import { Role } from "@/entities/role.entity";
 import { RefreshToken } from '@/entities/refresh_token.entity'
 
 export class AuthService {
@@ -23,7 +23,7 @@ export class AuthService {
 
     const newUser = new User();
     newUser.email = user.email;
-    newUser.role_id = Roles.USER;
+    newUser.role_id = Role.USER;
     newUser.password = hash.hash(user.password);
     newUser.name = user.name;
 

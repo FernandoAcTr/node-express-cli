@@ -7,9 +7,7 @@ export class Role extends BaseEntity {
 
   @Column()
   name: string
-}
 
-export enum Roles {
-  ADMIN = 1,
-  USER = 2,
+  public static readonly ADMIN = 1
+  public static readonly USER = 2
 }
