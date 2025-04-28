@@ -56,13 +56,18 @@ export class users1677294697210 implements MigrationInterface {
           },
           {
             name: 'created_at',
-            type: 'datetime(6)',
-            default: 'CURRENT_TIMESTAMP(6)',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
           },
           {
             name: 'updated_at',
-            type: 'datetime(6)',
-            default: 'CURRENT_TIMESTAMP(6)',
+            type: 'datetime',
+            default: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'email_verified_at',
+            type: 'datetime',
+            isNullable: true,
           },
           {
             name: 'deleted_at',

@@ -1,10 +1,10 @@
+import fs, { copySync } from 'fs-extra'
+import path from 'path'
 import { select } from '@inquirer/prompts'
 import { IGenerator } from '../interfaces/generator.interface'
 import { DbType } from '../types'
 import { configService } from '../services/config.service'
-import fs from 'fs'
 import { shellService } from '../services/shell.service'
-import path from 'path'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
@@ -40,6 +40,7 @@ export class OrmGenerator implements IGenerator {
 
     if (this.orm == DbType.TYPEORM) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/typeorm/datasources.ts'), './src/database/datasources.ts')
+      fs.copySync(path.resolve(__dirname, '../../templates/generator/orm/typeorm/audit'), './src/entities/audit')
     } else if (this.orm == DbType.SEQUELIZE) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/sequelize/datasources.ts'), './src/database/datasources.ts')
       fs.copyFileSync(
