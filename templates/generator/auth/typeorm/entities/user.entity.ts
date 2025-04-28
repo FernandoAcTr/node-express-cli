@@ -21,12 +21,6 @@ export class User extends Mixin(DateTimeAuditableEntity, Verifiable) {
   @Column()
   role_id: number
 
-  @CreateDateColumn()
-  created_at: Date
-
-  @UpdateDateColumn()
-  updated_at: Date
-
   @ManyToOne(() => Role)
   @JoinColumn({ name: 'role_id', referencedColumnName: 'id' })
   role: Role
