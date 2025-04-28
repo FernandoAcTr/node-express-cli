@@ -22,9 +22,9 @@ export class SocketsGenerator implements IPreGenerator, IInstallerGenerator, IFi
     fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/socket.ts'), './src/socket.ts')
     fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/socket.controller.ts'), './src/socket.controller.ts')
     if (config.fileBasedRouting) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/filerouting/index.ts'), './src/index.ts')
+      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/filerouting/index.ts'), './src/main.ts')
     } else {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/index.ts'), './src/index.ts')
+      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/index.ts'), './src/main.ts')
     }
   }
 

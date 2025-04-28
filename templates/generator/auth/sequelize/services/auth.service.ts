@@ -15,7 +15,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role_id: RoleEnum.USER,
-      password: hash.hash(user.password),
+      password: hash.make(user.password),
     })
 
     const token = createToken(newUser)

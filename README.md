@@ -338,6 +338,62 @@ export default {
 
 ```
 
+## Auditoría en modelos con TypeORM
+
+Actualmente Node Express Cli solo soporta auditoría para el TypeORM. El proyecto incluye un conjunto de clases abstractas que facilitan la implementación de auditoría en los modelos de TypeORM. Estas clases permiten registrar información sobre la creación, actualización y eliminación de registros, así como los usuarios responsables de estas acciones.
+
+### Clases de auditoría disponibles
+
+1. **DateTimeAuditableEntity**: Proporciona auditoría básica de tiempo, registrando las fechas de creación (`created_at`) y actualización (`updated_at`).
+2. **AuditableEntity**: Extiende `DateTimeAuditableEntity` y agrega auditoría de usuarios, registrando los IDs de los usuarios que crean (`created_by_id`) y actualizan (`updated_by_id`) los registros.
+3. **SoftDeletableAuditableEntity**: Extiende `AuditableEntity` y agrega soporte para soft delete, registrando la fecha de eliminación (`deleted_at`) y el ID del usuario que elimina (`deleted_by_id`).
+
+### Uso de las clases de auditoría
+
+Para implementar auditoría en un modelo con TypeORM, asegúrate de que la tabla correspondiente incluya las columnas necesarias según el nivel de auditoría que desees implementar:
+
+- **Auditoría básica de tiempo**: `created_at`, `updated_at`.
+- **Auditoría de tiempo y usuarios**: `created_at`, `updated_at`, `created_by_id`, `updated_by_id`.
+- **Auditoría con soft delete**: `created_at`, `updated_at`, `created_by_id`, `updated_by_id`, `deleted_at`, `deleted_by_id`.
+
+En lugar de heredar de `BaseEntity`, tus modelos deben heredar de una de las clases de auditoría disponibles. Por ejemplo:
+
+```typescript
+import { Entity, Column } from 'typeorm';
+import { AuditableEntity } from './audit/auditable_entity';
+
+@Entity()
+export class ExampleEntity extends AuditableEntity {
+  @Column()
+  name: string;
+}
+```
+
+### Herencia múltiple con `ts-mixer`
+
+Si necesitas combinar funcionalidades de varias clases abstractas, puedes usar la librería `ts-mixer`, que ya está incluida en el proyecto. Esto permite simular herencia múltiple. Por ejemplo:
+
+```typescript
+import { Entity, Column } from 'typeorm';
+import { Mixin } from 'ts-mixer';
+import { SoftDeletableAuditableEntity } from './audit/soft_deletable_auditable_entity';
+import { Verifiable } from './audit/verifiable';
+
+@Entity()
+export class ExampleEntity extends Mixin(SoftDeletableAuditableEntity, Verifiable) {
+  @Column()
+  name: string;
+}
+```
+
+En este ejemplo, el modelo combina las funcionalidades de auditoría con soft delete y verificación.
+
+### Consideraciones
+
+- Asegúrate de que las columnas necesarias estén definidas en las tablas de la base de datos.
+- Las clases de auditoría están diseñadas para integrarse fácilmente con el contexto del usuario (`context.userId`) para registrar los IDs de los usuarios responsables de las acciones.
+- Consulta la documentación de TypeORM para más detalles sobre cómo personalizar las entidades y columnas.
+
 ## Levantar el servidor 
 
 ### Desarrollo

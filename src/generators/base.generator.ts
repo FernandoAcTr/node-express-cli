@@ -68,7 +68,7 @@ export class BaseGenerator implements IGenerator {
     fs.copySync(path.resolve(__dirname, '../../templates/base'), `./${this.projectName}`)
 
     if (this.fileBasedRouting) {
-      fs.copySync(path.resolve(__dirname, '../../templates/generator/common/filerouting/index.ts'), `./${this.projectName}/src/index.ts`)
+      fs.copySync(path.resolve(__dirname, '../../templates/generator/common/filerouting/index.ts'), `./${this.projectName}/src/main.ts`)
       fs.copySync(
         path.resolve(__dirname, '../../templates/generator/common/filerouting/global.d.ts'),
         `./${this.projectName}/src/@types/global.d.ts`
@@ -87,7 +87,7 @@ export class BaseGenerator implements IGenerator {
     await shellService.execAsync(
       `${configService.getInstallCommand()} --prefix ${
         this.projectName
-      } app-root-path cors dotenv express express-validator helmet morgan rate-limiter-flexible winston`
+      } app-root-path cors dotenv express express-validator helmet morgan rate-limiter-flexible winston ts-mixer express-http-context`
     )
     await shellService.execAsync(
       `${configService.getDevInstallCommand()} --prefix ${

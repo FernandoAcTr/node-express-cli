@@ -53,7 +53,7 @@ UserSchema.methods.createRefreshToken = function () {
 }
 
 UserSchema.methods.encryptPassword = function (password: string) {
-  return hash.hash(password)
+  return hash.make(password)
 }
 
 UserSchema.methods.comparePassword = function (password: string) {
