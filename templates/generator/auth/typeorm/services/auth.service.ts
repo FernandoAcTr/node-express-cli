@@ -24,7 +24,7 @@ export class AuthService {
     const newUser = new User();
     newUser.email = user.email;
     newUser.role_id = Role.USER;
-    newUser.password = hash.hash(user.password);
+    newUser.password = hash.make(user.password);
     newUser.name = user.name;
 
     const saved = await this.repository.save(newUser);

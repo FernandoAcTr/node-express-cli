@@ -19,7 +19,7 @@ export class AuthService {
       data: {
         email: user.email,
         role_id: Role.USER,
-        password: hash.hash(user.password),
+        password: hash.make(user.password),
         name: user.name,
       },
     })

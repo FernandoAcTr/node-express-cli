@@ -87,7 +87,7 @@ export class BaseGenerator implements IGenerator {
     await shellService.execAsync(
       `${configService.getInstallCommand()} --prefix ${
         this.projectName
-      } app-root-path cors dotenv express express-validator helmet morgan rate-limiter-flexible winston ts-mixer`
+      } app-root-path cors dotenv express express-validator helmet morgan rate-limiter-flexible winston ts-mixer express-http-context`
     )
     await shellService.execAsync(
       `${configService.getDevInstallCommand()} --prefix ${

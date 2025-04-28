@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt'
 
 export class Hash {
-  hash(password: string): string {
+  make(password: string): string {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(10))
   }
 
