@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { __ServiceName__Service } from './services/__servicefile__.service'
+import { __ServiceName__Service } from './__servicefile__.service'
 
 /**
  * Return all entities

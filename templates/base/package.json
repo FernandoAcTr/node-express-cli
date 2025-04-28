@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "rimraf build && tsc-watch --noClear --onCompilationComplete tsc-alias --onFirstSuccess tsc-alias --onSuccess \"npm run start:compile\"",
-    "start": "node build",
+    "start": "node build/main.js",
     "start:compile": "tsc-alias && node build/main.js",
     "clean": "rimraf build && rimraf logs",
     "build": "rimraf build && tsc && tsc-alias",

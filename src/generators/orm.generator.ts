@@ -101,13 +101,14 @@ export class OrmGenerator implements IGenerator {
 
     if (this.orm == DbType.TYPEORM) {
       await shellService.execAsync(`${configService.getInstallCommand()} typeorm reflect-metadata`)
-      shellService.exec('npm pkg set scripts.typeorm="node ./node_modules/typeorm/cli.js"')
+      shellService.exec('npm pkg set scripts.typeorm="npx typeorm -d build/database/datasources.js"')
       shellService.exec('npm pkg set scripts.m:run="npm run build && npm run typeorm migration:run"')
       shellService.exec('npm pkg set scripts.m:revert="npm run build && npm run typeorm migration:revert"')
       shellService.exec('npm pkg set scripts.m:generate="npm run build && npm run typeorm migration:generate"')
       shellService.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
       shellService.exec('npm pkg set scripts.m:drop="npm run build && npm run typeorm schema:drop"')
       shellService.exec('npm pkg set scripts.m:run:fresh="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run"')
+      shellService.exec('npm pkg set scripts.m:run:fresh:seed="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run && node build/database/seeder.js"')
     } else if (this.orm == DbType.SEQUELIZE) {
       await shellService.execAsync(`${configService.getInstallCommand()} sequelize`)
       await shellService.execAsync(`${configService.getDevInstallCommand()} sequelize-cli`)

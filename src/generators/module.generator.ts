@@ -46,7 +46,6 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   async copyFiles(): Promise<void> {
     const config = configService.getConfig()
     const dir = this.getModuleDirectory()
-    const servicesDir = this.getServicesDirectory()
 
     const validator = fs.readFileSync(path.resolve(__dirname, `../../templates/generator/module/validator.ts`), 'utf-8')
     fs.writeFileSync(`${dir}/${this.moduleName}.validator.ts`, validator)
@@ -55,7 +54,7 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
     const service = fs
       .readFileSync(path.resolve(__dirname, `../../templates/generator/module/service.template.ts`), 'utf-8')
       .replace(/__ServiceName__/g, serviceName)
-    fs.writeFileSync(`${servicesDir}/${this.moduleName}.service.ts`, service)
+    fs.writeFileSync(`${dir}/${this.moduleName}.service.ts`, service)
 
     const controller = fs
       .readFileSync(path.resolve(__dirname, `../../templates/generator/module/controller.template.ts`), 'utf-8')
