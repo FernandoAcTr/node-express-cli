@@ -1,10 +1,10 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn, JoinColumn, ManyToOne } from 'typeorm'
+import { Column, Entity, PrimaryGeneratedColumn, JoinColumn, ManyToOne } from 'typeorm'
 import { DateTimeAuditableEntity } from './audit/date_time_auditable_entity'
-import { Verifiable } from './verifiable'
+import { Verifiable } from './audit/verifiable'
 import { Role } from './role.entity'
 import { Mixin } from 'ts-mixer'
 
-@Entity()
+@Entity('users')
 export class User extends Mixin(DateTimeAuditableEntity, Verifiable) {
   @PrimaryGeneratedColumn()
   id: number
