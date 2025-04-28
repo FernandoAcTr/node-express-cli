@@ -58,11 +58,11 @@ export class OrmGenerator implements IGenerator {
 
   async post(): Promise<void> {
     if (this.orm == DbType.TYPEORM) {
-      const indexContent = fs.readFileSync('./src/index.ts', 'utf-8')
+      const indexContent = fs.readFileSync('./src/main.ts', 'utf-8')
       if (!indexContent.includes('reflect-metadata')) {
         const lines = indexContent.split('\n')
         lines.splice(0, 0, "import 'reflect-metadata'")
-        fs.writeFileSync('./src/index.ts', lines.join('\n'))
+        fs.writeFileSync('./src/main.ts', lines.join('\n'))
       }
 
       console.log('-------------------------------------------------------------------------------------------'.green)
