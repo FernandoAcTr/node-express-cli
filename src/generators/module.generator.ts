@@ -11,10 +11,6 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
     return `./src/modules/${this.moduleName.toLowerCase()}`
   }
 
-  private getServicesDirectory(): string {
-    return `./src/modules/${this.moduleName.toLowerCase()}/services`
-  }
-
   async pre(): Promise<void> {
     const moduleName = await input({
       message: 'Name of module:',
@@ -32,10 +28,8 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
     const config = configService.getConfig()
 
     const dir = this.getModuleDirectory()
-    const servicesDir = this.getServicesDirectory()
 
     fs.mkdirSync(dir, { recursive: true })
-    fs.mkdirSync(servicesDir, { recursive: true })
 
     if (config.fileBasedRouting) {
       fs.mkdirSync(`./src/routes/${this.moduleName}`, { recursive: true })
