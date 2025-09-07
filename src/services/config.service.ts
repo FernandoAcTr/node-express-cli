@@ -1,5 +1,6 @@
 import fs from 'fs'
 import { Config, DbType, PackageManager } from '../types'
+import { version } from '../version'
 
 export class ConfigService {
   private configFile = 'cli.config.json'
@@ -23,7 +24,7 @@ export class ConfigService {
   }
 
   public writeConfig(config: Partial<Config>) {
-    fs.writeFileSync(this.configFile, JSON.stringify(config))
+    fs.writeFileSync(this.configFile, JSON.stringify({ ...config, version }))
   }
 
   public getInstallCommand() {

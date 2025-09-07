@@ -66,6 +66,7 @@ export class BaseGenerator implements IGenerator {
 
   async copyFiles() {
     fs.copySync(path.resolve(__dirname, '../../templates/base'), `./${this.projectName}`)
+    fs.moveSync(`./${this.projectName}/gitignore`, `./${this.projectName}/.gitignore`, { overwrite: true })
 
     if (this.fileBasedRouting) {
       fs.copySync(path.resolve(__dirname, '../../templates/generator/common/filerouting/index.ts'), `./${this.projectName}/src/main.ts`)
