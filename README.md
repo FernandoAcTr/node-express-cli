@@ -103,6 +103,8 @@ Para el caso de [Sequelize](https://sequelize.org) también se incluyen una list
 - m:reset
 - m:generate
 
+Cuando eliges Prisma también se genera un archivo raíz llamado `prisma.config.ts`, el cual apunta al schema en `src/database/prisma/schema.prisma`, define `DB_URL` como datasource, usa `src/database/prisma/migrations` como directorio de migraciones y configura el comando de `seed` según el package manager elegido.
+
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
 El archivo de rutas deben exportar por defecto una instancia de un `Router` de `express` porque será leído automáticamente en el archivo principal del servidor `index.ts`. Ejemplo:
@@ -162,19 +164,20 @@ router.post('/', storeValidators, userController.store);
 
 ## Logger
 
-Un proyecto REST incluye un Logger utilizando la librería [winston](https://www.npmjs.com/package/winston). Este logger puede ser utilizado de la siguiente manera: 
+Un proyecto REST incluye un logger simple basado en consola y un helper `colorize` dentro de `src/utils`. El logger soporta los niveles `log`, `debug`, `info`, `warn`, `error` y `fatal`, y respeta la variable de entorno `LOG_LEVEL`.
 
 ```TS
-import { logger } from '@/utils/logger';
+import logger from '@/utils/logger';
 
 logger.log('Some Log');
+logger.debug('Debug');
 logger.info('Información');
-logger.error('Error');
 logger.warn('Advertencia');
 logger.error('Error', error);
+logger.fatal('Error fatal');
 ```
 
-Por defecto el logger escribe en la consola y en un archivo llamado `app.log` dentro del directorio logs. Puedes personalizar el logger en el archivo `src/utils/logger.ts` para que escriba en otros destinos o con otros formatos.
+También se genera el archivo `src/utils/colorize.ts`, que expone la constante `ShellColors` y la función `colorize` para imprimir texto coloreado en consola.
 
 ## Manejo de errores 
 El proyecto incluye un middleware manejador de errores llamado handleErrorMiddleware dentro de /src/middlewares/error_handler.ts, con el propósito de generar respuestas de error estándar al cliente. Este middleware ya está configurado y será ejecutado si una función controladora llama a next(error). 
