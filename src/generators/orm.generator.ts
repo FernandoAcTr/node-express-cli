@@ -29,6 +29,7 @@ export class OrmGenerator implements IGenerator {
     }
     if (this.orm == DbType.PRISMA) {
       dirs.push('./src/database/prisma')
+      dirs.push('./src/database/prisma/migrations')
     }
 
     dirs.forEach((dir) => fs.mkdirSync(dir, { recursive: true }))
@@ -51,6 +52,10 @@ export class OrmGenerator implements IGenerator {
     } else if (this.orm == DbType.PRISMA) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/schema.prisma'), './src/database/prisma/schema.prisma')
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/client.ts'), './src/database/client.ts')
+      const prismaConfig = fs
+        .readFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/prisma.config.ts'), 'utf-8')
+        .replace('__PRISMA_SEED_COMMAND__', `${configService.getTypeScriptExecutionCommand()} src/database/seeder.ts`)
+      fs.writeFileSync('./prisma.config.ts', prismaConfig)
     } else if (this.orm == DbType.MONGO) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/mongo/datasources.ts'), './src/database/datasources.ts')
     }
@@ -78,11 +83,7 @@ export class OrmGenerator implements IGenerator {
     } else if (this.orm == DbType.PRISMA) {
       const packageContent = fs.readFileSync('./package.json', 'utf-8')
       const packageJson = JSON.parse(packageContent)
-      packageJson['prisma'] = JSON.stringify(
-        { schema: './src/database/prisma/schema.prisma', seed: 'ts-node src/database/prisma/seed.ts' },
-        null,
-        2
-      )
+      delete packageJson.prisma
       fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2))
 
       console.log('-------------------------------------------------------------------------------------------'.green)
@@ -119,11 +120,12 @@ export class OrmGenerator implements IGenerator {
       shellService.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate --name"')
     } else if (this.orm == DbType.PRISMA) {
       await shellService.execAsync(`${configService.getInstallCommand()} @prisma/client`)
-      await shellService.execAsync(`${configService.getDevInstallCommand()} prisma`)
-      shellService.exec('npm pkg set scripts.m:run="npx prisma migrate dev --schema src/database/prisma/schema.prisma"')
-      shellService.exec('npm pkg set scripts.m:run:deploy="npx prisma migrate deploy --schema src/database/prisma/schema.prisma"')
-      shellService.exec('npm pkg set scripts.m:reset="npx prisma migrate reset --schema src/database/prisma/schema.prisma"')
-      shellService.exec('npm pkg set scripts.m:generate="npx prisma generate --schema src/database/prisma/schema.prisma"')
+      await shellService.execAsync(`${configService.getDevInstallCommand()} prisma @prisma/config`)
+      shellService.exec('npm pkg delete prisma')
+      shellService.exec('npm pkg set scripts.m:run="npx prisma migrate dev"')
+      shellService.exec('npm pkg set scripts.m:run:deploy="npx prisma migrate deploy"')
+      shellService.exec('npm pkg set scripts.m:reset="npx prisma migrate reset"')
+      shellService.exec('npm pkg set scripts.m:generate="npx prisma generate"')
     } else if (this.orm == DbType.MONGO) {
       await shellService.execAsync(`${configService.getInstallCommand()} mongoose`)
     }
