@@ -1,6 +1,7 @@
 import { IUser, User } from '@/entities/user.entity'
 import { BadRequest, Unauthorized } from '@/middlewares/error_handler'
 import { RefreshToken } from '@/entities/refresh_token.entity'
+import { Types } from 'mongoose'
 
 export class AuthService {
   async signup(user: IUser) {
@@ -36,32 +37,33 @@ export class AuthService {
 
     await RefreshToken.create({
       user_id: dbUser._id,
-      refresh_token: dbUser.createToken(),
+      refresh_token: refreshToken,
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     })
 
     return { user: dbUser, token: token, refresh_token: refreshToken }
   }
 
-  async refreshToken(user_id: number, refresh_token: string) {
-    const user = await User.findOne({ _id: user_id })
-    const token = await RefreshToken.findOne({ user_id, refresh_token })
+  async refreshToken(user_id: string | Types.ObjectId, refresh_token: string) {
+    const id = new Types.ObjectId(user_id)
+    const user = await User.findOne({ _id: id })
+    const token = await RefreshToken.findOne({ user_id: id, refresh_token })
 
     if (!user || !token) throw Unauthorized()
     if (token.expires_at < new Date()) throw Unauthorized()
 
     const newToken = user.createToken()
-    const refreshToken = user.createRefreshToken()
+    const newRefreshToken = user.createRefreshToken()
 
     await RefreshToken.create({
       user_id: user._id,
-      refresh_token: user.createToken(),
+      refresh_token: newRefreshToken,
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     })
 
-    token.deleteOne()
+    await token.deleteOne()
 
-    return { token: newToken, refresh_token: refreshToken }
+    return { token: newToken, refresh_token: newRefreshToken }
   }
 }
 

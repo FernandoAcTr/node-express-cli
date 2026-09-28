@@ -30,6 +30,6 @@ export class SocketsGenerator implements IPreGenerator, IInstallerGenerator, IFi
 
   async installDependencies(): Promise<void> {
     console.log('================= Installing Socket.io ================='.yellow)
-    shellService.execAsync(`${configService.getInstallCommand()} socket.io`)
+    await shellService.execAsync(`${configService.getInstallCommand()} socket.io`)
   }
 }

@@ -17,4 +17,5 @@ export const JWTStrategy = new Strategy(
   }
 )
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) =>  passport.authenticate('jwt', { session: false })
+export const authenticate = (req: Request, res: Response, next: NextFunction) =>
+  passport.authenticate('jwt', { session: false })(req, res, next)

@@ -32,9 +32,9 @@ export class ConfigService {
 
     const commands = {
       [PackageManager.NPM]: 'npm install',
-      [PackageManager.YARN]: 'yarn',
-      [PackageManager.PNPM]: 'pnpm install',
-      [PackageManager.BUN]: 'bun install',
+      [PackageManager.YARN]: 'yarn add',
+      [PackageManager.PNPM]: 'pnpm add',
+      [PackageManager.BUN]: 'bun add',
     }
 
     return commands[config.package_manger]
@@ -46,8 +46,8 @@ export class ConfigService {
     const commands = {
       [PackageManager.NPM]: 'npm install -D',
       [PackageManager.YARN]: 'yarn add -D',
-      [PackageManager.PNPM]: 'pnpm install -D',
-      [PackageManager.BUN]: 'bun install -D',
+      [PackageManager.PNPM]: 'pnpm add -D',
+      [PackageManager.BUN]: 'bun add -d',
     }
 
     return commands[config.package_manger]

@@ -1,6 +1,6 @@
-import mongoose, { Document, Types } from 'mongoose'
+import mongoose, { Model, Types } from 'mongoose'
 
-export interface IRefreshToken extends Document {
+export interface IRefreshToken {
   refresh_token: string
   user_id: Types.ObjectId
   created_at: Date
@@ -8,15 +8,17 @@ export interface IRefreshToken extends Document {
   expires_at: Date
 }
 
-const RefreshTokenSchema = new mongoose.Schema<IRefreshToken>({
+type RefreshTokenModel = Model<IRefreshToken>
+
+const RefreshTokenSchema = new mongoose.Schema<IRefreshToken, RefreshTokenModel>({
   refresh_token: { type: String },
   created_at: { type: Date, default: new Date() },
   updated_at: { type: Date, default: new Date() },
   expires_at: { type: Date, default: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }
+    ref: 'User',
+  },
 })
 
-export const RefreshToken = mongoose.model<IRefreshToken>('RefreshToken', RefreshTokenSchema)
+export const RefreshToken = mongoose.model<IRefreshToken, RefreshTokenModel>('RefreshToken', RefreshTokenSchema)

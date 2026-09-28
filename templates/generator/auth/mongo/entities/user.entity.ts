@@ -1,4 +1,4 @@
-import mongoose, { Document } from 'mongoose'
+import mongoose, { Model } from 'mongoose'
 import { hash } from '@/utils/hash'
 import { config } from '@/config'
 import jwt from 'jsonwebtoken'
@@ -8,20 +8,25 @@ export enum Role {
   USER = 'user',
 }
 
-export interface IUser extends Document {
+export interface IUser {
   name: string
   email: string
   password: string
   role: Role
   created_at: Date
   updated_at: Date
+}
+
+export interface IUserMethods {
   encryptPassword(password: string): string
   comparePassword(password: string): boolean
   createToken(): string
   createRefreshToken(): string
 }
 
-const UserSchema = new mongoose.Schema<IUser>({
+type UserModel = Model<IUser, {}, IUserMethods>
+
+const UserSchema = new mongoose.Schema<IUser, UserModel, IUserMethods>({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true },
@@ -37,17 +42,13 @@ UserSchema.methods.toJSON = function () {
 }
 
 UserSchema.methods.createToken = function () {
-  const user = this.toObject()
-
-  return jwt.sign({ user_id: user._id }, config.SECRET, {
+  return jwt.sign({ user_id: this._id }, config.SECRET, {
     expiresIn: 86400,
   })
 }
 
 UserSchema.methods.createRefreshToken = function () {
-  const user = this.toObject()
-
-  return jwt.sign({ user_id: user._id, _: Math.random() }, config.SECRET, {
+  return jwt.sign({ user_id: this._id, _: Math.random() }, config.SECRET, {
     expiresIn: 86400,
   })
 }
@@ -57,8 +58,7 @@ UserSchema.methods.encryptPassword = function (password: string) {
 }
 
 UserSchema.methods.comparePassword = function (password: string) {
-  let user = this.toObject()
-  return hash.compare(password, user.password)
+  return hash.compare(password, this.password)
 }
 
-export const User = mongoose.model<IUser>('User', UserSchema)
+export const User = mongoose.model<IUser, UserModel>('User', UserSchema)

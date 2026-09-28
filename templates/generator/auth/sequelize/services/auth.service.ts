@@ -61,7 +61,7 @@ export class AuthService {
 
     await RefreshToken.create({
       user_id: user.id,
-      refresh_token: createToken(user),
+      refresh_token: refreshToken,
       expiresAt: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000),
     })
 

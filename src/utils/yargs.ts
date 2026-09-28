@@ -43,5 +43,5 @@ export const argv = yargs.options({
   },
   'route:list': {
     description: 'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',
-  }
+  },
 }).argv

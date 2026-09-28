@@ -34,6 +34,7 @@ export class AuthService {
     await RefreshToken.save({
       user_id: saved.id,
       refresh_token: refreshToken,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     })
 
     return { user: saved, token: token, refresh_token: refreshToken }
@@ -49,7 +50,11 @@ export class AuthService {
     const token = createToken(dbUser);
     const refreshToken = createRefreshToken(dbUser)
 
-    await RefreshToken.save({ user_id: dbUser.id, refresh_token: refreshToken })
+    await RefreshToken.save({
+      user_id: dbUser.id,
+      refresh_token: refreshToken,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    })
 
     return { user: dbUser, token: token, refresh_token: refreshToken }
   }
@@ -64,7 +69,11 @@ export class AuthService {
     const newToken = createToken(user);
     const refreshToken = createRefreshToken(user)
 
-    await RefreshToken.save({ user_id: user.id, refresh_token: refreshToken })
+    await RefreshToken.save({
+      user_id: user.id,
+      refresh_token: refreshToken,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    })
 
     await token.remove()
 

@@ -103,7 +103,7 @@ Para el caso de [Sequelize](https://sequelize.org) también se incluyen una list
 - m:reset
 - m:generate
 
-Cuando eliges Prisma también se genera un archivo raíz llamado `prisma.config.ts`, el cual apunta al schema en `src/database/prisma/schema.prisma`, define `DB_URL` como datasource, usa `src/database/prisma/migrations` como directorio de migraciones y configura el comando de `seed` según el package manager elegido.
+Cuando eliges Prisma también se genera un archivo raíz llamado `prisma.config.ts`, el cual apunta al schema en `src/database/prisma/schema.prisma`, usa `src/database/prisma/migrations` como directorio de migraciones y configura el comando de `seed` según el package manager elegido. La conexión a la base de datos se toma de la variable de entorno `DB_URL` definida en tu `.env`.
 
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
@@ -237,7 +237,8 @@ Es necesario instalar prettier para poder instalar eslint.
 Es posible instalar un módulo de autenticación con lo básico necesario para autenticar un usuario con JWT, haciendo uso de la conocida librería [Passport](https://www.npmjs.com/package/passport).  
 Para instalarlo utiliza el comando `node-express-cli install:auth`.
 Esta acción creará un modelo básico de usuario, una estrategia de passport y un módulo de autenticación. 
-Solamente deberás agregar las rutas del módulo auth al router principal de la aplicación y crear/ejecutar las migraciones para la base de datos, de ser necesario. 
+El módulo queda cableado automáticamente en `src/main.ts` (se registran `passport.initialize()` y la estrategia JWT) y las rutas del módulo auth se montan solas gracias al enrutador. 
+Para TypeORM también se inicializa `AppDataSource` y para Mongoose se importa la conexión. Solamente deberás crear/ejecutar las migraciones para la base de datos, de ser necesario. 
 
 ## Envío de Emails
 Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  

@@ -7,17 +7,16 @@
     "rootDir": "./src",
     "strict": true,
     "strictPropertyInitialization": false,
-    "baseUrl": "./src",
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
-    "typeRoots": ["@types", "node_modules/@types"],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     }
   },
-  "exclude": ["node_modules", "build"]
+  "include": ["src", "@types"],
+  "exclude": ["node_modules", "build", "public"]
 }

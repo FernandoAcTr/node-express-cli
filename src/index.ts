@@ -52,7 +52,7 @@ switch (command) {
     const config = configService.getConfig()
     if (!config.orm) {
       console.log('================================'.yellow)
-      console.log('Install first the orm. Please exec node-express-cli install:database'.yellow)
+      console.log('Install first the orm. Please exec node-express-cli install:orm'.yellow)
       console.log('================================'.yellow)
     } else {
       g = new AuthGenerator()

@@ -85,15 +85,15 @@ export class BaseGenerator implements IGenerator {
   async installDependencies(): Promise<void> {
     console.log('================= Installing dependencies ================='.yellow)
 
+    const cwd = path.resolve(`./${this.projectName}`)
+
     await shellService.execAsync(
-      `${configService.getInstallCommand()} --prefix ${
-        this.projectName
-      } app-root-path cors dotenv express express-validator helmet morgan rate-limiter-flexible ts-mixer express-http-context`
+      `${configService.getInstallCommand()} app-root-path cors dotenv express express-validator helmet morgan rate-limiter-flexible ts-mixer express-http-context`,
+      cwd
     )
     await shellService.execAsync(
-      `${configService.getDevInstallCommand()} --prefix ${
-        this.projectName
-      } @types/app-root-path @types/cors @types/express @types/morgan @types/node ts-node tsc-watch tsc-alias rimraf`
+      `${configService.getDevInstallCommand()} @types/app-root-path @types/cors @types/express @types/morgan @types/node ts-node tsc-watch tsc-alias rimraf typescript@^5`,
+      cwd
     )
   }
 

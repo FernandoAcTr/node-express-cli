@@ -110,7 +110,9 @@ export class OrmGenerator implements IGenerator {
       shellService.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
       shellService.exec('npm pkg set scripts.m:drop="npm run build && npm run typeorm schema:drop"')
       shellService.exec('npm pkg set scripts.m:run:fresh="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run"')
-      shellService.exec('npm pkg set scripts.m:run:fresh:seed="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run && node build/database/seeder.js"')
+      shellService.exec(
+        'npm pkg set scripts.m:run:fresh:seed="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run && node build/database/seeder.js"'
+      )
     } else if (this.orm == DbType.SEQUELIZE) {
       await shellService.execAsync(`${configService.getInstallCommand()} sequelize`)
       await shellService.execAsync(`${configService.getDevInstallCommand()} sequelize-cli`)
@@ -119,13 +121,14 @@ export class OrmGenerator implements IGenerator {
       shellService.exec('npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
       shellService.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate --name"')
     } else if (this.orm == DbType.PRISMA) {
-      await shellService.execAsync(`${configService.getInstallCommand()} @prisma/client`)
-      await shellService.execAsync(`${configService.getDevInstallCommand()} prisma @prisma/config`)
+      await shellService.execAsync(`${configService.getInstallCommand()} @prisma/client@^6`)
+      await shellService.execAsync(`${configService.getDevInstallCommand()} prisma@^6 @prisma/config@^6`)
       shellService.exec('npm pkg delete prisma')
       shellService.exec('npm pkg set scripts.m:run="npx prisma migrate dev"')
       shellService.exec('npm pkg set scripts.m:run:deploy="npx prisma migrate deploy"')
       shellService.exec('npm pkg set scripts.m:reset="npx prisma migrate reset"')
       shellService.exec('npm pkg set scripts.m:generate="npx prisma generate"')
+      await shellService.execAsync('npx prisma generate')
     } else if (this.orm == DbType.MONGO) {
       await shellService.execAsync(`${configService.getInstallCommand()} mongoose`)
     }

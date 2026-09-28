@@ -54,5 +54,5 @@ User.init(
 )
 
 User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' })
-User.hasOne(RefreshToken, { foreignKey: 'id', as: 'refreshToken' })
+User.hasOne(RefreshToken, { foreignKey: 'user_id', as: 'refreshToken' })
 RefreshToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
