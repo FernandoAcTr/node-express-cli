@@ -75,6 +75,7 @@ export class BaseGenerator implements IGenerator {
     fs.mkdirSync(path.join(src, 'modules'), { recursive: true })
     fs.mkdirSync(path.join(src, 'config'), { recursive: true })
     fs.mkdirSync(path.join(src, 'utils'), { recursive: true })
+    fs.mkdirSync(path.join(src, 'routing'), { recursive: true })
     if (this.fileBasedRouting) {
       fs.mkdirSync(path.join(src, 'routes'), { recursive: true })
       fs.mkdirSync(path.join(src, '@types'), { recursive: true })
@@ -89,11 +90,13 @@ export class BaseGenerator implements IGenerator {
       fs.moveSync(gitignore, path.join(this.projectDir, '.gitignore'), { overwrite: true })
     }
 
+    const routingDir = path.join(this.projectDir, 'src/routing')
+    const routingTemplate = this.fileBasedRouting ? 'filebased.ts' : 'modules.ts'
+    fs.copySync(path.join(routingDir, routingTemplate), path.join(routingDir, 'index.ts'))
+    fs.rmSync(path.join(routingDir, 'modules.ts'), { force: true })
+    fs.rmSync(path.join(routingDir, 'filebased.ts'), { force: true })
+
     if (this.fileBasedRouting) {
-      fs.copySync(
-        path.resolve(__dirname, '../../templates/generator/common/filerouting/index.ts'),
-        path.join(this.projectDir, 'src/main.ts')
-      )
       fs.copySync(
         path.resolve(__dirname, '../../templates/generator/common/filerouting/global.d.ts'),
         path.join(this.projectDir, 'src/@types/global.d.ts')

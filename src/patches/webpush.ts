@@ -1,4 +1,6 @@
 import fs from 'fs'
+import path from 'path'
+import { PatchResult, patchAtAnchor } from '../patch/anchor'
 
 export interface WirePushOptions {
   main?: boolean
@@ -7,6 +9,8 @@ export interface WirePushOptions {
   script?: boolean
   /** Package runner used inside the generated scripts, e.g. npx, pnpm dlx. */
   packageRunner?: string
+  /** Project root. Defaults to process.cwd(). */
+  cwd?: string
 }
 
 export interface WirePushResult {
@@ -38,77 +42,47 @@ VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:support@example.com
 `
 
-function insertAfterLastImport(content: string, line: string): string {
-  const lines = content.split('\n')
-  let lastImport = -1
+function wireMain(result: WirePushResult, cwd: string): void {
+  const mainFile = path.resolve(cwd, 'src/main.ts')
 
-  lines.forEach((current, index) => {
-    const trimmed = current.trim()
-    if (trimmed.startsWith('import ') && (trimmed.includes(' from ') || /^import\s+['"]/.test(trimmed))) {
-      lastImport = index
-    }
-  })
-
-  if (lastImport === -1) {
-    return `${line}\n${content}`
-  }
-
-  lines.splice(lastImport + 1, 0, line)
-  return lines.join('\n')
-}
-
-export function hasWebPushDependency(): boolean {
-  if (!fs.existsSync('./package.json')) {
-    return false
-  }
-
-  try {
-    const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf-8'))
-    return Boolean(packageJson.dependencies?.['web-push'] || packageJson.devDependencies?.['web-push'])
-  } catch {
-    return false
-  }
-}
-
-function wireMain(result: WirePushResult): void {
-  const mainFile = './src/main.ts'
-
-  if (!fs.existsSync(mainFile)) {
-    result.warnings.push(`Could not find ${mainFile}; the webpush configuration was not added.`)
+  const importPatch = patchAtAnchor(mainFile, 'imports', WEB_PUSH_IMPORT, { sort: true })
+  if (importPatch.status === 'file-missing') {
+    result.warnings.push(importPatch.message!)
     return
   }
 
-  let content = fs.readFileSync(mainFile, 'utf-8')
+  const runtimePatch = patchAtAnchor(mainFile, 'beforeListen', VAPID_RUNTIME, {
+    dedupeKey: 'setVapidDetails(',
+  })
+
+  recordPatches(result, mainFile, [importPatch, runtimePatch])
+}
+
+function recordPatches(result: WirePushResult, file: string, patches: PatchResult[]): void {
   let changed = false
+  let skipped = 0
+  let failed = false
 
-  if (!content.includes("from 'web-push'")) {
-    content = insertAfterLastImport(content, WEB_PUSH_IMPORT)
-    changed = true
-  }
-
-  if (!content.includes('setVapidDetails(')) {
-    const listenAnchor = 'export const server = app.listen('
-    const index = content.indexOf(listenAnchor)
-
-    if (index === -1) {
-      result.warnings.push(`Could not find "${listenAnchor}" in ${mainFile}; add the webpush block manually.`)
-      return
+  for (const patch of patches) {
+    if (patch.status === 'changed') {
+      changed = true
+    } else if (patch.status === 'skipped') {
+      skipped++
+    } else {
+      failed = true
+      result.warnings.push(patch.message ?? `Could not patch ${file} (${patch.status})`)
     }
-
-    content = `${content.slice(0, index)}${VAPID_RUNTIME}\n\n${content.slice(index)}`
-    changed = true
   }
 
   if (changed) {
-    fs.writeFileSync(mainFile, content)
-    result.changed.push(mainFile)
-  } else {
-    result.skipped.push(mainFile)
+    result.changed.push(file)
+  } else if (!failed && skipped === patches.length) {
+    result.skipped.push(file)
   }
 }
 
-function wireConfig(result: WirePushResult): void {
-  const configFile = './src/config/index.ts'
+function wireConfig(result: WirePushResult, cwd: string): void {
+  const configFile = path.resolve(cwd, 'src/config/index.ts')
 
   if (!fs.existsSync(configFile)) {
     result.warnings.push(`Could not find ${configFile}; the VAPID configuration was not added.`)
@@ -134,8 +108,8 @@ function wireConfig(result: WirePushResult): void {
   result.changed.push(configFile)
 }
 
-function wireEnv(result: WirePushResult, runner: string): void {
-  const envFile = './.env.example'
+function wireEnv(result: WirePushResult, runner: string, cwd: string): void {
+  const envFile = path.resolve(cwd, '.env.example')
 
   if (!fs.existsSync(envFile)) {
     result.warnings.push(`Could not find ${envFile}; add VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY manually.`)
@@ -156,8 +130,8 @@ function wireEnv(result: WirePushResult, runner: string): void {
   result.changed.push(envFile)
 }
 
-function wireScript(result: WirePushResult, runner: string): void {
-  const packageFile = './package.json'
+function wireScript(result: WirePushResult, runner: string, cwd: string): void {
+  const packageFile = path.resolve(cwd, 'package.json')
 
   if (!fs.existsSync(packageFile)) {
     result.warnings.push(`Could not find ${packageFile}; add the vapid:generate script manually.`)
@@ -186,16 +160,23 @@ function wireScript(result: WirePushResult, runner: string): void {
 
 /**
  * Wires web-push into an existing project. Every step is idempotent, so it can
- * be executed again (for example after install:socket replaces main.ts).
+ * be executed again safely.
  */
 export function wirePush(options: WirePushOptions = {}): WirePushResult {
-  const { main = true, config = true, env = true, script = true, packageRunner = 'npx' } = options
+  const {
+    main = true,
+    config = true,
+    env = true,
+    script = true,
+    packageRunner = 'npx',
+    cwd = process.cwd(),
+  } = options
   const result: WirePushResult = { changed: [], skipped: [], warnings: [] }
 
-  if (main) wireMain(result)
-  if (config) wireConfig(result)
-  if (env) wireEnv(result, packageRunner)
-  if (script) wireScript(result, packageRunner)
+  if (main) wireMain(result, cwd)
+  if (config) wireConfig(result, cwd)
+  if (env) wireEnv(result, packageRunner, cwd)
+  if (script) wireScript(result, packageRunner, cwd)
 
   return result
 }

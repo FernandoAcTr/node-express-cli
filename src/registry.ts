@@ -42,11 +42,6 @@ const NAME_OPTION: CommandOptionDefinition = {
   description: 'Name to use instead of the interactive prompt',
 }
 
-const YES_OPTION: CommandOptionDefinition = {
-  type: 'boolean',
-  description: 'Answer yes to confirmation prompts',
-}
-
 /**
  * Única fuente de verdad de los comandos. `src/utils/yargs.ts` genera el --help
  * a partir de esta lista y `src/index.ts` resuelve el comando por nombre.
@@ -88,7 +83,6 @@ export const commands: CommandDefinition[] = [
   {
     name: 'install:socket',
     description: 'Add Socket.io to the project',
-    options: { yes: YES_OPTION },
     create: (ctx) => new SocketsGenerator(ctx),
   },
   {

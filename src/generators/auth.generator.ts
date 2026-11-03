@@ -7,6 +7,7 @@ import {
 } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { DbType } from '../types'
+import { PatchResult, patchAtAnchor } from '../patch/anchor'
 
 export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IInstallerGenerator {
   constructor(private readonly ctx: Context) {}
@@ -109,14 +110,9 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
   }
 
   private wireAuth(): void {
-    const mainFile = './src/main.ts'
-    if (!fs.existsSync(mainFile)) {
-      return
-    }
-
-    let content = fs.readFileSync(mainFile, 'utf-8')
-
+    const mainFile = path.join(this.ctx.cwd, 'src/main.ts')
     const imports: string[] = []
+
     if (this.dbType == DbType.MONGO) {
       imports.push("import './database/datasources'")
     }
@@ -126,38 +122,54 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
     imports.push("import passport from 'passport'")
     imports.push("import { JWTStrategy } from './middlewares/passport'")
 
-    const missingImports = imports.filter((line) => !content.includes(line)).join('\n')
-    if (missingImports) {
-      content = `${missingImports}\n${content}`
+    const patches: PatchResult[] = imports.map((line) =>
+      patchAtAnchor(mainFile, 'imports', line, { sort: true })
+    )
+
+    if (patches.some((patch) => patch.status === 'file-missing')) {
+      this.warnPatches(patches)
+      return
     }
 
     if (this.dbType == DbType.TYPEORM) {
-      content = content.replace(/\n?import 'reflect-metadata'\n?/g, '\n')
-      content = `import 'reflect-metadata'\n${content.replace(/^\n+/, '')}`
-    }
-
-    const dbBoot: string[] = []
-    if (this.dbType == DbType.TYPEORM) {
-      dbBoot.push(
-        "AppDataSource.initialize()\n  .then(() => logger.info('🚀 Database connection is online...'))\n  .catch((error) => logger.error(error))\n"
+      patches.push(
+        patchAtAnchor(
+          mainFile,
+          'beforeApp',
+          "AppDataSource.initialize()\n  .then(() => logger.info('🚀 Database connection is online...'))\n  .catch((error) => logger.error(error))",
+          { dedupeKey: 'AppDataSource.initialize()' }
+        )
       )
     }
 
-    const passportSetup = "passport.use('jwt', JWTStrategy)\n\n"
+    patches.push(
+      patchAtAnchor(mainFile, 'beforeApp', "passport.use('jwt', JWTStrategy)", {
+        dedupeKey: "passport.use('jwt'",
+      })
+    )
+    patches.push(
+      patchAtAnchor(mainFile, 'beforeJson', 'app.use(passport.initialize())', {
+        dedupeKey: 'passport.initialize()',
+      })
+    )
 
-    if (!content.includes("passport.use('jwt'")) {
-      content = content.replace(/(const app = express\(\))/, `${passportSetup}$1`)
+    this.warnPatches(patches)
+  }
+
+  private warnPatches(patches: PatchResult[]): void {
+    const seen = new Set<string>()
+
+    for (const patch of patches) {
+      if (patch.status !== 'anchor-missing' && patch.status !== 'file-missing') {
+        continue
+      }
+
+      const message = patch.message ?? `Could not patch ${patch.file}`
+      if (!seen.has(message)) {
+        seen.add(message)
+        this.ctx.logger.warn(message)
+      }
     }
-
-    if (dbBoot.length && !content.includes('AppDataSource.initialize()')) {
-      content = content.replace(/(const app = express\(\))/, `${dbBoot.join('')}$1`)
-    }
-
-    if (!content.includes('passport.initialize()')) {
-      content = content.replace(/(app\.use\(express\.json\(\)\))/, `app.use(passport.initialize())\n$1`)
-    }
-
-    fs.writeFileSync(mainFile, content)
   }
 
   async installDependencies(): Promise<void> {

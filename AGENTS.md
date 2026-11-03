@@ -28,6 +28,7 @@
 
 ## Generated-project facts (relevant when editing templates/generators)
 - Entrypoint is `src/main.ts`; compiled output is `build/` (not `dist/`). Module alias `@/*` -> `src/*`, rewritten at runtime by `tsc-alias`.
+- `src/main.ts` is a single template with `// @nec:*` anchors. Installers must patch it through `src/patch/anchor.ts` (`patchAtAnchor`) and must never copy a whole `main.ts` over it.
+- Routing lives in `src/routing/index.ts`, chosen by `init` from `templates/base/src/routing/{modules,filebased}.ts`. `fileBasedRouting: true` uses `src/routes/**` (folders like `[id]` become `:id`); otherwise `src/modules/**`.
 - `cli.config.json` records `orm` (`mongoose|typeorm|sequelize|prisma`), `package_manger`, `fileBasedRouting`, and `version`.
-- `fileBasedRouting: true` switches routing from `src/modules/**` route files to a filesystem router under `src/routes/**` (placeholders `[id]` become `:id`).
 - The generated `dev` script uses `tsc-watch`; if `build/` does not exist yet it may need to be stopped and re-run once.

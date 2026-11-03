@@ -4,6 +4,7 @@ import { IGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { DbType } from '../types'
 import { renderTemplate } from '../utils/template'
+import { patchAtAnchor } from '../patch/anchor'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
@@ -66,11 +67,14 @@ export class OrmGenerator implements IGenerator {
 
   async post(): Promise<void> {
     if (this.orm == DbType.TYPEORM) {
-      const indexContent = fs.readFileSync('./src/main.ts', 'utf-8')
-      if (!indexContent.includes('reflect-metadata')) {
-        const lines = indexContent.split('\n')
-        lines.splice(0, 0, "import 'reflect-metadata'")
-        fs.writeFileSync('./src/main.ts', lines.join('\n'))
+      const reflectPatch = patchAtAnchor(
+        path.join(this.ctx.cwd, 'src/main.ts'),
+        'imports',
+        "import 'reflect-metadata'",
+        { sort: true }
+      )
+      if (reflectPatch.status === 'anchor-missing' || reflectPatch.status === 'file-missing') {
+        this.ctx.logger.warn(reflectPatch.message ?? 'Could not add reflect-metadata to src/main.ts')
       }
 
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')

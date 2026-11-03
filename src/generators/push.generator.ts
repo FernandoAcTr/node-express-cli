@@ -1,6 +1,6 @@
 import { IInstallerGenerator, IPostGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import { wirePush } from '../utils/wire_push'
+import { wirePush } from '../patches/webpush'
 
 export class PushGenerator implements IInstallerGenerator, IPostGenerator {
   constructor(private readonly ctx: Context) {}
@@ -12,7 +12,10 @@ export class PushGenerator implements IInstallerGenerator, IPostGenerator {
   }
 
   async post(): Promise<void> {
-    const result = wirePush({ packageRunner: this.ctx.config.getPackageRunnerCommand() })
+    const result = wirePush({
+      packageRunner: this.ctx.config.getPackageRunnerCommand(),
+      cwd: this.ctx.cwd,
+    })
 
     result.changed.forEach((file) => this.ctx.logger.success(`Updated ${file}`))
     result.skipped.forEach((file) => this.ctx.logger.success(`${file} already has the webpush configuration`))
