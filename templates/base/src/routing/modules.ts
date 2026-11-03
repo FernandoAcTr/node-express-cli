@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { Router } from 'express'
+import { RequestHandler, Router } from 'express'
 import logger from '../utils/logger'
 import { NotFound } from '../middlewares/error_handler'
 import { colorize } from '../utils/colorize'
@@ -20,7 +20,7 @@ async function initRoutes(router: Router, segments: string[]) {
     PATCH: 'CYAN',
   }
   const normalizeRoute = (route: string) => {
-    let r = route.replaceAll('//', '/')
+    let r = route.replace(/\/\//g, '/')
     if (!r.startsWith('/')) r = `/${r}`
     if (r.endsWith('/')) r = r.slice(0, -1)
     return r
@@ -52,7 +52,7 @@ async function initRoutes(router: Router, segments: string[]) {
 
     const file = await import(`${currentDir}/${entry.name}` + '')
     const r = file.default as Router
-    const middlewares: express.RequestHandler[] = file.MIDDLEWARES || []
+    const middlewares: RequestHandler[] = file.MIDDLEWARES || []
     if (middlewares && !Array.isArray(middlewares)) {
       throw new Error(`MIDDLEWARES export in ${[...segments, entry.name].join('/')} must be an array of express middlewares`)
     }
