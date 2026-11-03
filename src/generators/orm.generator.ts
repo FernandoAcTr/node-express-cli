@@ -5,6 +5,7 @@ import { IGenerator } from '../interfaces/generator.interface'
 import { DbType } from '../types'
 import { configService } from '../services/config.service'
 import { shellService } from '../services/shell.service'
+import { renderTemplate } from '../utils/template'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
@@ -52,9 +53,9 @@ export class OrmGenerator implements IGenerator {
     } else if (this.orm == DbType.PRISMA) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/schema.prisma'), './src/database/prisma/schema.prisma')
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/client.ts'), './src/database/client.ts')
-      const prismaConfig = fs
-        .readFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/prisma.config.ts'), 'utf-8')
-        .replace('__PRISMA_SEED_COMMAND__', `${configService.getTypeScriptExecutionCommand()} src/database/seeder.ts`)
+      const prismaConfig = renderTemplate(path.resolve(__dirname, '../../templates/generator/orm/prisma/prisma.config.ts'), {
+        PRISMA_SEED_COMMAND: `${configService.getTypeScriptExecutionCommand()} src/database/seeder.ts`,
+      })
       fs.writeFileSync('./prisma.config.ts', prismaConfig)
     } else if (this.orm == DbType.MONGO) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/mongo/datasources.ts'), './src/database/datasources.ts')

@@ -19,84 +19,97 @@ import { FactoryGenerator } from './generators/factory.generator'
 import { TestGenerator } from './generators/tests.generator'
 import { RouteListCommand } from './commands/route_list.command'
 import { PushGenerator } from './generators/push.generator'
+import { CliError, handleError } from './errors'
 
-let command = (argv as any)._[0]
+async function main(): Promise<void> {
+  const command = (argv as any)._[0] as string | undefined
 
-let g: Generator | Command | null = null
+  let g: Generator | Command | null = null
 
-switch (command) {
-  case 'init':
-    g = new BaseGenerator()
-    break
+  switch (command) {
+    case 'init':
+      g = new BaseGenerator()
+      break
 
-  case 'make:module':
-    g = new ModuleGenerator()
-    break
+    case 'make:module':
+      g = new ModuleGenerator()
+      break
 
-  case 'install:prettier':
-    g = new PrettierGenerator()
-    break
+    case 'install:prettier':
+      g = new PrettierGenerator()
+      break
 
-  case 'install:eslint':
-    g = new EslintGenerator()
-    break
+    case 'install:eslint':
+      g = new EslintGenerator()
+      break
 
-  case 'install:socket':
-    g = new SocketsGenerator()
-    break
+    case 'install:socket':
+      g = new SocketsGenerator()
+      break
 
-  case 'install:orm':
-    g = new OrmGenerator()
-    break
+    case 'install:orm':
+      g = new OrmGenerator()
+      break
 
-  case 'install:auth':
-    const config = configService.getConfig()
-    if (!config.orm) {
-      console.log('================================'.yellow)
-      console.log('Install first the orm. Please exec node-express-cli install:orm'.yellow)
-      console.log('================================'.yellow)
-    } else {
+    case 'install:auth': {
+      const config = configService.getConfig()
+      if (!config.orm) {
+        throw new CliError('Auth requires a database ORM', {
+          hint: 'Run "node-express-cli install:orm" first.',
+        })
+      }
       g = new AuthGenerator()
+      break
     }
-    break
 
-  case 'install:mailer':
-    g = new MailerGenerator()
-    break
+    case 'install:mailer':
+      g = new MailerGenerator()
+      break
 
-  case 'install:push':
-    g = new PushGenerator()
-    break
+    case 'install:push':
+      g = new PushGenerator()
+      break
 
-  case 'make:seeder':
-    g = new SeederGenerator()
-    break
+    case 'make:seeder':
+      g = new SeederGenerator()
+      break
 
-  case 'make:entity':
-    g = new EntityGenerator()
-    break
+    case 'make:entity':
+      g = new EntityGenerator()
+      break
 
-  case 'make:migration':
-    g = new MigrationGenerator()
-    break
+    case 'make:migration':
+      g = new MigrationGenerator()
+      break
 
-  case 'make:factory':
-    g = new FactoryGenerator()
-    break
+    case 'make:factory':
+      g = new FactoryGenerator()
+      break
 
-  case 'install:tests':
-    g = new TestGenerator()
-    break
+    case 'install:tests':
+      g = new TestGenerator()
+      break
 
-  case 'route:list':
-    const omitParam = argv['omit']
-    g = new RouteListCommand(omitParam)
-    break
+    case 'route:list': {
+      const omitParam = argv['omit'] as string | undefined
+      g = new RouteListCommand(omitParam)
+      break
+    }
 
-  default:
-    console.log('Please enter --help to see a list of commands')
+    default:
+      if (!command) {
+        console.log('Please enter --help to see a list of commands')
+        return
+      }
+
+      throw new CliError(`Unknown command "${command}"`, {
+        hint: 'Run "node-express-cli --help" to see the available commands.',
+      })
+  }
+
+  if (g) {
+    await run(g)
+  }
 }
 
-if (g) {
-  run(g)
-}
+main().catch(handleError)

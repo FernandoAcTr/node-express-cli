@@ -3,12 +3,19 @@ import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.int
 import fs from 'fs'
 import path from 'path'
 import { configService } from '../services/config.service'
+import { kebabCase, pascalCase } from '../utils/naming'
+import { renderTemplate } from '../utils/template'
+import { CliError } from '../errors'
 
 export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   private moduleName: string
 
+  private get moduleDir(): string {
+    return kebabCase(this.moduleName)
+  }
+
   private getModuleDirectory(): string {
-    return `./src/modules/${this.moduleName.toLowerCase()}`
+    return `./src/modules/${this.moduleDir}`
   }
 
   async pre(): Promise<void> {
@@ -17,11 +24,12 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
     })
 
     if (!moduleName) {
-      console.error('Module name is required')
-      process.exit(0)
+      throw new CliError('Module name is required', {
+        hint: 'Run "node-express-cli make:module" again and enter a name.',
+      })
     }
 
-    this.moduleName = moduleName.toLowerCase()
+    this.moduleName = moduleName.trim()
   }
 
   async createDirectories(): Promise<void> {
@@ -32,46 +40,48 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
     fs.mkdirSync(dir, { recursive: true })
 
     if (config.fileBasedRouting) {
-      fs.mkdirSync(`./src/routes/${this.moduleName}`, { recursive: true })
-      fs.mkdirSync(`./src/routes/${this.moduleName}/[id]`, { recursive: true })
+      fs.mkdirSync(`./src/routes/${this.moduleDir}`, { recursive: true })
+      fs.mkdirSync(`./src/routes/${this.moduleDir}/[id]`, { recursive: true })
     }
   }
 
   async copyFiles(): Promise<void> {
     const config = configService.getConfig()
     const dir = this.getModuleDirectory()
+    const moduleDir = this.moduleDir
+    const serviceName = pascalCase(this.moduleName)
 
-    const validator = fs.readFileSync(path.resolve(__dirname, `../../templates/generator/module/validator.ts`), 'utf-8')
-    fs.writeFileSync(`${dir}/${this.moduleName}.validator.ts`, validator)
+    const validator = renderTemplate(path.resolve(__dirname, `../../templates/generator/module/validator.ts`), {})
+    fs.writeFileSync(`${dir}/${moduleDir}.validator.ts`, validator)
 
-    const serviceName = `${this.moduleName[0].toUpperCase()}${this.moduleName.substring(1).toLowerCase()}`
-    const service = fs
-      .readFileSync(path.resolve(__dirname, `../../templates/generator/module/service.template.ts`), 'utf-8')
-      .replace(/__ServiceName__/g, serviceName)
-    fs.writeFileSync(`${dir}/${this.moduleName}.service.ts`, service)
+    const service = renderTemplate(path.resolve(__dirname, `../../templates/generator/module/service.template.ts`), {
+      ServiceName: serviceName,
+    })
+    fs.writeFileSync(`${dir}/${moduleDir}.service.ts`, service)
 
-    const controller = fs
-      .readFileSync(path.resolve(__dirname, `../../templates/generator/module/controller.template.ts`), 'utf-8')
-      .replace(/__ServiceName__/g, serviceName)
-      .replace(/__servicefile__/g, this.moduleName)
-    fs.writeFileSync(`${dir}/${this.moduleName}.controller.ts`, controller)
+    const controller = renderTemplate(
+      path.resolve(__dirname, `../../templates/generator/module/controller.template.ts`),
+      { ServiceName: serviceName, servicefile: moduleDir }
+    )
+    fs.writeFileSync(`${dir}/${moduleDir}.controller.ts`, controller)
 
     if (config.fileBasedRouting) {
-      let router1 = fs.readFileSync(path.resolve(__dirname, `../../templates/generator/module/filerouting/router.template.ts`), 'utf-8')
-      router1 = router1.replace(/__modulename__/g, this.moduleName)
-      let router2 = fs.readFileSync(
-        path.resolve(__dirname, `../../templates/generator/module/filerouting/[id]/router.template.ts`),
-        'utf-8'
+      const router1 = renderTemplate(
+        path.resolve(__dirname, `../../templates/generator/module/filerouting/router.template.ts`),
+        { modulename: moduleDir }
       )
-      router2 = router2.replace(/__modulename__/g, this.moduleName)
+      const router2 = renderTemplate(
+        path.resolve(__dirname, `../../templates/generator/module/filerouting/[id]/router.template.ts`),
+        { modulename: moduleDir }
+      )
 
-      fs.writeFileSync(`./src/routes/${this.moduleName}/index.ts`, router1)
-      fs.writeFileSync(`./src/routes/${this.moduleName}/[id]/index.ts`, router2)
+      fs.writeFileSync(`./src/routes/${moduleDir}/index.ts`, router1)
+      fs.writeFileSync(`./src/routes/${moduleDir}/[id]/index.ts`, router2)
     } else {
-      const routes = fs
-        .readFileSync(path.resolve(__dirname, `../../templates/generator/module/routes.template.ts`), 'utf-8')
-        .replace(/__modulename__/g, this.moduleName)
-      fs.writeFileSync(`${dir}/${this.moduleName}.routes.ts`, routes)
+      const routes = renderTemplate(path.resolve(__dirname, `../../templates/generator/module/routes.template.ts`), {
+        modulename: moduleDir,
+      })
+      fs.writeFileSync(`${dir}/${moduleDir}.routes.ts`, routes)
     }
   }
 }

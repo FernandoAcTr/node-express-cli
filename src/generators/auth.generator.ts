@@ -4,6 +4,7 @@ import { IGenerator } from '../interfaces/generator.interface'
 import { configService } from '../services/config.service'
 import { shellService } from '../services/shell.service'
 import { DbType } from '../types'
+import { CliError } from '../errors'
 
 export class AuthGenerator implements IGenerator {
   private dbType: DbType
@@ -11,10 +12,9 @@ export class AuthGenerator implements IGenerator {
   async pre(): Promise<void> {
     const config = configService.getConfig()
     if (!config.orm) {
-      console.log('================================'.yellow)
-      console.log('Install first the orm. Please exec node-express-cli install:orm'.yellow)
-      console.log('================================'.yellow)
-      process.exit(0)
+      throw new CliError('Auth requires a database ORM', {
+        hint: 'Run "node-express-cli install:orm" first.',
+      })
     }
 
     this.dbType = config.orm

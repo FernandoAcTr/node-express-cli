@@ -2,6 +2,9 @@ import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
 import fs from 'fs-extra'
 import path from 'path'
+import { kebabCase, pascalCase } from '../utils/naming'
+import { renderTemplate } from '../utils/template'
+import { CliError } from '../errors'
 
 export class FactoryGenerator implements IPreGenerator, IFileSystemGenerator {
   private factoryName: string
@@ -11,7 +14,9 @@ export class FactoryGenerator implements IPreGenerator, IFileSystemGenerator {
       message: 'Name of the model that belongs to Factory:',
     })
     if (!name) {
-      process.exit(0)
+      throw new CliError('Factory model name is required', {
+        hint: 'Run "node-express-cli make:factory" again and enter a name.',
+      })
     }
 
     this.factoryName = name
@@ -24,13 +29,13 @@ export class FactoryGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async copyFiles(): Promise<void> {
-    const factoryName = `${this.factoryName[0].toUpperCase()}${this.factoryName.substring(1).toLowerCase()}`
-    const fileName = `${this.factoryName.toLowerCase()}.factory.ts`
+    const factoryName = pascalCase(this.factoryName)
+    const fileName = `${kebabCase(this.factoryName)}.factory.ts`
 
-    const entity = fs
-      .readFileSync(path.resolve(__dirname, '../../templates/generator/common/factory/factory.template.ts'), 'utf-8')
-      .toString()
-      .replace(/__ClassName__/g, factoryName)
-    fs.writeFileSync(`./src/database/factories/${fileName}`, entity)
+    const factory = renderTemplate(
+      path.resolve(__dirname, '../../templates/generator/common/factory/factory.template.ts'),
+      { ClassName: factoryName }
+    )
+    fs.writeFileSync(`./src/database/factories/${fileName}`, factory)
   }
 }

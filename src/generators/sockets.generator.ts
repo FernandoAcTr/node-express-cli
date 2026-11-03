@@ -5,14 +5,17 @@ import { configService } from '../services/config.service'
 import fs from 'fs'
 import path from 'path'
 import { hasWebPushDependency, wirePush } from '../utils/wire_push'
+import { CliError } from '../errors'
 
 export class SocketsGenerator implements IPreGenerator, IInstallerGenerator, IFileSystemGenerator {
   async pre(): Promise<void> {
     const accepted = await confirm({
-      message: 'Are you sure? This action will replace all your code in index.ts',
+      message: 'Are you sure? This action will replace all your code in src/main.ts',
     })
     if (!accepted) {
-      process.exit(0)
+      throw new CliError('Socket installation cancelled', {
+        hint: 'Run "node-express-cli install:socket" again when you are ready.',
+      })
     }
   }
 

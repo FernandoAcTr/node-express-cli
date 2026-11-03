@@ -10,8 +10,8 @@ export class EslintGenerator implements IFileSystemGenerator, IInstallerGenerato
     await shellService.execAsync(
       `${configService.getDevInstallCommand()} eslint eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin`
     )
-    shellService.exec('npm pkg set scripts.lint="eslint . --ext .ts"')
-    shellService.exec('npm pkg set scripts.lint:fix="eslint . --ext .ts --fix"')
+    configService.setScript('lint', 'eslint . --ext .ts')
+    configService.setScript('lint:fix', 'eslint . --ext .ts --fix')
   }
   async createDirectories(): Promise<void> {
     //

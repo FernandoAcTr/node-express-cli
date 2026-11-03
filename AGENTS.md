@@ -8,8 +8,9 @@
 ## Commands
 - Build: `npm run build` (runs `tsc`, emits `dist/`). `prepare` also builds, so it runs automatically on install.
 - Run the CLI locally: `npm run build && node dist/index <command>`.
-- Format: `npm run prettier:fix` — the only scripted check.
-- There is **no** test, lint, or separate typecheck script; `npm run build` is the typecheck. The CLI has no test suite (`templates/generator/common/tests` is scaffolding for *generated* projects).
+- Test: `npm test` (vitest, only `test/**/*.test.ts`).
+- Format: `npm run prettier:fix` — the only scripted formatting check.
+- There is **no** lint or separate typecheck script; `npm run build` is the typecheck. The CLI test suite only covers `src/utils` helpers; `templates/generator/common/tests` is scaffolding for *generated* projects.
 
 ## Gotchas
 - `templates/` is excluded in `tsconfig.json`. Template `.ts` files are copied as text and never compiled or type-checked, so the compiler will not catch errors in them.

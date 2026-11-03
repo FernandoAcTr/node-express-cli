@@ -4,6 +4,9 @@ import { configService } from '../services/config.service'
 import { DbType } from '../types'
 import fs from 'fs-extra'
 import path from 'path'
+import { kebabCase, pascalCase } from '../utils/naming'
+import { renderTemplate } from '../utils/template'
+import { CliError } from '../errors'
 
 export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
   private entityName: string
@@ -13,10 +16,9 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
     const config = configService.getConfig()
 
     if (config.orm == DbType.PRISMA) {
-      console.log('================================'.yellow)
-      console.log("Since you are using Prisma you don't need to make entities, Prisma generate them for you.".yellow)
-      console.log('================================'.yellow)
-      process.exit(0)
+      throw new CliError('Prisma generates entities automatically', {
+        hint: 'Edit src/database/prisma/schema.prisma and run "m:generate" instead.',
+      })
     }
     this.dbType = config.orm ?? DbType.TYPEORM
 
@@ -24,7 +26,9 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
       message: 'Name of entity:',
     })
     if (!this.entityName) {
-      process.exit(0)
+      throw new CliError('Entity name is required', {
+        hint: 'Run "node-express-cli make:entity" again and enter a name.',
+      })
     }
   }
 
@@ -33,8 +37,8 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async copyFiles(): Promise<void> {
-    const entityName = `${this.entityName[0].toUpperCase()}${this.entityName.substring(1).toLowerCase()}`
-    const fileName = this.entityName.toLowerCase()
+    const entityName = pascalCase(this.entityName)
+    const fileName = kebabCase(this.entityName)
 
     const codeDirs = {
       [DbType.MONGO]: 'mongo',
@@ -42,10 +46,10 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
       [DbType.SEQUELIZE]: 'sequelize',
     }
 
-    const entity = fs
-      .readFileSync(path.resolve(__dirname, '../../templates/generator/orm', codeDirs[this.dbType], 'entity.template.ts'))
-      .toString()
-      .replace(/__EntityName__/g, entityName)
+    const entity = renderTemplate(
+      path.resolve(__dirname, '../../templates/generator/orm', codeDirs[this.dbType], 'entity.template.ts'),
+      { EntityName: entityName }
+    )
     fs.writeFileSync(`./src/entities/${fileName}.entity.ts`, entity)
   }
 }

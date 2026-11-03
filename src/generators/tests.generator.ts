@@ -9,7 +9,7 @@ export class TestGenerator implements IInstallerGenerator, IFileSystemGenerator 
     console.log('================= Installing Test dependencies ================='.yellow)
     await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
     await shellService.execAsync(`${configService.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`)
-    shellService.exec('npm pkg set scripts.test="npx jest"')
+    configService.setScript('test', 'jest')
   }
 
   async createDirectories(): Promise<void> {

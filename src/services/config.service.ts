@@ -1,6 +1,7 @@
 import fs from 'fs'
 import { Config, DbType, PackageManager } from '../types'
 import { version } from '../version'
+import { CliError } from '../errors'
 
 export class ConfigService {
   private configFile = 'cli.config.json'
@@ -25,6 +26,39 @@ export class ConfigService {
 
   public writeConfig(config: Partial<Config>) {
     fs.writeFileSync(this.configFile, JSON.stringify({ ...config, version }))
+  }
+
+  /**
+   * Escribe un script en package.json sin depender de `npm pkg set`, para que
+   * funcione igual con yarn, pnpm o bun. Devuelve true si el archivo cambió.
+   */
+  public setScript(name: string, command: string): boolean {
+    const packageFile = 'package.json'
+
+    if (!fs.existsSync(packageFile)) {
+      throw new CliError(`Could not find ${packageFile}`, {
+        hint: 'Run this command from the root of a generated project.',
+      })
+    }
+
+    let packageJson: any
+    try {
+      packageJson = JSON.parse(fs.readFileSync(packageFile, 'utf-8'))
+    } catch {
+      throw new CliError(`Could not parse ${packageFile}`, {
+        hint: `Fix the JSON in ${packageFile} and try again.`,
+      })
+    }
+
+    packageJson.scripts = packageJson.scripts ?? {}
+
+    if (packageJson.scripts[name] === command) {
+      return false
+    }
+
+    packageJson.scripts[name] = command
+    fs.writeFileSync(packageFile, `${JSON.stringify(packageJson, null, 2)}\n`)
+    return true
   }
 
   public getInstallCommand() {

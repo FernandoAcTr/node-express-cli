@@ -7,8 +7,8 @@ import fs from 'fs'
 export class PrettierGenerator implements IFileSystemGenerator, IInstallerGenerator {
   async installDependencies(): Promise<void> {
     console.log('================= Installing Prettier ================='.yellow)
-    shellService.exec(`${configService.getDevInstallCommand()} prettier`)
-    shellService.exec('npm pkg set scripts.prettier:fix="prettier --config .prettierrc.json --write src/**/**/*.ts"')
+    await shellService.execAsync(`${configService.getDevInstallCommand()} prettier`)
+    configService.setScript('prettier:fix', 'prettier --config .prettierrc.json --write src/**/**/*.ts')
   }
   async createDirectories(): Promise<void> {
     //

@@ -8,15 +8,14 @@ import { configService } from '../services/config.service'
 import path from 'path'
 import { shellService } from '../services/shell.service'
 import fs from 'fs-extra'
+import { CliError } from '../errors'
 
 export class BaseGenerator implements IGenerator {
   private projectName: string
   private fileBasedRouting: boolean
 
   async pre() {
-    figlet.text('Node-Express-CLI', { font: 'Standard' }, (err, data) => {
-      console.log(gradient.pastel.multiline(data))
-    })
+    console.log(gradient.pastel.multiline(figlet.textSync('Node-Express-CLI', { font: 'Standard' })))
 
     await sleep(500)
 
@@ -24,8 +23,9 @@ export class BaseGenerator implements IGenerator {
       message: 'Enter the project name',
     })
     if (!name) {
-      console.error('Project name is required')
-      process.exit(0)
+      throw new CliError('Project name is required', {
+        hint: 'Run "node-express-cli init" again and enter a name.',
+      })
     }
     const manager = await select({
       message: 'Choose package manager',
@@ -41,7 +41,13 @@ export class BaseGenerator implements IGenerator {
 
     this.projectName = name
 
-    fs.mkdirSync(`./${this.projectName}`)
+    if (fs.existsSync(this.projectName)) {
+      throw new CliError(`The directory "${this.projectName}" already exists`, {
+        hint: 'Choose a different project name or remove the existing directory.',
+      })
+    }
+
+    fs.mkdirSync(this.projectName)
 
     configService.setConfigFilePath(this.projectName)
     configService.writeConfig({
@@ -78,7 +84,10 @@ export class BaseGenerator implements IGenerator {
         path.resolve(__dirname, '../../templates/generator/common/filerouting/healthcheck.ts'),
         `./${this.projectName}/src/routes/healthcheck.ts`
       )
-      fs.rmSync(`./${this.projectName}/src/modules/healthcheck/routes.ts`)
+      const healthcheckRoutes = `./${this.projectName}/src/modules/healthcheck/routes.ts`
+      if (fs.existsSync(healthcheckRoutes)) {
+        fs.rmSync(healthcheckRoutes)
+      }
     }
   }
 

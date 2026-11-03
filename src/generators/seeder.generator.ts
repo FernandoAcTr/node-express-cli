@@ -2,6 +2,9 @@ import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
 import fs from 'fs-extra'
 import path from 'path'
+import { camelCase, pascalCase } from '../utils/naming'
+import { renderTemplate } from '../utils/template'
+import { CliError } from '../errors'
 
 export class SeederGenerator implements IPreGenerator, IFileSystemGenerator {
   private seederName: string
@@ -11,7 +14,9 @@ export class SeederGenerator implements IPreGenerator, IFileSystemGenerator {
       message: 'Name of seeder:',
     })
     if (!this.seederName) {
-      process.exit(0)
+      throw new CliError('Seeder name is required', {
+        hint: 'Run "node-express-cli make:seeder" again and enter a name.',
+      })
     }
   }
 
@@ -20,13 +25,13 @@ export class SeederGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async copyFiles(): Promise<void> {
-    const filename = `${this.seederName[0].toLowerCase()}${this.seederName.substring(1)}.seeder.ts`
-    const seederName = `${this.seederName[0].toUpperCase()}${this.seederName.substring(1)}Seeder`
+    const filename = `${camelCase(this.seederName)}.seeder.ts`
+    const seederName = `${pascalCase(this.seederName)}Seeder`
 
-    const seeder = fs
-      .readFileSync(path.resolve(__dirname, '../../templates/generator/common/seed/seed.template.ts'))
-      .toString()
-      .replace(/__ClassName__/g, seederName)
+    const seeder = renderTemplate(
+      path.resolve(__dirname, '../../templates/generator/common/seed/seed.template.ts'),
+      { ClassName: seederName }
+    )
 
     fs.writeFileSync(`./src/database/seeds/${filename}`, seeder)
   }
