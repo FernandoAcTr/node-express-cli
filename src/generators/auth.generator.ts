@@ -1,27 +1,22 @@
 import path from 'path'
 import fs from 'fs'
-import { IGenerator } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
-import { shellService } from '../services/shell.service'
+import {
+  IFileSystemGenerator,
+  IInstallerGenerator,
+  IPostGenerator,
+} from '../interfaces/generator.interface'
+import { Context } from '../context'
 import { DbType } from '../types'
-import { CliError } from '../errors'
 
-export class AuthGenerator implements IGenerator {
-  private dbType: DbType
+export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IInstallerGenerator {
+  constructor(private readonly ctx: Context) {}
 
-  async pre(): Promise<void> {
-    const config = configService.getConfig()
-    if (!config.orm) {
-      throw new CliError('Auth requires a database ORM', {
-        hint: 'Run "node-express-cli install:orm" first.',
-      })
-    }
-
-    this.dbType = config.orm
+  private get dbType(): DbType {
+    return this.ctx.config.getConfig().orm as DbType
   }
 
   async createDirectories(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
 
     fs.mkdirSync(`./src/entities`, { recursive: true })
     fs.mkdirSync(`./src/modules/auth`, { recursive: true })
@@ -35,7 +30,7 @@ export class AuthGenerator implements IGenerator {
   }
 
   async copyFiles(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
 
     fs.copyFileSync(
       path.resolve(__dirname, '../../templates/generator/auth/common/auth.controller.ts'),
@@ -97,16 +92,20 @@ export class AuthGenerator implements IGenerator {
 
   async post(): Promise<void> {
     if (this.dbType == DbType.PRISMA) {
-      await shellService.execAsync(`${configService.getRunCommand()} m:generate`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getRunCommand()} m:generate`)
     }
 
     this.wireAuth()
 
-    console.log('-------------------------------------------------------------------------------------------'.green)
-    console.log('Auth module was wired up: passport.initialize() and the JWT strategy are registered in src/main.ts'.green)
-    console.log('The auth routes are already mounted by the app router'.green)
-    console.log('You need to run the database migrations. Depending on the ORM you chose it is necessary to run a specific command'.green)
-    console.log('-------------------------------------------------------------------------------------------'.green)
+    this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+    this.ctx.logger.success(
+      'Auth module was wired up: passport.initialize() and the JWT strategy are registered in src/main.ts'
+    )
+    this.ctx.logger.success('The auth routes are already mounted by the app router')
+    this.ctx.logger.success(
+      'You need to run the database migrations. Depending on the ORM you chose it is necessary to run a specific command'
+    )
+    this.ctx.logger.success('-------------------------------------------------------------------------------------------')
   }
 
   private wireAuth(): void {
@@ -162,10 +161,10 @@ export class AuthGenerator implements IGenerator {
   }
 
   async installDependencies(): Promise<void> {
-    console.log('================= Installing auth dependencies ================='.yellow)
-    await shellService.execAsync(`${configService.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`)
-    await shellService.execAsync(
-      `${configService.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`
+    this.ctx.logger.info('================= Installing auth dependencies =================')
+    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`)
+    await this.ctx.shell.execAsync(
+      `${this.ctx.config.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`
     )
   }
 }

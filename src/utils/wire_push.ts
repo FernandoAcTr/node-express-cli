@@ -1,11 +1,12 @@
 import fs from 'fs'
-import { configService } from '../services/config.service'
 
 export interface WirePushOptions {
   main?: boolean
   config?: boolean
   env?: boolean
   script?: boolean
+  /** Package runner used inside the generated scripts, e.g. npx, pnpm dlx. */
+  packageRunner?: string
 }
 
 export interface WirePushResult {
@@ -133,7 +134,7 @@ function wireConfig(result: WirePushResult): void {
   result.changed.push(configFile)
 }
 
-function wireEnv(result: WirePushResult): void {
+function wireEnv(result: WirePushResult, runner: string): void {
   const envFile = './.env.example'
 
   if (!fs.existsSync(envFile)) {
@@ -148,7 +149,6 @@ function wireEnv(result: WirePushResult): void {
     return
   }
 
-  const runner = configService.getPackageRunnerCommand()
   const block = VAPID_ENV.replace('<runner>', runner)
   const separator = content.endsWith('\n') ? '' : '\n'
 
@@ -156,7 +156,7 @@ function wireEnv(result: WirePushResult): void {
   result.changed.push(envFile)
 }
 
-function wireScript(result: WirePushResult): void {
+function wireScript(result: WirePushResult, runner: string): void {
   const packageFile = './package.json'
 
   if (!fs.existsSync(packageFile)) {
@@ -167,7 +167,7 @@ function wireScript(result: WirePushResult): void {
   try {
     const content = fs.readFileSync(packageFile, 'utf-8')
     const packageJson = JSON.parse(content)
-    const command = `${configService.getPackageRunnerCommand()} web-push generate-vapid-keys`
+    const command = `${runner} web-push generate-vapid-keys`
 
     packageJson.scripts = packageJson.scripts || {}
 
@@ -189,13 +189,13 @@ function wireScript(result: WirePushResult): void {
  * be executed again (for example after install:socket replaces main.ts).
  */
 export function wirePush(options: WirePushOptions = {}): WirePushResult {
-  const { main = true, config = true, env = true, script = true } = options
+  const { main = true, config = true, env = true, script = true, packageRunner = 'npx' } = options
   const result: WirePushResult = { changed: [], skipped: [], warnings: [] }
 
   if (main) wireMain(result)
   if (config) wireConfig(result)
-  if (env) wireEnv(result)
-  if (script) wireScript(result)
+  if (env) wireEnv(result, packageRunner)
+  if (script) wireScript(result, packageRunner)
 
   return result
 }

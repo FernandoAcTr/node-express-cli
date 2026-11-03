@@ -1,15 +1,15 @@
-import { input } from '@inquirer/prompts'
 import { IPostGenerator, IPreGenerator } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
+import { Context } from '../context'
 import { DbType } from '../types'
-import { shellService } from '../services/shell.service'
 import { CliError } from '../errors'
 
 export class MigrationGenerator implements IPreGenerator, IPostGenerator {
   private migrationName: string
 
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
     const dbType = config.orm ?? DbType.TYPEORM
 
     if (dbType == DbType.MONGO) {
@@ -23,8 +23,9 @@ export class MigrationGenerator implements IPreGenerator, IPostGenerator {
       })
     }
 
-    const name = await input({
+    const name = await this.ctx.prompter.input({
       message: 'Name of migration:',
+      name: 'name',
     })
     if (!name) {
       throw new CliError('Migration name is required', {
@@ -36,13 +37,13 @@ export class MigrationGenerator implements IPreGenerator, IPostGenerator {
   }
 
   async post(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
     const dbType = config.orm ?? DbType.TYPEORM
 
     if (dbType == DbType.SEQUELIZE) {
-      shellService.exec(`npm run db:make:migration ${this.migrationName}`)
+      this.ctx.shell.exec(`npm run db:make:migration ${this.migrationName}`)
     } else if (dbType == DbType.TYPEORM) {
-      shellService.exec(`npm run m:create ./src/database/migrations/${this.migrationName}`)
+      this.ctx.shell.exec(`npm run m:create ./src/database/migrations/${this.migrationName}`)
     }
   }
 }

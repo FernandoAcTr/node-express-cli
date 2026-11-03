@@ -1,24 +1,25 @@
 import { Command, Generator } from './interfaces/generator.interface'
 
-export async function run(generator: Generator | Command) {
-  if ('pre' in generator) {
-    await generator.pre()
-  }
+interface Lifecycle {
+  pre?(): Promise<void>
+  createDirectories?(): Promise<void>
+  copyFiles?(): Promise<void>
+  installDependencies?(): Promise<void>
+  post?(): Promise<void>
+  run?(): Promise<void>
+}
 
-  if ('createDirectories' in generator) {
-    await generator.createDirectories()
-    await generator.copyFiles()
-  }
+/**
+ * Pipeline fijo del ciclo de vida. Solo se ejecutan las fases que el generador
+ * implementa; los errores se propagan a `main().catch(handleError)`.
+ */
+export async function run(generator: Generator | Command): Promise<void> {
+  const lifecycle = generator as Lifecycle
 
-  if ('installDependencies' in generator) {
-    await generator.installDependencies()
-  }
-
-  if ('post' in generator) {
-    await generator.post()
-  }
-
-  if ('run' in generator) {
-    await generator.run()
-  }
+  await lifecycle.pre?.()
+  await lifecycle.createDirectories?.()
+  await lifecycle.copyFiles?.()
+  await lifecycle.installDependencies?.()
+  await lifecycle.post?.()
+  await lifecycle.run?.()
 }

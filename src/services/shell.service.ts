@@ -48,5 +48,3 @@ export class ShellService {
     return { code, stdout, stderr }
   }
 }
-
-export const shellService = new ShellService()

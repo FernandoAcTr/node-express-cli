@@ -1,16 +1,17 @@
-import { confirm } from '@inquirer/prompts'
 import { IFileSystemGenerator, IInstallerGenerator, IPreGenerator } from '../interfaces/generator.interface'
-import { shellService } from '../services/shell.service'
-import { configService } from '../services/config.service'
+import { Context } from '../context'
 import fs from 'fs'
 import path from 'path'
 import { hasWebPushDependency, wirePush } from '../utils/wire_push'
 import { CliError } from '../errors'
 
 export class SocketsGenerator implements IPreGenerator, IInstallerGenerator, IFileSystemGenerator {
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    const accepted = await confirm({
+    const accepted = await this.ctx.prompter.confirm({
       message: 'Are you sure? This action will replace all your code in src/main.ts',
+      name: 'yes',
     })
     if (!accepted) {
       throw new CliError('Socket installation cancelled', {
@@ -22,9 +23,12 @@ export class SocketsGenerator implements IPreGenerator, IInstallerGenerator, IFi
   async createDirectories(): Promise<void> {}
 
   async copyFiles(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
     fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/socket.ts'), './src/socket.ts')
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/socket.controller.ts'), './src/socket.controller.ts')
+    fs.copyFileSync(
+      path.resolve(__dirname, '../../templates/generator/common/socketio/socket.controller.ts'),
+      './src/socket.controller.ts'
+    )
     if (config.fileBasedRouting) {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/filerouting/index.ts'), './src/main.ts')
     } else {
@@ -38,7 +42,7 @@ export class SocketsGenerator implements IPreGenerator, IInstallerGenerator, IFi
   }
 
   async installDependencies(): Promise<void> {
-    console.log('================= Installing Socket.io ================='.yellow)
-    await shellService.execAsync(`${configService.getInstallCommand()} socket.io`)
+    this.ctx.logger.info('================= Installing Socket.io =================')
+    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} socket.io`)
   }
 }

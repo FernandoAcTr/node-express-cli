@@ -1,50 +1,40 @@
 import yargs from 'yargs'
+import { CommandDefinition, CommandOptionDefinition, commands } from '../registry'
 
-export const argv = yargs.options({
-  init: {
-    alias: 'i',
-    description: 'Init a new Express project',
-  },
-  'make:module': {
-    description: 'Generate a new resource module',
-  },
-  'make:seeder': {
-    description: 'Generate a new seeder class',
-  },
-  'make:entity': {
-    description: 'Generate a new entity class',
-  },
-  'make:migration': {
-    description: 'Generate a new database migration',
-  },
-  'make:factory': {
-    description: 'Generate a new Factory class for a Model',
-  },
-  'install:prettier': {
-    description: 'Add prettier to the project',
-  },
-  'install:eslint': {
-    description: 'Add eslint to the project',
-  },
-  'install:socket': {
-    description: 'Add Socket.io to the project',
-  },
-  'install:orm': {
-    description: 'Add Database support using an orm',
-  },
-  'install:auth': {
-    description: 'Add basic scaffolding to auth with jwt and passport',
-  },
-  'install:mailer': {
-    description: 'Add support for send mails via nodemailer library',
-  },
-  'install:push': {
-    description: 'Add web push notifications support via web-push',
-  },
-  'install:tests': {
-    description: 'Add a library to do testing and some examples',
-  },
-  'route:list': {
-    description: 'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',
-  },
-}).argv
+export type ParsedArgv = Record<string, unknown> & { _: (string | number)[] }
+
+function buildOptions(commandList: CommandDefinition[]): Record<string, any> {
+  const options: Record<string, any> = {
+    'no-interaction': {
+      type: 'boolean',
+      description: 'Disable prompts and read answers from flags or positional arguments',
+    },
+    ci: {
+      type: 'boolean',
+      description: 'Alias of --no-interaction',
+    },
+  }
+
+  for (const command of commandList) {
+    options[command.name] = {
+      description: command.description,
+      ...(command.aliases?.length ? { alias: command.aliases } : {}),
+    }
+
+    for (const [name, definition] of Object.entries(command.options ?? {})) {
+      const option: CommandOptionDefinition = definition
+
+      options[name] = {
+        type: option.type ?? 'string',
+        description: option.description,
+        ...(option.default !== undefined ? { default: option.default } : {}),
+        ...(option.alias ? { alias: option.alias } : {}),
+      }
+    }
+  }
+
+  return options
+}
+
+/** El --help se genera desde `src/registry.ts`; este archivo no conoce comandos concretos. */
+export const argv = yargs.options(buildOptions(commands)).argv as ParsedArgv

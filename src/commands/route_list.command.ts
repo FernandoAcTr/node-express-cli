@@ -3,7 +3,7 @@ import fs from 'fs'
 import * as parser from '@babel/parser'
 import traverse from '@babel/traverse'
 import { Command } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
+import { Context } from '../context'
 
 interface Route {
   method: string
@@ -185,10 +185,13 @@ async function listRoutes(nestedPath: string[] = [], routeGroups: Record<string,
 }
 
 export class RouteListCommand implements Command {
-  constructor(private readonly omit?: string) {}
+  constructor(
+    private readonly ctx: Context,
+    private readonly omit?: string
+  ) {}
 
   async run(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
     if (config.fileBasedRouting) {
       await listFilebasedRoutes([], {}, this.omit)
     } else {

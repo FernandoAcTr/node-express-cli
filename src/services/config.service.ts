@@ -1,17 +1,31 @@
 import fs from 'fs'
+import path from 'path'
 import { Config, DbType, PackageManager } from '../types'
 import { version } from '../version'
 import { CliError } from '../errors'
 
 export class ConfigService {
-  private configFile = 'cli.config.json'
+  readonly cwd: string
+  private readonly configFilePath: string
+  private readonly packageFilePath: string
+
+  constructor(cwd: string = process.cwd()) {
+    this.cwd = path.resolve(cwd)
+    this.configFilePath = path.join(this.cwd, 'cli.config.json')
+    this.packageFilePath = path.join(this.cwd, 'package.json')
+  }
+
+  /** Devuelve un servicio apuntando a otro directorio (p. ej. el proyecto recién creado). */
+  public forDirectory(directory: string): ConfigService {
+    return new ConfigService(path.resolve(this.cwd, directory))
+  }
 
   public getConfig(): Config {
-    if (!fs.existsSync(this.configFile)) {
+    if (!fs.existsSync(this.configFilePath)) {
       return { orm: DbType.TYPEORM, package_manger: PackageManager.NPM, fileBasedRouting: false }
     }
 
-    const parsed = JSON.parse(fs.readFileSync(this.configFile).toString())
+    const parsed = JSON.parse(fs.readFileSync(this.configFilePath).toString())
 
     return {
       orm: parsed.orm,
@@ -20,12 +34,8 @@ export class ConfigService {
     }
   }
 
-  public setConfigFilePath(path: string) {
-    this.configFile = `./${path}/cli.config.json`
-  }
-
   public writeConfig(config: Partial<Config>) {
-    fs.writeFileSync(this.configFile, JSON.stringify({ ...config, version }))
+    fs.writeFileSync(this.configFilePath, JSON.stringify({ ...config, version }))
   }
 
   /**
@@ -33,20 +43,18 @@ export class ConfigService {
    * funcione igual con yarn, pnpm o bun. Devuelve true si el archivo cambió.
    */
   public setScript(name: string, command: string): boolean {
-    const packageFile = 'package.json'
-
-    if (!fs.existsSync(packageFile)) {
-      throw new CliError(`Could not find ${packageFile}`, {
+    if (!fs.existsSync(this.packageFilePath)) {
+      throw new CliError(`Could not find ${this.packageFilePath}`, {
         hint: 'Run this command from the root of a generated project.',
       })
     }
 
     let packageJson: any
     try {
-      packageJson = JSON.parse(fs.readFileSync(packageFile, 'utf-8'))
+      packageJson = JSON.parse(fs.readFileSync(this.packageFilePath, 'utf-8'))
     } catch {
-      throw new CliError(`Could not parse ${packageFile}`, {
-        hint: `Fix the JSON in ${packageFile} and try again.`,
+      throw new CliError(`Could not parse ${this.packageFilePath}`, {
+        hint: `Fix the JSON in ${this.packageFilePath} and try again.`,
       })
     }
 
@@ -57,7 +65,7 @@ export class ConfigService {
     }
 
     packageJson.scripts[name] = command
-    fs.writeFileSync(packageFile, `${JSON.stringify(packageJson, null, 2)}\n`)
+    fs.writeFileSync(this.packageFilePath, `${JSON.stringify(packageJson, null, 2)}\n`)
     return true
   }
 
@@ -126,5 +134,3 @@ export class ConfigService {
     return commands[config.package_manger]
   }
 }
-
-export const configService = new ConfigService()

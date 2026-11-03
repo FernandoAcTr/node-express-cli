@@ -1,14 +1,15 @@
 import path from 'path'
 import { IFileSystemGenerator, IInstallerGenerator } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
-import { shellService } from '../services/shell.service'
+import { Context } from '../context'
 import fs from 'fs'
 
 export class PrettierGenerator implements IFileSystemGenerator, IInstallerGenerator {
+  constructor(private readonly ctx: Context) {}
+
   async installDependencies(): Promise<void> {
-    console.log('================= Installing Prettier ================='.yellow)
-    await shellService.execAsync(`${configService.getDevInstallCommand()} prettier`)
-    configService.setScript('prettier:fix', 'prettier --config .prettierrc.json --write src/**/**/*.ts')
+    this.ctx.logger.info('================= Installing Prettier =================')
+    await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prettier`)
+    this.ctx.config.setScript('prettier:fix', 'prettier --config .prettierrc.json --write src/**/**/*.ts')
   }
   async createDirectories(): Promise<void> {
     //

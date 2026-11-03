@@ -1,15 +1,18 @@
 import { IFileSystemGenerator, IInstallerGenerator } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
-import { shellService } from '../services/shell.service'
+import { Context } from '../context'
 import fs from 'fs-extra'
 import path from 'path'
 
 export class TestGenerator implements IInstallerGenerator, IFileSystemGenerator {
+  constructor(private readonly ctx: Context) {}
+
   async installDependencies(): Promise<void> {
-    console.log('================= Installing Test dependencies ================='.yellow)
-    await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
-    await shellService.execAsync(`${configService.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`)
-    configService.setScript('test', 'jest')
+    this.ctx.logger.info('================= Installing Test dependencies =================')
+    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`)
+    await this.ctx.shell.execAsync(
+      `${this.ctx.config.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`
+    )
+    this.ctx.config.setScript('test', 'jest')
   }
 
   async createDirectories(): Promise<void> {

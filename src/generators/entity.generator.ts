@@ -1,6 +1,5 @@
-import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
+import { Context } from '../context'
 import { DbType } from '../types'
 import fs from 'fs-extra'
 import path from 'path'
@@ -12,8 +11,10 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
   private entityName: string
   private dbType: DbType
 
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
 
     if (config.orm == DbType.PRISMA) {
       throw new CliError('Prisma generates entities automatically', {
@@ -22,8 +23,9 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
     }
     this.dbType = config.orm ?? DbType.TYPEORM
 
-    this.entityName = await input({
+    this.entityName = await this.ctx.prompter.input({
       message: 'Name of entity:',
+      name: 'name',
     })
     if (!this.entityName) {
       throw new CliError('Entity name is required', {

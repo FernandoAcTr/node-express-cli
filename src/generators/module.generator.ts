@@ -1,14 +1,15 @@
-import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
+import { Context } from '../context'
 import fs from 'fs'
 import path from 'path'
-import { configService } from '../services/config.service'
 import { kebabCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
 import { CliError } from '../errors'
 
 export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   private moduleName: string
+
+  constructor(private readonly ctx: Context) {}
 
   private get moduleDir(): string {
     return kebabCase(this.moduleName)
@@ -19,8 +20,9 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async pre(): Promise<void> {
-    const moduleName = await input({
+    const moduleName = await this.ctx.prompter.input({
       message: 'Name of module:',
+      name: 'name',
     })
 
     if (!moduleName) {
@@ -33,7 +35,7 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async createDirectories(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
 
     const dir = this.getModuleDirectory()
 
@@ -46,7 +48,7 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async copyFiles(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
     const dir = this.getModuleDirectory()
     const moduleDir = this.moduleDir
     const serviceName = pascalCase(this.moduleName)

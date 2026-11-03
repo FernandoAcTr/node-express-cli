@@ -20,9 +20,10 @@
 - Root `.prettierrc.json` differs from the one shipped to generated projects (`templates/generator/common/prettier/.prettierrc.json`). Edit the right one.
 
 ## Adding a command
-1. Add a generator in `src/generators/` implementing whichever lifecycle interfaces it needs (`src/interfaces/generator.interface.ts`).
-2. Register it in **two** places: a `case` in the `switch` in `src/index.ts`, and an option in `src/utils/yargs.ts`. Dispatch is an exact string match on `argv._[0]`; yargs only provides `--help` and flags.
+1. Add a generator in `src/generators/` implementing whichever lifecycle interfaces it needs (`src/interfaces/generator.interface.ts`). It receives a `Context` (`config`, `shell`, `prompter`, `logger`, `fs`, `cwd`, `has`) via its constructor; do not import `configService`/`shellService` singletons (they no longer exist).
+2. Register it **once** in the `commands` array of `src/registry.ts` with `name`, `description`, optional `aliases`, `requires` (`orm`, `fileBasedRouting`), `options` and `create(ctx, args)`. `src/index.ts` resolves dispatch from that registry and `src/utils/yargs.ts` generates `--help` from it.
 3. Lifecycle order is fixed by `src/run.ts`: `pre` -> `createDirectories` + `copyFiles` -> `installDependencies` -> `post` -> `run`. Only implemented phases run.
+4. For non-interactive use, pass a `name` on each prompt option so `--no-interaction` can read it from a flag or positional argument.
 - Template paths resolve via `path.resolve(__dirname, '../../templates/...')`, so `templates/` must ship next to `dist/` (it does; `.npmignore` excludes only `src`, configs, `logs`, `docs`).
 
 ## Generated-project facts (relevant when editing templates/generators)

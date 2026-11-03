@@ -1,115 +1,90 @@
 #!/usr/bin/env node
 import 'colors'
-import { AuthGenerator } from './generators/auth.generator'
-import { BaseGenerator } from './generators/base.generator'
-import { EslintGenerator } from './generators/eslint.generator'
-import { ModuleGenerator } from './generators/module.generator'
-import { OrmGenerator } from './generators/orm.generator'
-import { PrettierGenerator } from './generators/prettier.generator'
-import { run } from './run'
-import { SocketsGenerator } from './generators/sockets.generator'
-import { Command, Generator } from './interfaces/generator.interface'
-import { configService } from './services/config.service'
-import { argv } from './utils/yargs'
-import { MailerGenerator } from './generators/mailer.generator'
-import { SeederGenerator } from './generators/seeder.generator'
-import { EntityGenerator } from './generators/entity.generator'
-import { MigrationGenerator } from './generators/migration.generator'
-import { FactoryGenerator } from './generators/factory.generator'
-import { TestGenerator } from './generators/tests.generator'
-import { RouteListCommand } from './commands/route_list.command'
-import { PushGenerator } from './generators/push.generator'
+import { ContextFeature, createContext } from './context'
 import { CliError, handleError } from './errors'
+import { InquirerPrompter, NonInteractivePrompter, Prompter, isNonInteractive } from './prompts'
+import { CommandArgs, commands } from './registry'
+import { run } from './run'
+import { ParsedArgv, argv } from './utils/yargs'
+
+function splitArgs(raw: ParsedArgv): CommandArgs {
+  const positionals = raw._.map(String)
+  const flags: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === '_' || key === '$0') continue
+    flags[key] = value
+  }
+
+  return { positionals, flags }
+}
+
+function requiresHint(feature: ContextFeature): string {
+  if (feature === 'orm') {
+    return 'Run "node-express-cli install:orm" first.'
+  }
+
+  if (feature === 'fileBasedRouting') {
+    return 'Run "node-express-cli init" and enable file-based routing.'
+  }
+
+  return ''
+}
+
+function resolveCommandName(args: CommandArgs): string | undefined {
+  if (args.positionals[0]) {
+    return args.positionals[0]
+  }
+
+  // `nec -i` / `nec --init` have no positional command.
+  for (const command of commands) {
+    if (args.flags[command.name] === true) {
+      return command.name
+    }
+
+    for (const alias of command.aliases ?? []) {
+      if (args.flags[alias] === true) {
+        return command.name
+      }
+    }
+  }
+
+  return undefined
+}
 
 async function main(): Promise<void> {
-  const command = (argv as any)._[0] as string | undefined
+  const args = splitArgs(argv)
+  const commandName = resolveCommandName(args)
 
-  let g: Generator | Command | null = null
+  const prompter: Prompter = isNonInteractive(args.flags)
+    ? new NonInteractivePrompter(args.flags, args.positionals.slice(1))
+    : new InquirerPrompter()
 
-  switch (command) {
-    case 'init':
-      g = new BaseGenerator()
-      break
+  const ctx = createContext({ prompter })
 
-    case 'make:module':
-      g = new ModuleGenerator()
-      break
+  const definition = commands.find(
+    (command) => command.name === commandName || (commandName !== undefined && command.aliases?.includes(commandName))
+  )
 
-    case 'install:prettier':
-      g = new PrettierGenerator()
-      break
-
-    case 'install:eslint':
-      g = new EslintGenerator()
-      break
-
-    case 'install:socket':
-      g = new SocketsGenerator()
-      break
-
-    case 'install:orm':
-      g = new OrmGenerator()
-      break
-
-    case 'install:auth': {
-      const config = configService.getConfig()
-      if (!config.orm) {
-        throw new CliError('Auth requires a database ORM', {
-          hint: 'Run "node-express-cli install:orm" first.',
-        })
-      }
-      g = new AuthGenerator()
-      break
+  if (!definition) {
+    if (!commandName) {
+      ctx.logger.info('Please enter --help to see a list of commands')
+      return
     }
 
-    case 'install:mailer':
-      g = new MailerGenerator()
-      break
-
-    case 'install:push':
-      g = new PushGenerator()
-      break
-
-    case 'make:seeder':
-      g = new SeederGenerator()
-      break
-
-    case 'make:entity':
-      g = new EntityGenerator()
-      break
-
-    case 'make:migration':
-      g = new MigrationGenerator()
-      break
-
-    case 'make:factory':
-      g = new FactoryGenerator()
-      break
-
-    case 'install:tests':
-      g = new TestGenerator()
-      break
-
-    case 'route:list': {
-      const omitParam = argv['omit'] as string | undefined
-      g = new RouteListCommand(omitParam)
-      break
-    }
-
-    default:
-      if (!command) {
-        console.log('Please enter --help to see a list of commands')
-        return
-      }
-
-      throw new CliError(`Unknown command "${command}"`, {
-        hint: 'Run "node-express-cli --help" to see the available commands.',
-      })
+    throw new CliError(`Unknown command "${commandName}"`, {
+      hint: 'Run "node-express-cli --help" to see the available commands.',
+    })
   }
 
-  if (g) {
-    await run(g)
+  const unmet = (definition.requires ?? []).filter((feature) => !ctx.has(feature))
+  if (unmet.length > 0) {
+    throw new CliError(`"${definition.name}" requires: ${unmet.join(', ')}`, {
+      hint: unmet.map(requiresHint).join(' '),
+    })
   }
+
+  await run(definition.create(ctx, args))
 }
 
 main().catch(handleError)

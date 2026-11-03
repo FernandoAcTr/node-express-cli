@@ -1,5 +1,5 @@
-import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
+import { Context } from '../context'
 import fs from 'fs-extra'
 import path from 'path'
 import { camelCase, pascalCase } from '../utils/naming'
@@ -9,9 +9,12 @@ import { CliError } from '../errors'
 export class SeederGenerator implements IPreGenerator, IFileSystemGenerator {
   private seederName: string
 
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    this.seederName = await input({
+    this.seederName = await this.ctx.prompter.input({
       message: 'Name of seeder:',
+      name: 'name',
     })
     if (!this.seederName) {
       throw new CliError('Seeder name is required', {

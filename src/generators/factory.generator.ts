@@ -1,5 +1,5 @@
-import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
+import { Context } from '../context'
 import fs from 'fs-extra'
 import path from 'path'
 import { kebabCase, pascalCase } from '../utils/naming'
@@ -9,9 +9,12 @@ import { CliError } from '../errors'
 export class FactoryGenerator implements IPreGenerator, IFileSystemGenerator {
   private factoryName: string
 
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    const name = await input({
+    const name = await this.ctx.prompter.input({
       message: 'Name of the model that belongs to Factory:',
+      name: 'name',
     })
     if (!name) {
       throw new CliError('Factory model name is required', {
