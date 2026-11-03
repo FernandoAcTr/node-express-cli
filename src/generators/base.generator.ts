@@ -8,6 +8,7 @@ import { ConfigService } from '../services/config.service'
 import path from 'path'
 import fs from 'fs-extra'
 import { CliError } from '../errors'
+import { baseScripts } from '../utils/scripts'
 
 export class BaseGenerator implements IGenerator {
   private projectName: string
@@ -110,6 +111,8 @@ export class BaseGenerator implements IGenerator {
         fs.rmSync(healthcheckRoutes)
       }
     }
+
+    this.projectConfig.setScripts(baseScripts(this.projectConfig))
   }
 
   async installDependencies(): Promise<void> {
@@ -130,13 +133,13 @@ export class BaseGenerator implements IGenerator {
   }
 
   async post(): Promise<void> {
+    const run = this.projectConfig.getRunCommand()
+
     this.ctx.logger.success('-------------------------------------------------------------------------------------------')
-    this.ctx.logger.success(
-      "Cool! All ready. The next step is to create an .env file and run the command 'npm run dev'"
-    )
+    this.ctx.logger.success(`Cool! All ready. The next step is to create an .env file and run the command '${run} dev'`)
     this.ctx.logger.success(`cd ${this.projectName}`)
     this.ctx.logger.success('cp .env.example .env')
-    this.ctx.logger.success('npm run dev')
+    this.ctx.logger.success(`${run} dev`)
     this.ctx.logger.success('-------------------------------------------------------------------------------------------')
   }
 }

@@ -23,10 +23,7 @@ function project(): string {
       '',
     ].join('\n')
   )
-  fs.writeFileSync(
-    path.join(dir, 'src/config/index.ts'),
-    ["export const config = Object.freeze({", '  PORT: 3000,', '})', ''].join('\n')
-  )
+  fs.writeFileSync(path.join(dir, 'src/config/index.ts'), ['export const config = Object.freeze({', '  PORT: 3000,', '})', ''].join('\n'))
   fs.writeFileSync(path.join(dir, '.env.example'), 'PORT=3000\n')
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'app', scripts: {} }, null, 2))
   return dir
@@ -84,5 +81,26 @@ describe('wirePush', () => {
 
     expect(result.warnings.length).toBeGreaterThan(0)
     expect(result.warnings[0]).toContain('@nec:imports')
+  })
+
+  it('uses the package runner of the selected package manager', () => {
+    const cwd = project()
+
+    wirePush({ cwd, packageRunner: 'bunx' })
+
+    const pkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8'))
+
+    expect(pkg.scripts['vapid:generate']).toBe('bunx web-push generate-vapid-keys')
+    expect(JSON.stringify(pkg)).not.toMatch(/\bnpm\b|\bnpx\b/)
+  })
+
+  it('updates the runner in an existing .env.example VAPID block', () => {
+    const cwd = project()
+    const envFile = path.join(cwd, '.env.example')
+    fs.writeFileSync(envFile, '# Webpush notifications. Generate keys with: npx web-push generate-vapid-keys\nVAPID_PUBLIC_KEY=\n')
+
+    wirePush({ cwd, packageRunner: 'bunx' })
+
+    expect(fs.readFileSync(envFile, 'utf-8')).toContain('bunx web-push generate-vapid-keys')
   })
 })

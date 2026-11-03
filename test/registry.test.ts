@@ -35,4 +35,24 @@ describe('command registry', () => {
 
     expect(routeList?.options?.['omit']).toBeDefined()
   })
+
+  it('declares the feature for every install command', () => {
+    const expected: Record<string, string> = {
+      'install:orm': 'orm',
+      'install:auth': 'auth',
+      'install:socket': 'socket',
+      'install:push': 'push',
+      'install:mailer': 'mailer',
+      'install:tests': 'tests',
+      'install:prettier': 'prettier',
+      'install:eslint': 'eslint',
+    }
+
+    for (const [name, feature] of Object.entries(expected)) {
+      expect(commands.find((command) => command.name === name)?.feature).toBe(feature)
+    }
+
+    const installs = commands.filter((command) => command.name.startsWith('install:'))
+    expect(installs.every((command) => command.feature !== undefined)).toBe(true)
+  })
 })

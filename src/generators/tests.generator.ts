@@ -7,11 +7,13 @@ export class TestGenerator implements IInstallerGenerator, IFileSystemGenerator 
   constructor(private readonly ctx: Context) {}
 
   async installDependencies(): Promise<void> {
-    this.ctx.logger.info('================= Installing Test dependencies =================')
-    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`)
-    await this.ctx.shell.execAsync(
-      `${this.ctx.config.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`
-    )
+    if (this.ctx.has('tests')) {
+      this.ctx.logger.info('The test stack is already installed; skipping dependency installation')
+    } else {
+      this.ctx.logger.info('================= Installing Test dependencies =================')
+      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`)
+    }
     this.ctx.config.setScript('test', 'jest')
   }
 

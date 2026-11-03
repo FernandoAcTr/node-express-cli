@@ -7,9 +7,13 @@ export class MailerGenerator implements IInstallerGenerator, IFileSystemGenerato
   constructor(private readonly ctx: Context) {}
 
   async installDependencies(): Promise<void> {
-    this.ctx.logger.info('================= Installing Mail dependencies =================')
-    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} handlebars nodemailer`)
-    await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} @types/nodemailer`)
+    if (this.ctx.has('mailer')) {
+      this.ctx.logger.info('The mailer is already installed; skipping dependency installation')
+    } else {
+      this.ctx.logger.info('================= Installing Mail dependencies =================')
+      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} handlebars nodemailer`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} @types/nodemailer`)
+    }
   }
 
   async createDirectories(): Promise<void> {

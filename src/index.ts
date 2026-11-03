@@ -84,7 +84,7 @@ async function main(): Promise<void> {
     })
   }
 
-  await run(definition.create(ctx, args))
+  await run(definition.create(ctx, args), { ctx, feature: definition.feature })
 }
 
 main().catch(handleError)

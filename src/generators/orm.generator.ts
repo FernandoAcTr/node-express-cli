@@ -5,9 +5,12 @@ import { Context } from '../context'
 import { DbType } from '../types'
 import { renderTemplate } from '../utils/template'
 import { patchAtAnchor } from '../patch/anchor'
+import { ormScripts } from '../utils/scripts'
+import { Reporter } from '../report'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
+  private previousOrm?: DbType
 
   constructor(private readonly ctx: Context) {}
 
@@ -20,6 +23,7 @@ export class OrmGenerator implements IGenerator {
     })
 
     const config = this.ctx.config.getConfig()
+    this.previousOrm = config.orm
     config.orm = orm
     this.ctx.config.writeConfig(config)
 
@@ -67,15 +71,9 @@ export class OrmGenerator implements IGenerator {
 
   async post(): Promise<void> {
     if (this.orm == DbType.TYPEORM) {
-      const reflectPatch = patchAtAnchor(
-        path.join(this.ctx.cwd, 'src/main.ts'),
-        'imports',
-        "import 'reflect-metadata'",
-        { sort: true }
-      )
-      if (reflectPatch.status === 'anchor-missing' || reflectPatch.status === 'file-missing') {
-        this.ctx.logger.warn(reflectPatch.message ?? 'Could not add reflect-metadata to src/main.ts')
-      }
+      const mainFile = path.join(this.ctx.cwd, 'src/main.ts')
+      const reporter = new Reporter(this.ctx.logger)
+      reporter.patches(mainFile, [patchAtAnchor(mainFile, 'imports', "import 'reflect-metadata'", { sort: true })])
 
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
       this.ctx.logger.warn('You must install specific database driver like mysql or pg')
@@ -88,13 +86,8 @@ export class OrmGenerator implements IGenerator {
       this.ctx.logger.success(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`)
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
     } else if (this.orm == DbType.PRISMA) {
-      const packageContent = fs.readFileSync('./package.json', 'utf-8')
-      const packageJson = JSON.parse(packageContent)
-      delete packageJson.prisma
-      fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2))
-
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
-      this.ctx.logger.success(`You need to create your first migration. Run ${this.ctx.config.getConfig().package_manger} run m:run`)
+      this.ctx.logger.success(`You need to create your first migration. Run ${this.ctx.config.getRunCommand()} m:run`)
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
     } else if (this.orm == DbType.MONGO) {
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
@@ -104,42 +97,33 @@ export class OrmGenerator implements IGenerator {
   }
 
   async installDependencies(): Promise<void> {
-    this.ctx.logger.info('================= Installing ORM =================')
+    // `hasFeature` distingue una instalación completa de un `orm` escrito en
+    // config antes de que la instalación terminara.
+    const alreadyInstalled = this.ctx.has('orm') && this.ctx.config.hasFeature('orm') && this.previousOrm === this.orm
+    const runner = this.ctx.config.getPackageRunnerCommand()
 
-    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`)
+    if (alreadyInstalled) {
+      this.ctx.logger.info(`${this.orm} is already installed; skipping dependency installation`)
+    } else {
+      this.ctx.logger.info('================= Installing ORM =================')
 
-    if (this.orm == DbType.TYPEORM) {
-      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} typeorm reflect-metadata`)
-      this.ctx.shell.exec('npm pkg set scripts.typeorm="npx typeorm -d build/database/datasources.js"')
-      this.ctx.shell.exec('npm pkg set scripts.m:run="npm run build && npm run typeorm migration:run"')
-      this.ctx.shell.exec('npm pkg set scripts.m:revert="npm run build && npm run typeorm migration:revert"')
-      this.ctx.shell.exec('npm pkg set scripts.m:generate="npm run build && npm run typeorm migration:generate"')
-      this.ctx.shell.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
-      this.ctx.shell.exec('npm pkg set scripts.m:drop="npm run build && npm run typeorm schema:drop"')
-      this.ctx.shell.exec('npm pkg set scripts.m:run:fresh="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run"')
-      this.ctx.shell.exec(
-        'npm pkg set scripts.m:run:fresh:seed="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run && node build/database/seeder.js"'
-      )
-    } else if (this.orm == DbType.SEQUELIZE) {
-      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} sequelize`)
-      await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} sequelize-cli`)
-      this.ctx.shell.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
-      this.ctx.shell.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
-      this.ctx.shell.exec('npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
-      this.ctx.shell.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate --name"')
-    } else if (this.orm == DbType.PRISMA) {
-      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @prisma/client@^6`)
-      await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prisma@^6 @prisma/config@^6`)
-      this.ctx.shell.exec('npm pkg delete prisma')
-      this.ctx.shell.exec('npm pkg set scripts.m:run="npx prisma migrate dev"')
-      this.ctx.shell.exec('npm pkg set scripts.m:run:deploy="npx prisma migrate deploy"')
-      this.ctx.shell.exec('npm pkg set scripts.m:reset="npx prisma migrate reset"')
-      this.ctx.shell.exec('npm pkg set scripts.m:generate="npx prisma generate"')
-      await this.ctx.shell.execAsync('npx prisma generate')
-    } else if (this.orm == DbType.MONGO) {
-      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} mongoose`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`)
+
+      if (this.orm == DbType.TYPEORM) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} typeorm reflect-metadata`)
+      } else if (this.orm == DbType.SEQUELIZE) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} sequelize`)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} sequelize-cli`)
+      } else if (this.orm == DbType.PRISMA) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @prisma/client@^6`)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prisma@^6 @prisma/config@^6`)
+        this.ctx.config.deletePackageField('prisma')
+        await this.ctx.shell.execAsync(`${runner} prisma generate`)
+      } else if (this.orm == DbType.MONGO) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} mongoose`)
+      }
     }
 
-    this.ctx.shell.exec('npm pkg set scripts.db:seed="npm run build && node build/database/seeder.js"')
+    this.ctx.config.setScripts(ormScripts(this.orm, this.ctx.config))
   }
 }

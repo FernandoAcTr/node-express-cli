@@ -39,11 +39,12 @@ export class MigrationGenerator implements IPreGenerator, IPostGenerator {
   async post(): Promise<void> {
     const config = this.ctx.config.getConfig()
     const dbType = config.orm ?? DbType.TYPEORM
+    const run = this.ctx.config.getRunCommand()
 
     if (dbType == DbType.SEQUELIZE) {
-      this.ctx.shell.exec(`npm run db:make:migration ${this.migrationName}`)
+      this.ctx.shell.exec(`${run} db:make:migration ${this.migrationName}`)
     } else if (dbType == DbType.TYPEORM) {
-      this.ctx.shell.exec(`npm run m:create ./src/database/migrations/${this.migrationName}`)
+      this.ctx.shell.exec(`${run} m:create ./src/database/migrations/${this.migrationName}`)
     }
   }
 }

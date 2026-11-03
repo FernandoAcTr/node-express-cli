@@ -3,9 +3,9 @@ import { ConfigService } from './services/config.service'
 import { ShellService } from './services/shell.service'
 import { Logger, consoleLogger } from './logger'
 import { InquirerPrompter, Prompter } from './prompts'
-import { Config } from './types'
+import { Feature } from './types'
 
-export type ContextFeature = 'orm' | 'fileBasedRouting'
+export type ContextFeature = Feature | 'fileBasedRouting'
 
 export interface Context {
   cwd: string
@@ -14,7 +14,10 @@ export interface Context {
   fs: typeof fs
   logger: Logger
   prompter: Prompter
+  /** True si la feature está instalada o si el estado del proyecto la implica. */
   has(feature: ContextFeature): boolean
+  /** Registra una feature en `cli.config.json` al terminar una instalación. */
+  markInstalled(feature: Feature): void
 }
 
 export interface CreateContextOptions {
@@ -45,8 +48,13 @@ export function createContext(options: CreateContextOptions = {}): Context {
     logger,
     prompter,
     has(feature: ContextFeature): boolean {
-      const current: Config = config.getConfig()
+      const current = config.getConfig()
 
+      if (current.features.includes(feature)) {
+        return true
+      }
+
+      // Compatibilidad con proyectos anteriores a `features`.
       switch (feature) {
         case 'orm':
           return Boolean(current.orm)
@@ -55,6 +63,9 @@ export function createContext(options: CreateContextOptions = {}): Context {
         default:
           return false
       }
+    },
+    markInstalled(feature: Feature): void {
+      config.markFeature(feature)
     },
   }
 }

@@ -2,14 +2,10 @@ import fs from 'fs'
 import path from 'path'
 import { Router } from 'express'
 import logger from '../utils/logger'
+import { buildURLPath, routeResourceName } from '../utils/file_routes'
 
 export function registerRoutes(router: Router): void {
   void initFileBasedRoutes(router, [])
-}
-
-function buildURLPath(segments: string[]) {
-  const final = segments.map((val) => (val.startsWith('[') && val.endsWith(']') ? `:${val.slice(1, val.length - 1)}` : val))
-  return ('/' + final.join('/').replace('//', '')).replace('//', '/')
 }
 
 async function initFileBasedRoutes(router: Router, segments: string[]) {
@@ -25,7 +21,7 @@ async function initFileBasedRoutes(router: Router, segments: string[]) {
         continue
       }
 
-      const resourceName = entry.name == 'index.js' ? '/' : entry.name.slice(0, entry.name.length - 3)
+      const resourceName = routeResourceName(entry.name)
       const url = buildURLPath([...segments, resourceName])
 
       if (controller.GET) {

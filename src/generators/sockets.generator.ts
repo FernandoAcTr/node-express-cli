@@ -2,7 +2,8 @@ import { IFileSystemGenerator, IInstallerGenerator } from '../interfaces/generat
 import { Context } from '../context'
 import fs from 'fs'
 import path from 'path'
-import { PatchResult, patchAtAnchor } from '../patch/anchor'
+import { patchAtAnchor } from '../patch/anchor'
+import { Reporter } from '../report'
 
 export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerator {
   constructor(private readonly ctx: Context) {}
@@ -11,6 +12,7 @@ export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerat
 
   async copyFiles(): Promise<void> {
     const mainFile = path.join(this.ctx.cwd, 'src/main.ts')
+    const reporter = new Reporter(this.ctx.logger, 'already has the socket configuration')
 
     fs.copyFileSync(
       path.resolve(__dirname, '../../templates/generator/common/socketio/socket.ts'),
@@ -26,7 +28,7 @@ export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerat
     })
 
     if (importPatch.status === 'file-missing') {
-      this.report(mainFile, [importPatch])
+      reporter.patches(mainFile, [importPatch])
       return
     }
 
@@ -34,33 +36,15 @@ export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerat
       dedupeKey: 'new SocketIO(server)',
     })
 
-    this.report(mainFile, [importPatch, listenPatch])
-  }
-
-  private report(file: string, patches: PatchResult[]): void {
-    let changed = false
-    let skipped = 0
-    let failed = false
-
-    for (const patch of patches) {
-      if (patch.status === 'changed') {
-        changed = true
-      } else if (patch.status === 'skipped') {
-        skipped++
-      } else {
-        failed = true
-        this.ctx.logger.warn(patch.message ?? `Could not patch ${patch.file}`)
-      }
-    }
-
-    if (changed) {
-      this.ctx.logger.success(`Updated ${file}`)
-    } else if (!failed && skipped === patches.length) {
-      this.ctx.logger.success(`${file} already has the socket configuration`)
-    }
+    reporter.patches(mainFile, [importPatch, listenPatch])
   }
 
   async installDependencies(): Promise<void> {
+    if (this.ctx.has('socket')) {
+      this.ctx.logger.info('Socket.io is already installed; skipping dependency installation')
+      return
+    }
+
     this.ctx.logger.info('================= Installing Socket.io =================')
     await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} socket.io`)
   }

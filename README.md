@@ -28,6 +28,8 @@ El proyecto incluye y debe incluir un archivo llamado cli.config.json con las op
     "orm": "mongoose", -> opciones disponibles: mongoose | typeorm | sequelize | prisma
     "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
     "fileBasedRouting": false, -> opciones disponibles: true | false
+    "version": "3.3.0", -> versión del CLI que generó el proyecto
+    "features": ["orm", "auth"] -> features instaladas; las escribe el CLI automáticamente
 }
 ```
 
@@ -287,7 +289,8 @@ Para generar las llaves VAPID ejecuta:
 ```bash
 npm run vapid:generate
 ```
-y copia `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y opcionalmente `VAPID_SUBJECT` en tu archivo `.env`. Si las llaves no están configuradas el servidor arranca normalmente y solo registra una advertencia, dejando las notificaciones push deshabilitadas.
+
+Usa el runner de tu package manager (`pnpm run vapid:generate`, `yarn vapid:generate` o `bun run vapid:generate`) y copia `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y opcionalmente `VAPID_SUBJECT` en tu archivo `.env`. Si las llaves no están configuradas el servidor arranca normalmente y solo registra una advertencia, dejando las notificaciones push deshabilitadas.
 
 ## Ruteo basado en archivos
 Al crear un proyecto puedes elegir si deseas que las rutas sean manejadas con base en tu sistema de archivos (similar a lo que hace Next.js) o si prefieres manejarlas de manera manual, exportando un router de express en cada archivo de rutas (como se mencionó en la sección de módulos).

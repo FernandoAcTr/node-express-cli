@@ -1,13 +1,10 @@
 import path from 'path'
 import fs from 'fs'
-import {
-  IFileSystemGenerator,
-  IInstallerGenerator,
-  IPostGenerator,
-} from '../interfaces/generator.interface'
+import { IFileSystemGenerator, IInstallerGenerator, IPostGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { DbType } from '../types'
 import { PatchResult, patchAtAnchor } from '../patch/anchor'
+import { Reporter } from '../report'
 
 export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IInstallerGenerator {
   constructor(private readonly ctx: Context) {}
@@ -99,9 +96,7 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
     this.wireAuth()
 
     this.ctx.logger.success('-------------------------------------------------------------------------------------------')
-    this.ctx.logger.success(
-      'Auth module was wired up: passport.initialize() and the JWT strategy are registered in src/main.ts'
-    )
+    this.ctx.logger.success('Auth module was wired up: passport.initialize() and the JWT strategy are registered in src/main.ts')
     this.ctx.logger.success('The auth routes are already mounted by the app router')
     this.ctx.logger.success(
       'You need to run the database migrations. Depending on the ORM you chose it is necessary to run a specific command'
@@ -111,6 +106,7 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
 
   private wireAuth(): void {
     const mainFile = path.join(this.ctx.cwd, 'src/main.ts')
+    const reporter = new Reporter(this.ctx.logger)
     const imports: string[] = []
 
     if (this.dbType == DbType.MONGO) {
@@ -122,12 +118,10 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
     imports.push("import passport from 'passport'")
     imports.push("import { JWTStrategy } from './middlewares/passport'")
 
-    const patches: PatchResult[] = imports.map((line) =>
-      patchAtAnchor(mainFile, 'imports', line, { sort: true })
-    )
+    const patches: PatchResult[] = imports.map((line) => patchAtAnchor(mainFile, 'imports', line, { sort: true }))
 
     if (patches.some((patch) => patch.status === 'file-missing')) {
-      this.warnPatches(patches)
+      reporter.patches(mainFile, patches)
       return
     }
 
@@ -153,26 +147,15 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
       })
     )
 
-    this.warnPatches(patches)
-  }
-
-  private warnPatches(patches: PatchResult[]): void {
-    const seen = new Set<string>()
-
-    for (const patch of patches) {
-      if (patch.status !== 'anchor-missing' && patch.status !== 'file-missing') {
-        continue
-      }
-
-      const message = patch.message ?? `Could not patch ${patch.file}`
-      if (!seen.has(message)) {
-        seen.add(message)
-        this.ctx.logger.warn(message)
-      }
-    }
+    reporter.patches(mainFile, patches)
   }
 
   async installDependencies(): Promise<void> {
+    if (this.ctx.has('auth')) {
+      this.ctx.logger.info('Auth is already installed; skipping dependency installation')
+      return
+    }
+
     this.ctx.logger.info('================= Installing auth dependencies =================')
     await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`)
     await this.ctx.shell.execAsync(

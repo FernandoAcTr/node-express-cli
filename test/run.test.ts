@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { run } from '../src/run'
+import { Context } from '../src/context'
+
+function fakeContext(marked: string[]): Context {
+  return {
+    markInstalled: (feature: string) => marked.push(feature),
+  } as unknown as Context
+}
 
 describe('run', () => {
   it('executes phases in the documented order', async () => {
@@ -49,5 +56,30 @@ describe('run', () => {
         },
       })
     ).rejects.toThrow('boom')
+  })
+
+  it('marks the feature only after every phase succeeds', async () => {
+    const marked: string[] = []
+
+    await run({ post: async () => undefined }, { ctx: fakeContext(marked), feature: 'push' })
+
+    expect(marked).toEqual(['push'])
+  })
+
+  it('does not mark the feature when a phase fails', async () => {
+    const marked: string[] = []
+
+    await expect(
+      run(
+        {
+          copyFiles: async () => {
+            throw new Error('boom')
+          },
+        },
+        { ctx: fakeContext(marked), feature: 'push' }
+      )
+    ).rejects.toThrow('boom')
+
+    expect(marked).toEqual([])
   })
 })

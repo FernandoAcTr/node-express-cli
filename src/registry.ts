@@ -1,5 +1,6 @@
 import { Command, Generator } from './interfaces/generator.interface'
 import { Context, ContextFeature } from './context'
+import { Feature } from './types'
 import { AuthGenerator } from './generators/auth.generator'
 import { BaseGenerator } from './generators/base.generator'
 import { EslintGenerator } from './generators/eslint.generator'
@@ -33,6 +34,8 @@ export interface CommandDefinition {
   description: string
   aliases?: string[]
   requires?: ContextFeature[]
+  /** Feature que se marca en cli.config.json cuando el comando termina bien. */
+  feature?: Feature
   options?: Record<string, CommandOptionDefinition>
   create(ctx: Context, args: CommandArgs): Generator | Command
 }
@@ -73,21 +76,25 @@ export const commands: CommandDefinition[] = [
   {
     name: 'install:prettier',
     description: 'Add prettier to the project',
+    feature: 'prettier',
     create: (ctx) => new PrettierGenerator(ctx),
   },
   {
     name: 'install:eslint',
     description: 'Add eslint to the project',
+    feature: 'eslint',
     create: (ctx) => new EslintGenerator(ctx),
   },
   {
     name: 'install:socket',
     description: 'Add Socket.io to the project',
+    feature: 'socket',
     create: (ctx) => new SocketsGenerator(ctx),
   },
   {
     name: 'install:orm',
     description: 'Add Database support using an orm',
+    feature: 'orm',
     options: {
       orm: {
         type: 'string',
@@ -100,16 +107,19 @@ export const commands: CommandDefinition[] = [
     name: 'install:auth',
     description: 'Add basic scaffolding to auth with jwt and passport',
     requires: ['orm'],
+    feature: 'auth',
     create: (ctx) => new AuthGenerator(ctx),
   },
   {
     name: 'install:mailer',
     description: 'Add support for send mails via nodemailer library',
+    feature: 'mailer',
     create: (ctx) => new MailerGenerator(ctx),
   },
   {
     name: 'install:push',
     description: 'Add web push notifications support via web-push',
+    feature: 'push',
     create: (ctx) => new PushGenerator(ctx),
   },
   {
@@ -139,12 +149,12 @@ export const commands: CommandDefinition[] = [
   {
     name: 'install:tests',
     description: 'Add a library to do testing and some examples',
+    feature: 'tests',
     create: (ctx) => new TestGenerator(ctx),
   },
   {
     name: 'route:list',
-    description:
-      'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',
+    description: 'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',
     options: {
       omit: {
         type: 'string',

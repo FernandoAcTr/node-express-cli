@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { PatchResult, patchAtAnchor } from '../patch/anchor'
+import type { OperationResult } from '../report'
 
 export interface WirePushOptions {
   main?: boolean
@@ -13,11 +14,7 @@ export interface WirePushOptions {
   cwd?: string
 }
 
-export interface WirePushResult {
-  changed: string[]
-  skipped: string[]
-  warnings: string[]
-}
+export type WirePushResult = OperationResult
 
 const WEB_PUSH_IMPORT = "import webpush from 'web-push'"
 
@@ -119,6 +116,18 @@ function wireEnv(result: WirePushResult, runner: string, cwd: string): void {
   const content = fs.readFileSync(envFile, 'utf-8')
 
   if (content.includes('VAPID_PUBLIC_KEY')) {
+    const comment = /^# Webpush notifications\. Generate keys with: .*$/m
+
+    if (comment.test(content)) {
+      const updated = content.replace(comment, `# Webpush notifications. Generate keys with: ${runner} web-push generate-vapid-keys`)
+
+      if (updated !== content) {
+        fs.writeFileSync(envFile, updated)
+        result.changed.push(envFile)
+        return
+      }
+    }
+
     result.skipped.push(envFile)
     return
   }
@@ -163,14 +172,7 @@ function wireScript(result: WirePushResult, runner: string, cwd: string): void {
  * be executed again safely.
  */
 export function wirePush(options: WirePushOptions = {}): WirePushResult {
-  const {
-    main = true,
-    config = true,
-    env = true,
-    script = true,
-    packageRunner = 'npx',
-    cwd = process.cwd(),
-  } = options
+  const { main = true, config = true, env = true, script = true, packageRunner = 'npx', cwd = process.cwd() } = options
   const result: WirePushResult = { changed: [], skipped: [], warnings: [] }
 
   if (main) wireMain(result, cwd)

@@ -15,13 +15,13 @@ const silentLogger = {
   error: () => undefined,
 }
 
-async function initProject(fileBasedRouting: boolean): Promise<string> {
+async function initProject(fileBasedRouting: boolean, packageManager = 'npm'): Promise<string> {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-base-'))
   dirs.push(cwd)
 
   const prompter = new NonInteractivePrompter({
     name: 'app',
-    'package-manager': 'npm',
+    'package-manager': packageManager,
     'file-based-routing': fileBasedRouting,
   })
   const ctx = createContext({ cwd, prompter, logger: silentLogger })
@@ -69,5 +69,33 @@ describe('BaseGenerator routing selection', () => {
     for (const anchor of ['@nec:imports', '@nec:before-app', '@nec:before-json', '@nec:before-listen', '@nec:after-listen']) {
       expect(main).toContain(anchor)
     }
+  })
+
+  it('writes the initial config without pretending an ORM is installed', async () => {
+    const project = await initProject(false)
+    const config = JSON.parse(fs.readFileSync(path.join(project, 'cli.config.json'), 'utf-8'))
+
+    expect(config.features).toEqual([])
+    expect(config.orm).toBeUndefined()
+    expect(config.version).toBeDefined()
+  })
+
+  it('writes the base scripts for the selected package manager', async () => {
+    const project = await initProject(false)
+    const pkg = JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf-8'))
+
+    expect(pkg.scripts.dev).toContain('npm run start:compile')
+    expect(pkg.scripts.build).toBe('rimraf build && tsc && tsc-alias')
+    expect(pkg.scripts['vapid:generate']).toBe('npx web-push generate-vapid-keys')
+  })
+
+  it('uses the selected package manager in package.json scripts', async () => {
+    const project = await initProject(false, 'bun')
+    const pkg = JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf-8'))
+    const serialized = JSON.stringify(pkg.scripts)
+
+    expect(serialized).not.toMatch(/\bnpm\b|\bnpx\b/)
+    expect(pkg.scripts.dev).toContain('bun run start:compile')
+    expect(pkg.scripts['vapid:generate']).toBe('bunx web-push generate-vapid-keys')
   })
 })

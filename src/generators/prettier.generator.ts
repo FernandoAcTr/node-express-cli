@@ -7,8 +7,12 @@ export class PrettierGenerator implements IFileSystemGenerator, IInstallerGenera
   constructor(private readonly ctx: Context) {}
 
   async installDependencies(): Promise<void> {
-    this.ctx.logger.info('================= Installing Prettier =================')
-    await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prettier`)
+    if (this.ctx.has('prettier')) {
+      this.ctx.logger.info('Prettier is already installed; skipping dependency installation')
+    } else {
+      this.ctx.logger.info('================= Installing Prettier =================')
+      await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prettier`)
+    }
     this.ctx.config.setScript('prettier:fix', 'prettier --config .prettierrc.json --write src/**/**/*.ts')
   }
   async createDirectories(): Promise<void> {
