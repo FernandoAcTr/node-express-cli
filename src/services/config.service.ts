@@ -66,6 +66,19 @@ export class ConfigService {
     return commands[config.package_manger]
   }
 
+  public getPackageRunnerCommand() {
+    const config = this.getConfig()
+
+    const commands = {
+      [PackageManager.NPM]: 'npx',
+      [PackageManager.YARN]: 'yarn dlx',
+      [PackageManager.PNPM]: 'pnpm dlx',
+      [PackageManager.BUN]: 'bunx',
+    }
+
+    return commands[config.package_manger]
+  }
+
   public getTypeScriptExecutionCommand() {
     const config = this.getConfig()
 

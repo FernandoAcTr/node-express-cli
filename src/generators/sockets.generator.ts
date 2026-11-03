@@ -4,6 +4,7 @@ import { shellService } from '../services/shell.service'
 import { configService } from '../services/config.service'
 import fs from 'fs'
 import path from 'path'
+import { hasWebPushDependency, wirePush } from '../utils/wire_push'
 
 export class SocketsGenerator implements IPreGenerator, IInstallerGenerator, IFileSystemGenerator {
   async pre(): Promise<void> {
@@ -25,6 +26,11 @@ export class SocketsGenerator implements IPreGenerator, IInstallerGenerator, IFi
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/filerouting/index.ts'), './src/main.ts')
     } else {
       fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/socketio/index.ts'), './src/main.ts')
+    }
+
+    // install:socket replaces main.ts, so re-apply the webpush wiring when it is already installed.
+    if (hasWebPushDependency()) {
+      wirePush({ main: true, config: false, env: false, script: false })
     }
   }
 

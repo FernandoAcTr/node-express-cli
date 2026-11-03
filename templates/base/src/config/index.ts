@@ -24,4 +24,9 @@ export const config = Object.freeze({
     FROM_ADDRESS: process.env.MAIL_FROM_ADDRESS,
     FROM_NAME: process.env.MAIL_FROM_NAME,
   },
+  VAPID: {
+    PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+    PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    SUBJECT: process.env.VAPID_SUBJECT || 'mailto:support@example.com',
+  },
 })

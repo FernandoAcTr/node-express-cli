@@ -38,6 +38,9 @@ export const argv = yargs.options({
   'install:mailer': {
     description: 'Add support for send mails via nodemailer library',
   },
+  'install:push': {
+    description: 'Add web push notifications support via web-push',
+  },
   'install:tests': {
     description: 'Add a library to do testing and some examples',
   },

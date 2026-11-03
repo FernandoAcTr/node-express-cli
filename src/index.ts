@@ -18,6 +18,7 @@ import { MigrationGenerator } from './generators/migration.generator'
 import { FactoryGenerator } from './generators/factory.generator'
 import { TestGenerator } from './generators/tests.generator'
 import { RouteListCommand } from './commands/route_list.command'
+import { PushGenerator } from './generators/push.generator'
 
 let command = (argv as any)._[0]
 
@@ -61,6 +62,10 @@ switch (command) {
 
   case 'install:mailer':
     g = new MailerGenerator()
+    break
+
+  case 'install:push':
+    g = new PushGenerator()
     break
 
   case 'make:seeder':

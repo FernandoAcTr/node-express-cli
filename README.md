@@ -276,6 +276,19 @@ Mailer.sendNotification({
 })
 ```
 
+## Notificaciones Push
+Es posible agregar soporte para notificaciones push mediante la librería [web-push](https://github.com/web-push-libs/web-push) con el comando:
+```bash
+node-express-cli install:push
+```
+Esta acción instala `web-push` y sus tipos, agrega el bloque `VAPID` en `src/config/index.ts`, registra `webpush.setVapidDetails()` en `src/main.ts`, añade las variables correspondientes en `.env.example` y el script `vapid:generate` a tu `package.json`.
+
+Para generar las llaves VAPID ejecuta:
+```bash
+npm run vapid:generate
+```
+y copia `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y opcionalmente `VAPID_SUBJECT` en tu archivo `.env`. Si las llaves no están configuradas el servidor arranca normalmente y solo registra una advertencia, dejando las notificaciones push deshabilitadas.
+
 ## Ruteo basado en archivos
 Al crear un proyecto puedes elegir si deseas que las rutas sean manejadas con base en tu sistema de archivos (similar a lo que hace Next.js) o si prefieres manejarlas de manera manual, exportando un router de express en cada archivo de rutas (como se mencionó en la sección de módulos).
 El ruteo basado en archivos es una opción que permite que las rutas sean manejadas de manera automática, sin necesidad de importarlas manualmente en el archivo principal del servidor. Las rutas serán creadas basándose en los nombres de los archivos y directorios dentro de la carpeta routes. Ejemplo: 
