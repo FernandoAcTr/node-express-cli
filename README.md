@@ -106,22 +106,39 @@ Para el caso de [Sequelize](https://sequelize.org) también se incluyen una list
 Cuando eliges Prisma también se genera un archivo raíz llamado `prisma.config.ts`, el cual apunta al schema en `src/database/prisma/schema.prisma`, usa `src/database/prisma/migrations` como directorio de migraciones y configura el comando de `seed` según el package manager elegido. La conexión a la base de datos se toma de la variable de entorno `DB_URL` definida en tu `.env`.
 
 ## Creación de módulos
-Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
-El archivo de rutas deben exportar por defecto una instancia de un `Router` de `express` porque será leído automáticamente en el archivo principal del servidor `index.ts`. Ejemplo:
+Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables.
+
+El archivo de rutas debe exportar por defecto una instancia de un `Router` de `express` porque será leído automáticamente en el archivo principal del servidor `main.ts`. Opcionalmente también puede exportar:
+
+- `PREFIX`: prefijo con el que se montará el router. Si se omite, se monta directamente en `/api`.
+- `MIDDLEWARES`: arreglo de middlewares que se aplican a todas las rutas del archivo.
+
+Las rutas declaradas dentro del router son relativas al prefijo, por lo que no debes repetir `/api` en ellas. Ejemplo para `src/modules/products/products.routes.ts`:
 
 ```TS
-import { Router } from 'express';
+import { RequestHandler, Router } from 'express';
+import * as Controller from './products.controller';
+import { storeValidators, updateValidators } from './products.validator';
 
 const router = Router();
 
-router.get('/api/products', (req, res) => {
-  res.send('Hello World');
-});
+export const PREFIX = '/products';
+
+// Middlewares que aplican a todas las rutas de este archivo (ej. autenticación)
+export const MIDDLEWARES: RequestHandler[] = [];
+
+router.get('/', Controller.index);
+router.get('/:id', Controller.show);
+router.post('/', storeValidators, Controller.store);
+router.put('/:id', updateValidators, Controller.update);
+router.delete('/:id', Controller.destroy);
 
 export default router;
 ```
 
-Como un módulo puede contener varios archivos de código, para identificar el archivo de rutas, este debe contener la palabra `routes` en su nombre, por ejemplo `products.routes.ts` o `products_routes.ts`, `routes.ts`, etc.
+Con esto se generan las rutas `/api/products`, `/api/products/:id`, etc. Si necesitas rutas que no deben pasar por los `MIDDLEWARES` de un prefijo protegido, colócalas en un directorio `public`: sus routers se montan antes que los de sus directorios hermanos.
+
+Como un módulo puede contener varios archivos de código, para identificar el archivo de rutas, este debe llamarse `routes.ts`, `router.ts` o terminar en `.routes.ts` / `.router.ts`, por ejemplo `products.routes.ts` o `products.router.ts`.
 
 Con esto y sin mayor configuración adicional, las rutas del módulo ya estarán disponibles.
 

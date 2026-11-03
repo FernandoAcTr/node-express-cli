@@ -28,7 +28,12 @@ async function initRoutes(router: Router, path: string[]) {
     return r
   }
 
-  const entries = fs.readdirSync(currentDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))
+  // Anonymous routers must precede siblings whose MIDDLEWARES protect the entire shared prefix.
+  // Otherwise /projects/public/:token is intercepted by /projects activity/cards auth first.
+  const entries = fs.readdirSync(currentDir, { withFileTypes: true }).sort((a, b) => {
+    const publicPriority = Number(b.isDirectory() && b.name === 'public') - Number(a.isDirectory() && a.name === 'public')
+    return publicPriority || a.name.localeCompare(b.name)
+  })
 
   // First, recurse into subdirectories (routes from inside out).
   for (const entry of entries) {

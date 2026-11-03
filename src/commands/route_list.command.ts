@@ -74,6 +74,16 @@ async function listFilebasedRoutes(paths: string[] = [], routeGroups: Record<str
   }
 }
 
+function joinRoutePath(prefix: string, routePath: string): string {
+  // Older projects declare the /api prefix inside the route file itself.
+  if (/^\/api(\/|$)/.test(routePath)) {
+    return routePath
+  }
+
+  const segments = ['/api', prefix, routePath].join('/').split('/').filter((value) => !!value)
+  return `/${segments.join('/')}`
+}
+
 function extractRoutesFromFile(filePath: string): Route[] {
   const code = fs.readFileSync(filePath, 'utf-8')
   const ast = parser.parse(code, {
@@ -82,10 +92,23 @@ function extractRoutesFromFile(filePath: string): Route[] {
   })
 
   const routes: Route[] = []
+  let prefix = ''
 
   traverse(ast, {
+    ExportNamedDeclaration({ node }) {
+      const declaration = node.declaration
+      if (declaration?.type !== 'VariableDeclaration') return
+
+      declaration.declarations.forEach((declarator) => {
+        if (declarator.id.type !== 'Identifier' || declarator.id.name !== 'PREFIX') return
+        const init = declarator.init
+        if (init?.type === 'StringLiteral') {
+          prefix = init.value
+        }
+      })
+    },
     CallExpression({ node }) {
-      // Detect calls like: router.get('/api/products', ...)
+      // Detect calls like: router.get('/', ...)
       if (
         node.callee.type === 'MemberExpression' &&
         node.callee.object.type === 'Identifier' &&
@@ -105,7 +128,7 @@ function extractRoutesFromFile(filePath: string): Route[] {
     },
   })
 
-  return routes
+  return routes.map((route) => ({ ...route, path: joinRoutePath(prefix, route.path) }))
 }
 
 async function listRoutes(nestedPath: string[] = [], routeGroups: Record<string, Route[]> = {}): Promise<void> {

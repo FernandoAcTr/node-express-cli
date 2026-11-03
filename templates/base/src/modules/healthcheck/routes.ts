@@ -1,8 +1,10 @@
 import { Router } from 'express'
 const router = Router()
 
+export const PREFIX = '/healthcheck'
+
 //importing all routes here
-router.get('/healthcheck', (req, res) => {
+router.get('/', (req, res) => {
   res.send('Ok')
 })
 
