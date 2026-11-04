@@ -4,8 +4,16 @@ import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../src/context'
 import { ConfigService } from '../src/services/config.service'
+import { DbType } from '../src/types'
 
 const dirs: string[] = []
+
+const silentLogger = {
+  info: () => undefined,
+  success: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+}
 
 function tmpDir(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-context-'))
@@ -22,12 +30,46 @@ afterEach(() => {
 describe('createContext', () => {
   it('reports installed features from cli.config.json', () => {
     const cwd = tmpDir()
-    fs.writeFileSync(path.join(cwd, 'cli.config.json'), JSON.stringify({ orm: 'typeorm', fileBasedRouting: true, package_manger: 'npm' }))
+    fs.writeFileSync(
+      path.join(cwd, 'cli.config.json'),
+      JSON.stringify({ orm: 'typeorm', fileBasedRouting: true, package_manger: 'npm', features: ['orm'] })
+    )
 
-    const ctx = createContext({ cwd })
+    const ctx = createContext({ cwd, logger: silentLogger })
 
     expect(ctx.has('orm')).toBe(true)
     expect(ctx.has('fileBasedRouting')).toBe(true)
+  })
+
+  it('falls back to a legacy ORM value and warns only once', () => {
+    const cwd = tmpDir()
+    fs.writeFileSync(path.join(cwd, 'cli.config.json'), JSON.stringify({ orm: 'typeorm', fileBasedRouting: false, package_manger: 'npm' }))
+    const warnings: string[] = []
+    const ctx = createContext({
+      cwd,
+      logger: { ...silentLogger, warn: (message: string) => warnings.push(message) },
+    })
+
+    expect(ctx.has('orm')).toBe(true)
+    expect(ctx.has('orm')).toBe(true)
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain('orm')
+  })
+
+  it('uses features as the source of truth for the ORM feature', () => {
+    const cwd = tmpDir()
+    fs.writeFileSync(
+      path.join(cwd, 'cli.config.json'),
+      JSON.stringify({ fileBasedRouting: false, package_manger: 'npm', features: ['orm'] })
+    )
+    const warnings: string[] = []
+    const ctx = createContext({
+      cwd,
+      logger: { ...silentLogger, warn: (message: string) => warnings.push(message) },
+    })
+
+    expect(ctx.has('orm')).toBe(true)
+    expect(warnings).toEqual([])
   })
 
   it('reports missing features', () => {
@@ -78,12 +120,24 @@ describe('createContext', () => {
 
   it('marks a feature and persists it in cli.config.json', () => {
     const cwd = tmpDir()
-    const ctx = createContext({ cwd })
+    const ctx = createContext({ cwd, logger: silentLogger })
 
     expect(ctx.has('push')).toBe(false)
     ctx.markInstalled('push')
 
     expect(ctx.has('push')).toBe(true)
     expect(new ConfigService(cwd).getConfig().features).toEqual(['push'])
+  })
+
+  it('persists feature metadata atomically with the feature', () => {
+    const cwd = tmpDir()
+    const ctx = createContext({ cwd, logger: silentLogger })
+
+    ctx.markInstalled('orm', { orm: DbType.TYPEORM })
+
+    expect(new ConfigService(cwd).getConfig()).toMatchObject({
+      orm: DbType.TYPEORM,
+      features: ['orm'],
+    })
   })
 })

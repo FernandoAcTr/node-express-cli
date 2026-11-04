@@ -67,6 +67,31 @@ describe('ConfigService', () => {
     expect(config.getConfig().features).toEqual(['push'])
   })
 
+  it('writes feature metadata together with the feature', () => {
+    const root = tmpDir()
+    const config = new ConfigService(root)
+
+    expect(config.markFeature('orm', { orm: DbType.TYPEORM })).toBe(true)
+    expect(config.getConfig()).toMatchObject({
+      orm: DbType.TYPEORM,
+      features: ['orm'],
+    })
+  })
+
+  it('updates metadata without duplicating the feature', () => {
+    const root = tmpDir()
+    const config = new ConfigService(root)
+
+    config.markFeature('orm', { orm: DbType.TYPEORM })
+
+    expect(config.markFeature('orm', { orm: DbType.SEQUELIZE })).toBe(true)
+    expect(config.getConfig()).toMatchObject({
+      orm: DbType.SEQUELIZE,
+      features: ['orm'],
+    })
+    expect(config.markFeature('orm', { orm: DbType.SEQUELIZE })).toBe(false)
+  })
+
   it('preserves unknown keys when merging', () => {
     const root = tmpDir()
     const file = path.join(root, 'cli.config.json')

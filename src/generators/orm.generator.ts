@@ -1,6 +1,6 @@
 import { IGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import { DbType } from '../types'
+import { DbType, FeatureMetadata } from '../types'
 import { renderTemplate } from '../utils/template'
 import { ormScripts } from '../utils/scripts'
 import { Reporter } from '../report'
@@ -10,24 +10,21 @@ import { ormWireSteps } from '../installers/specs/orm.spec'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
-  private previousOrm?: DbType
 
   constructor(private readonly ctx: Context) {}
 
   async pre(): Promise<void> {
-    const orm = await this.ctx.prompter.select<DbType>({
+    this.orm = await this.ctx.prompter.select<DbType>({
       message: 'Choose an ORM',
       name: 'orm',
       choices: Object.values(DbType).map((x) => ({ name: x, value: x })),
       default: DbType.TYPEORM,
     })
+  }
 
-    const config = this.ctx.config.getConfig()
-    this.previousOrm = config.orm
-    config.orm = orm
-    this.ctx.config.writeConfig(config)
-
-    this.orm = orm
+  /** `run()` persiste el ORM elegido junto con la feature al terminar todo. */
+  installMetadata(): FeatureMetadata {
+    return { orm: this.orm }
   }
 
   async createDirectories(): Promise<void> {
@@ -109,9 +106,9 @@ export class OrmGenerator implements IGenerator {
   }
 
   async installDependencies(): Promise<void> {
-    // `hasFeature` distingue una instalación completa de un `orm` escrito en
-    // config antes de que la instalación terminara.
-    const alreadyInstalled = this.ctx.has('orm') && this.ctx.config.hasFeature('orm') && this.previousOrm === this.orm
+    // `has('orm')` ya se apoya en `features`; comparar con el ORM guardado evita
+    // reinstalar dependencias al repetir el mismo motor y permite cambiar de ORM.
+    const alreadyInstalled = this.ctx.has('orm') && this.ctx.config.getConfig().orm === this.orm
     const runner = this.ctx.config.getPackageRunnerCommand()
     const cwd = this.ctx.cwd
 

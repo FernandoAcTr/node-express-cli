@@ -26,3 +26,9 @@ export type Config = {
   /** Features ya instaladas; permite repetir comandos sin duplicar trabajo. */
   features: Feature[]
 }
+
+/**
+ * Estado adicional que se persiste junto con una feature. Se escribe en la
+ * misma operación que `features` para que nunca queden desincronizados.
+ */
+export type FeatureMetadata = Partial<Pick<Config, 'orm'>>

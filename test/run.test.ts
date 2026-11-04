@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { run } from '../src/run'
 import { Context } from '../src/context'
+import { DbType, Feature, FeatureMetadata } from '../src/types'
 
-function fakeContext(marked: string[]): Context {
+function fakeContext(marked: Array<[Feature, FeatureMetadata | undefined]>): Context {
   return {
-    markInstalled: (feature: string) => marked.push(feature),
+    markInstalled: (feature: Feature, metadata?: FeatureMetadata) => marked.push([feature, metadata]),
   } as unknown as Context
 }
 
@@ -76,15 +77,15 @@ describe('run', () => {
   })
 
   it('marks the feature only after every phase succeeds', async () => {
-    const marked: string[] = []
+    const marked: Array<[Feature, FeatureMetadata | undefined]> = []
 
     await run({ post: async () => undefined }, { ctx: fakeContext(marked), feature: 'push' })
 
-    expect(marked).toEqual(['push'])
+    expect(marked).toEqual([['push', undefined]])
   })
 
   it('does not mark the feature when a phase fails', async () => {
-    const marked: string[] = []
+    const marked: Array<[Feature, FeatureMetadata | undefined]> = []
 
     await expect(
       run(
@@ -98,5 +99,19 @@ describe('run', () => {
     ).rejects.toThrow('boom')
 
     expect(marked).toEqual([])
+  })
+
+  it('persists generator metadata together with the feature', async () => {
+    const marked: Array<[Feature, FeatureMetadata | undefined]> = []
+
+    await run(
+      {
+        post: async () => undefined,
+        installMetadata: () => ({ orm: DbType.TYPEORM }),
+      },
+      { ctx: fakeContext(marked), feature: 'orm' }
+    )
+
+    expect(marked).toEqual([['orm', { orm: DbType.TYPEORM }]])
   })
 })

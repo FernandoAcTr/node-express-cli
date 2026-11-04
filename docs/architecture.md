@@ -9,7 +9,7 @@ para añadir comandos sin volver a duplicar plantillas ni parches frágiles.
 | ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Entrada       | `src/index.ts`                          | Resuelve el comando desde el registry y ejecuta el lifecycle.                                    |
 | Registro      | `src/registry.ts`                       | Única fuente de verdad: nombre, descripción, aliases, `requires`, `requiresProject`, `feature`, opciones y factory. |
-| Lifecycle     | `src/run.ts`                            | Orden fijo de fases; marca la feature al terminar.                                               |
+| Lifecycle     | `src/run.ts`                            | Orden fijo de fases; marca la feature y su metadata al terminar.                                |
 | Contexto      | `src/context.ts`                        | Inyecta `config`, `project`, `wiring`, `shell`, `fs`, `logger`, `prompter`, `cwd`, `force`, `has` y `markInstalled`. |
 | Escritura     | `src/services/project.service.ts`       | Política de propiedad, manifest y rutas absolutas dentro del proyecto.                           |
 | Generadores   | `src/generators/`                       | Implementan solo las fases que necesitan.                                                        |
@@ -36,10 +36,15 @@ pre -> createDirectories -> copyFiles -> installDependencies -> post -> run
 - `run`: comandos que solo ejecutan una acción (por ejemplo `route:list`).
 - `rollback` (opcional): limpia lo creado si una fase anterior lanza. `init` lo
   usa para borrar el proyecto a medias; el resto de generadores no lo necesitan.
+- `installMetadata` (opcional): devuelve el estado que `run()` debe persistir
+  junto con la feature. `install:orm` lo usa para guardar `{ orm }` al final.
 
 Si el comando declara `feature` en el registry y todas las fases terminan bien,
-`run()` llama a `ctx.markInstalled(feature)`. Si una fase lanza, la feature **no**
-se escribe y `src/index.ts` muestra el error con `handleError`.
+`run()` llama a `ctx.markInstalled(feature, metadata)`. La feature y su metadata
+se escriben en una sola operación atómica sobre `cli.config.json`. Si una fase
+lanza, no se escribe nada y `src/index.ts` muestra el error con `handleError`.
+Por eso `install:orm` ya no escribe `config.orm` en `pre()`: un fallo de
+instalación deja el proyecto sin ORM persistido.
 
 ## Contexto
 
@@ -58,13 +63,20 @@ export interface Context {
   prompter: Prompter
   force: boolean
   has(feature: ContextFeature): boolean
-  markInstalled(feature: Feature): void
+  markInstalled(feature: Feature, metadata?: FeatureMetadata): void
 }
 ```
 
-`ctx.has('push')` consulta `features` en `cli.config.json` (con fallback legacy
-para `orm` y `fileBasedRouting`). Úsalo para saltar trabajo ya hecho sin
-inspeccionar `package.json`.
+`ctx.has('push')` consulta `features` en `cli.config.json` como fuente de
+verdad. Para proyectos anteriores a `features`, `has('orm')` cae al valor de
+`config.orm` y avisa una sola vez por contexto para que el usuario pueda
+regularizar el estado con `install:orm`; `fileBasedRouting` se lee directamente
+de la configuración. Úsalo para saltar trabajo ya hecho sin inspeccionar
+`package.json`.
+
+`markInstalled(feature, metadata?)` escribe la feature y su metadata en una sola
+operación. El único metadata actual es `{ orm }`, que se registra al terminar
+`install:orm`.
 
 Los tests pueden construir el contexto con `createContext({ cwd, logger, prompter, shell, force })`
 y sustituir solo lo necesario. `ctx.cwd` es la raíz del proyecto; ningún
@@ -133,6 +145,10 @@ antes de crear nada.
   lanza `CliError` con un hint.
 - `features` es la fuente de verdad de la idempotencia. Las features válidas se
   declaran en `FEATURES` (`src/types/index.ts`); `Feature` se deriva de esa lista.
+- `features` y `orm` se escriben juntos al final de `install:orm` mediante
+  `ctx.markInstalled('orm', { orm })`; un fallo no deja el ORM persistido.
+- Los proyectos viejos sin `features` siguen funcionando: `has('orm')` usa
+  `config.orm` como fallback y emite un warning por contexto.
 
 ## Package manager
 
@@ -351,6 +367,7 @@ npm run test:smoke # genera, instala y compila un proyecto real (lento)
 | ----------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Unit        | `test/utils`, `test/services`, `test/patch`, `test/wiring`  | helpers, configuración, `ProjectService`/manifest, markers, bloques, `WiringService`        |
 | Instaladores| `test/installers`                                           | specs, `SpecGenerator`, base sin features opcionales, `installer(spec)`                     |
+| Contratos   | `test/contracts`                                            | todos los `install:*`: idempotencia, líneas custom, placeholders, estado y scripts           |
 | Generadores | `test/generators`, `test/commands`                          | routing, módulos, auth, mailer, push, migraciones, sockets, `route:list`                     |
 | Golden      | `test/golden`                                               | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json`      |
 | Smoke       | `test/smoke`                                                | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                      |

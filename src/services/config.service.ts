@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { Config, DbType, FEATURES, Feature, PackageManager } from '../types'
+import { Config, DbType, FEATURES, Feature, FeatureMetadata, PackageManager } from '../types'
 import { version } from '../version'
 import { CliError } from '../errors'
 
@@ -88,15 +88,26 @@ export class ConfigService {
     return next
   }
 
-  /** Marca una feature como instalada. Devuelve true si cambió el archivo. */
-  public markFeature(feature: Feature): boolean {
+  /**
+   * Marca una feature como instalada junto con su metadata en una única
+   * escritura. Devuelve true si cambió el archivo.
+   */
+  public markFeature(feature: Feature, metadata: FeatureMetadata = {}): boolean {
     const config = this.getConfig()
+    const features = config.features.includes(feature) ? config.features : [...config.features, feature]
+    const metadataChanged = metadata.orm !== undefined && config.orm !== metadata.orm
 
-    if (config.features.includes(feature)) {
+    if (features.length === config.features.length && !metadataChanged) {
       return false
     }
 
-    this.writeConfig({ features: [...config.features, feature] })
+    const next: Partial<Config> = { features }
+
+    if (metadata.orm !== undefined) {
+      next.orm = metadata.orm
+    }
+
+    this.writeConfig(next)
     return true
   }
 

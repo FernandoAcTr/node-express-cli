@@ -4,7 +4,7 @@ import { ProjectService } from './services/project.service'
 import { ShellService } from './services/shell.service'
 import { Logger, consoleLogger } from './logger'
 import { InquirerPrompter, Prompter } from './prompts'
-import { Feature } from './types'
+import { Feature, FeatureMetadata } from './types'
 import { WiringService } from './wiring'
 
 export type ContextFeature = Feature | 'fileBasedRouting'
@@ -22,8 +22,8 @@ export interface Context {
   force: boolean
   /** True si la feature está instalada o si el estado del proyecto la implica. */
   has(feature: ContextFeature): boolean
-  /** Registra una feature en `cli.config.json` al terminar una instalación. */
-  markInstalled(feature: Feature): void
+  /** Registra una feature (y su metadata) en `cli.config.json` al terminar. */
+  markInstalled(feature: Feature, metadata?: FeatureMetadata): void
 }
 
 export interface CreateContextOptions {
@@ -58,6 +58,8 @@ export function createContext(options: CreateContextOptions = {}): Context {
       project,
     })
 
+  const legacyWarnings = new Set<ContextFeature>()
+
   return {
     cwd,
     config,
@@ -71,22 +73,32 @@ export function createContext(options: CreateContextOptions = {}): Context {
     has(feature: ContextFeature): boolean {
       const current = config.getConfig()
 
-      if (feature !== 'fileBasedRouting' && current.features.includes(feature)) {
+      if (feature === 'fileBasedRouting') {
+        return Boolean(current.fileBasedRouting)
+      }
+
+      if (current.features.includes(feature)) {
         return true
       }
 
-      // Compatibilidad con proyectos anteriores a `features`.
-      switch (feature) {
-        case 'orm':
-          return Boolean(current.orm)
-        case 'fileBasedRouting':
-          return Boolean(current.fileBasedRouting)
-        default:
-          return false
+      // Proyectos anteriores a `features`: el ORM configurado sigue siendo una
+      // señal válida, pero avisamos una sola vez para que el usuario pueda
+      // regularizar el estado con `install:orm`.
+      if (feature === 'orm' && current.orm) {
+        if (!legacyWarnings.has('orm')) {
+          legacyWarnings.add('orm')
+          logger.warn(
+            'cli.config.json has an ORM but does not list the "orm" feature; treating it as installed. Run "install:orm" to update the project state.'
+          )
+        }
+
+        return true
       }
+
+      return false
     },
-    markInstalled(feature: Feature): void {
-      config.markFeature(feature)
+    markInstalled(feature: Feature, metadata?: FeatureMetadata): void {
+      config.markFeature(feature, metadata)
     },
   }
 }

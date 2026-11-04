@@ -1,44 +1,35 @@
-import { Command, Generator } from './interfaces/generator.interface'
+import { Lifecycle } from './interfaces/generator.interface'
 import { Context } from './context'
-import { Feature } from './types'
-
-interface Lifecycle {
-  pre?(): Promise<void>
-  createDirectories?(): Promise<void>
-  copyFiles?(): Promise<void>
-  installDependencies?(): Promise<void>
-  post?(): Promise<void>
-  run?(): Promise<void>
-  /** Limpieza opcional si una fase falla (p. ej. borrar un proyecto a medias). */
-  rollback?(): Promise<void> | void
-}
+import { Feature, FeatureMetadata } from './types'
 
 export interface RunOptions {
   ctx?: Context
   /** Feature que se registra en cli.config.json si todas las fases terminan bien. */
   feature?: Feature
+  /** Metadata extra que se persiste junto con la feature. */
+  metadata?: FeatureMetadata
 }
 
 /**
  * Pipeline fijo del ciclo de vida. Solo se ejecutan las fases que el generador
  * implementa; los errores se propagan a `main().catch(handleError)`.
  */
-export async function run(generator: Generator | Command, options: RunOptions = {}): Promise<void> {
-  const lifecycle = generator as Lifecycle
-
+export async function run(generator: Lifecycle, options: RunOptions = {}): Promise<void> {
   try {
-    await lifecycle.pre?.()
-    await lifecycle.createDirectories?.()
-    await lifecycle.copyFiles?.()
-    await lifecycle.installDependencies?.()
-    await lifecycle.post?.()
-    await lifecycle.run?.()
+    await generator.pre?.()
+    await generator.createDirectories?.()
+    await generator.copyFiles?.()
+    await generator.installDependencies?.()
+    await generator.post?.()
+    await generator.run?.()
   } catch (error) {
-    await lifecycle.rollback?.()
+    await generator.rollback?.()
     throw error
   }
 
   if (options.ctx && options.feature) {
-    options.ctx.markInstalled(options.feature)
+    // La metadata del generador y la feature se escriben juntas al final: si
+    // una fase falla no queda estado a medias en cli.config.json.
+    options.ctx.markInstalled(options.feature, options.metadata ?? generator.installMetadata?.())
   }
 }
