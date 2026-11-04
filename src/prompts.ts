@@ -103,9 +103,7 @@ export class NonInteractivePrompter implements Prompter {
       })
     }
 
-    const match = options.choices.find(
-      (choice) => choice.value === flag || String(choice.value) === String(flag) || choice.name === flag
-    )
+    const match = options.choices.find((choice) => choice.value === flag || String(choice.value) === String(flag) || choice.name === flag)
 
     if (!match) {
       throw new CliError(`Invalid value "${String(flag)}" for "${options.name ?? 'select'}"`, {

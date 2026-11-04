@@ -184,10 +184,10 @@ import { JWTStrategy } from './middlewares/passport'
 console.debug('Applied config: ', config)
 
 // @nec:before-app
-passport.use('jwt', JWTStrategy)
 AppDataSource.initialize()
   .then(() => logger.info('🚀 Database connection is online...'))
   .catch((error) => logger.error(error))
+passport.use('jwt', JWTStrategy)
 const app = express()
 const router = express.Router()
 

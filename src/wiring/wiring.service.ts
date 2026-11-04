@@ -63,9 +63,14 @@ export class WiringService {
     this.fs = options.fs ?? nodeFileSystem
   }
 
-  /** Añade un import al bloque `@nec:imports` de `src/main.ts`. */
-  public import(statement: string, options: WireOptions = {}): OperationResult {
-    return this.stagePatch('src/main.ts', {
+  /**
+   * Añade un import al bloque `@nec:imports` de `src/main.ts`.
+   *
+   * Las operaciones de staging no devuelven resultado: solo `commit()` o
+   * `transaction()` informan de lo que realmente se escribió.
+   */
+  public import(statement: string, options: WireOptions = {}): void {
+    this.stagePatch('src/main.ts', {
       marker: anchorComment('imports'),
       snippet: statement,
       options: {
@@ -77,8 +82,8 @@ export class WiringService {
   }
 
   /** Añade código junto a un anchor de `src/main.ts`. */
-  public main(anchor: AnchorName, code: string, options: WireOptions = {}): OperationResult {
-    return this.stagePatch('src/main.ts', {
+  public main(anchor: AnchorName, code: string, options: WireOptions = {}): void {
+    this.stagePatch('src/main.ts', {
       marker: anchorComment(anchor),
       snippet: code,
       options: {
@@ -90,8 +95,8 @@ export class WiringService {
   }
 
   /** Añade una entrada al objeto `config` de `src/config/index.ts`. */
-  public config(code: string, options: WireOptions = {}): OperationResult {
-    return this.stagePatch('src/config/index.ts', {
+  public config(code: string, options: WireOptions = {}): void {
+    this.stagePatch('src/config/index.ts', {
       marker: DEFAULT_CONFIG_MARKER,
       snippet: code,
       options: {
@@ -102,8 +107,8 @@ export class WiringService {
   }
 
   /** Añade variables a `.env.example`. */
-  public env(code: string, options: WireOptions = {}): OperationResult {
-    return this.stagePatch('.env.example', {
+  public env(code: string, options: WireOptions = {}): void {
+    this.stagePatch('.env.example', {
       marker: DEFAULT_ENV_MARKER,
       snippet: code,
       options: {
@@ -117,8 +122,8 @@ export class WiringService {
    * Escribe un bloque de variables en `.env.example` usando el anchor
    * `# @nec:env`. El bloque se puede reemplazar en instalaciones posteriores.
    */
-  public envBlock(marker: string, code: string, options: WireOptions = {}): OperationResult {
-    return this.block('.env.example', marker, code, {
+  public envBlock(marker: string, code: string, options: WireOptions = {}): void {
+    this.block('.env.example', marker, code, {
       ...options,
       after: DEFAULT_ENV_MARKER,
       comment: '#',
@@ -150,7 +155,7 @@ export class WiringService {
    * Sustituye un bloque `@nec:<marker>:start` / `@nec:<marker>:end` de `file`.
    * Si el bloque no existe, se crea después de `after`.
    */
-  public block(file: string, marker: string, code: string, options: BlockWireOptions = {}): OperationResult {
+  public block(file: string, marker: string, code: string, options: BlockWireOptions = {}): void {
     const absolute = this.resolve(file)
     const blockOptions: BlockOptions = {
       dedupeKey: options.key,
@@ -160,12 +165,11 @@ export class WiringService {
     const error = this.validateBlock(absolute, marker, blockOptions)
 
     if (error) {
-      return this.blockFile(absolute, error)
+      this.blockFile(absolute, error)
+      return
     }
 
     this.queue.push({ kind: 'block', file: absolute, marker, code, options: blockOptions })
-
-    return { changed: [absolute], skipped: [], warnings: [] }
   }
 
   /** Aplica todo lo encolado y devuelve el resultado definitivo. */
@@ -216,34 +220,35 @@ export class WiringService {
     this.reset()
   }
 
-  /** Ejecuta varias operaciones y las aplica de forma atómica al final. */
+  /**
+   * Ejecuta varias operaciones y las aplica de forma atómica al final.
+   *
+   * No es reentrante: si hay operaciones encoladas de una transacción anterior
+   * (o un staging fallido pendiente), lanza un error en vez de descartarlas en
+   * silencio. Usa `discard()` de forma explícita para limpiar la cola.
+   */
   public transaction(wire: (wiring: WiringService) => void): OperationResult {
-    this.discard()
+    if (this.queue.length > 0 || this.pendingWarnings.length > 0) {
+      throw new Error(
+        'WiringService.transaction() cannot start with pending operations. Call commit() or discard() before starting a new transaction.'
+      )
+    }
+
     wire(this)
 
     return this.commit()
   }
 
-  /** Comprueba markers sin modificar nada. */
-  public missing(file: string, markers: string[]): PatchResult[] {
-    return findMissingMarkers(this.resolve(file), markers, this.fs)
-  }
-
-  /** True si hay warnings pendientes de un staging fallido. */
-  public hasWarnings(): boolean {
-    return this.pendingWarnings.length > 0
-  }
-
-  private stagePatch(relative: string, patch: MarkerPatch): OperationResult {
+  private stagePatch(relative: string, patch: MarkerPatch): void {
     const absolute = this.resolve(relative)
     const missing = findMissingMarkers(absolute, [patch.marker], this.fs)
 
     if (missing.length > 0) {
-      return this.blockFile(absolute, missing[0].message ?? `Could not patch ${absolute}.`)
+      this.blockFile(absolute, missing[0].message ?? `Could not patch ${absolute}.`)
+      return
     }
 
     this.queue.push({ kind: 'patch', file: absolute, patch })
-    return { changed: [absolute], skipped: [], warnings: [] }
   }
 
   private validateBlock(file: string, marker: string, options: BlockOptions): string | undefined {
@@ -283,10 +288,9 @@ export class WiringService {
     return undefined
   }
 
-  private blockFile(file: string, message: string): OperationResult {
+  private blockFile(file: string, message: string): void {
     this.blocked.add(file)
     this.pendingWarnings.push(message)
-    return { changed: [], skipped: [], warnings: [message] }
   }
 
   private merge(result: OperationResult, file: string, patches: PatchResult[]): void {

@@ -89,6 +89,15 @@ describe('command dispatch', () => {
     expect(() => assertCommandCanRun(findCommand('install:auth')!, ctx)).not.toThrow()
   })
 
+  it.each(['make:entity', 'make:migration', 'make:seeder', 'make:factory'])('rejects %s without an ORM before creating files', (name) => {
+    const cwd = project()
+    const before = fs.readdirSync(cwd)
+    const ctx = createContext({ cwd, logger: silentLogger })
+
+    expect(() => assertCommandCanRun(findCommand(name)!, ctx)).toThrow(/requires: orm/)
+    expect(fs.readdirSync(cwd)).toEqual(before)
+  })
+
   it('has a project guard for every command except init', () => {
     expect(commands.find((command) => command.name === 'init')?.requiresProject).toBe(false)
     expect(commands.filter((command) => command.name !== 'init').every((command) => command.requiresProject)).toBe(true)

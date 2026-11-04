@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Context, createContext } from '../../src/context'
 import { InstallerSpec, SpecGenerator } from '../../src/installers'
 import { mailerSpec } from '../../src/installers/specs/mailer.spec'
+import { eslintSpec } from '../../src/installers/specs/eslint.spec'
 import { commands, installer } from '../../src/registry'
 import { Feature, FEATURES } from '../../src/types'
 import { FakeShell } from '../helpers/project'
@@ -91,7 +92,7 @@ describe('SpecGenerator', () => {
     expect(definition.name).toBe('install:cache')
     expect(definition.feature).toBe('cache')
 
-    const generator = definition.create(context(cwd), { positionals: [], flags: {} })
+    const generator = definition.create(context(cwd))
     const lifecycle = generator as SpecGenerator
 
     await lifecycle.createDirectories()
@@ -115,6 +116,28 @@ describe('SpecGenerator', () => {
     expect(config).toContain('MAILER:')
     expect(env).toContain('MAIL_HOST=')
     expect(env).toContain('# @nec:mailer:start')
+  })
+
+  it('ships a flat ESLint config with lint scripts', async () => {
+    const cwd = project()
+
+    expect(eslintSpec.requires).toEqual([{ feature: 'prettier', hint: expect.stringContaining('install:prettier') }])
+    expect(eslintSpec.devDeps).toEqual(
+      expect.arrayContaining(['eslint@^10', '@eslint/js@^10', 'typescript-eslint@^8', 'eslint-config-prettier@^10'])
+    )
+    expect(eslintSpec.scripts).toEqual({
+      lint: 'eslint "src/**/*.ts"',
+      'lint:fix': 'eslint "src/**/*.ts" --fix',
+    })
+
+    await new SpecGenerator(context(cwd), eslintSpec).copyFiles()
+
+    const config = fs.readFileSync(path.join(cwd, 'eslint.config.mjs'), 'utf-8')
+
+    expect(fs.existsSync(path.join(cwd, '.eslintrc.js'))).toBe(false)
+    expect(config).toContain("from 'typescript-eslint'")
+    expect(config).toContain("from 'eslint-config-prettier'")
+    expect(config).toContain("ignores: ['build/**'")
   })
 
   it('has an install command for every feature', () => {

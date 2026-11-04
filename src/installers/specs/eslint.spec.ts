@@ -2,11 +2,12 @@ import { InstallerSpec } from '../spec'
 
 export const eslintSpec: InstallerSpec = {
   feature: 'eslint',
-  description: 'Add eslint to the project',
-  devDeps: ['eslint', 'eslint-config-prettier', 'eslint-plugin-prettier', '@typescript-eslint/parser', '@typescript-eslint/eslint-plugin'],
-  files: [{ from: 'generator/common/eslint/.eslintrc.js', to: '.eslintrc.js' }],
+  description: 'Add ESLint (flat config) to the project',
+  requires: [{ feature: 'prettier', hint: 'Run "node-express-cli install:prettier" first.' }],
+  devDeps: ['eslint@^10', '@eslint/js@^10', 'typescript-eslint@^8', 'eslint-config-prettier@^10'],
+  files: [{ from: 'generator/common/eslint/eslint.config.mjs', to: 'eslint.config.mjs' }],
   scripts: {
-    lint: 'eslint . --ext .ts',
-    'lint:fix': 'eslint . --ext .ts --fix',
+    lint: 'eslint "src/**/*.ts"',
+    'lint:fix': 'eslint "src/**/*.ts" --fix',
   },
 }

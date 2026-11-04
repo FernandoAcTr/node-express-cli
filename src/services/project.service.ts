@@ -83,6 +83,11 @@ export class ProjectService {
     return path.resolve(__dirname, '../../templates', ...parts)
   }
 
+  /** Lee un archivo de `templates/` como texto. */
+  public readTemplate(...parts: string[]): string {
+    return this.fsImpl.readFileSync(this.template(...parts), 'utf-8')
+  }
+
   /** Lee un archivo del proyecto como texto. */
   public read(relative: string): string {
     return this.fsImpl.readFileSync(this.path(relative), 'utf-8')
@@ -101,6 +106,32 @@ export class ProjectService {
   /** Crea un directorio (y sus padres) dentro del proyecto. */
   public ensureDir(relative: string): void {
     this.fsImpl.mkdirSync(this.path(relative), { recursive: true })
+  }
+
+  /**
+   * Preflight para comandos que escriben varios archivos con política `create`.
+   * Comprueba todos los destinos antes de escribir el primero y lanza un
+   * `CliError` con la lista de archivos existentes. Con `--force` no bloquea:
+   * la política `create` ya sobrescribe.
+   */
+  public assertCanCreate(paths: string[]): void {
+    if (this.force) {
+      return
+    }
+
+    const existing = [...new Set(paths.map((relative) => normalizeRelative(relative)))].filter((relative) =>
+      this.fsImpl.existsSync(this.path(relative))
+    )
+
+    if (existing.length === 0) {
+      return
+    }
+
+    const label = existing.length === 1 ? 'this file already exists' : 'these files already exist'
+
+    throw new CliError(`Cannot create the requested files because ${label}:\n${existing.map((file) => `  - ${file}`).join('\n')}`, {
+      hint: 'Run the command again with --force to overwrite them.',
+    })
   }
 
   /**

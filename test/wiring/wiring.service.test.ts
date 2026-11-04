@@ -190,4 +190,42 @@ describe('WiringService', () => {
     expect(second.skipped).toContain(path.join(cwd, 'package.json'))
     expect(pkg.scripts['vapid:generate']).toBe('npx web-push generate-vapid-keys')
   })
+
+  it('keeps the declaration order for patches on the same anchor', () => {
+    const cwd = project()
+    const service = wiring(cwd)
+
+    service.transaction((wire) => {
+      wire.main('beforeListen', 'const A = 1', { key: 'const A = 1' })
+      wire.main('beforeListen', 'const B = 2', { key: 'const B = 2' })
+    })
+
+    const main = fs.readFileSync(path.join(cwd, 'src/main.ts'), 'utf-8')
+
+    expect(main.indexOf('const A = 1')).toBeLessThan(main.indexOf('const B = 2'))
+  })
+
+  it('keeps the declaration order for before patches on the same anchor', () => {
+    const cwd = project()
+    const service = wiring(cwd)
+
+    service.transaction((wire) => {
+      wire.main('beforeListen', 'const A = 1', { key: 'const A = 1', position: 'before' })
+      wire.main('beforeListen', 'const B = 2', { key: 'const B = 2', position: 'before' })
+    })
+
+    const main = fs.readFileSync(path.join(cwd, 'src/main.ts'), 'utf-8')
+
+    expect(main.indexOf('const A = 1')).toBeLessThan(main.indexOf('const B = 2'))
+    expect(main.indexOf('const B = 2')).toBeLessThan(main.indexOf('// @nec:before-listen'))
+  })
+
+  it('refuses to start a transaction with staged operations', () => {
+    const cwd = project()
+    const service = wiring(cwd)
+
+    service.import("import webpush from 'web-push'")
+
+    expect(() => service.transaction(() => undefined)).toThrow(/pending operations/)
+  })
 })

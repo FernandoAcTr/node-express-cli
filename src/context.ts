@@ -115,6 +115,10 @@ export function createContext(options: CreateContextOptions = {}): Context {
     },
     markInstalled(feature: Feature, metadata?: FeatureMetadata): void {
       config.markFeature(feature, metadata)
+      // `markFeature` escribe cli.config.json fuera de ProjectService; sin este
+      // record el manifest conservaría el hash anterior y el archivo parecería
+      // modificado por el usuario en la siguiente ejecución.
+      project.record('cli.config.json')
     },
   }
 }

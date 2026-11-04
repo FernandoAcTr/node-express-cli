@@ -3,7 +3,7 @@ import { Context } from '../context'
 import path from 'path'
 import { kebabCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
-import { CliError } from '../errors'
+import { validateIdentifier } from '../utils/validation'
 
 export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   private moduleName: string
@@ -24,13 +24,7 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
       name: 'name',
     })
 
-    if (!moduleName) {
-      throw new CliError('Module name is required', {
-        hint: 'Run "node-express-cli make:module" again and enter a name.',
-      })
-    }
-
-    this.moduleName = moduleName.trim()
+    this.moduleName = validateIdentifier(moduleName, 'Module name')
   }
 
   async createDirectories(): Promise<void> {
@@ -51,35 +45,56 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
     const serviceName = pascalCase(this.moduleName)
     const policy = 'create' as const
 
-    const validator = renderTemplate(this.ctx.project.template('generator/module/validator.ts'), {})
-    this.ctx.project.write(path.join(dir, `${moduleDir}.validator.ts`), validator, policy)
-
-    const service = renderTemplate(this.ctx.project.template('generator/module/service.template.ts'), {
-      ServiceName: serviceName,
-    })
-    this.ctx.project.write(path.join(dir, `${moduleDir}.service.ts`), service, policy)
-
-    const controller = renderTemplate(this.ctx.project.template('generator/module/controller.template.ts'), {
-      ServiceName: serviceName,
-      servicefile: moduleDir,
-    })
-    this.ctx.project.write(path.join(dir, `${moduleDir}.controller.ts`), controller, policy)
+    const files: Array<{ path: string; content: string }> = [
+      {
+        path: path.join(dir, `${moduleDir}.validator.ts`),
+        content: renderTemplate(this.ctx.project.template('generator/module/validator.ts'), {}),
+      },
+      {
+        path: path.join(dir, `${moduleDir}.service.ts`),
+        content: renderTemplate(this.ctx.project.template('generator/module/service.template.ts'), {
+          ServiceName: serviceName,
+        }),
+      },
+      {
+        path: path.join(dir, `${moduleDir}.controller.ts`),
+        content: renderTemplate(this.ctx.project.template('generator/module/controller.template.ts'), {
+          ServiceName: serviceName,
+          servicefile: moduleDir,
+        }),
+      },
+    ]
 
     if (config.fileBasedRouting) {
-      const router1 = renderTemplate(this.ctx.project.template('generator/module/filerouting/router.template.ts'), {
-        modulename: moduleDir,
-      })
-      const router2 = renderTemplate(this.ctx.project.template('generator/module/filerouting/[id]/router.template.ts'), {
-        modulename: moduleDir,
-      })
-
-      this.ctx.project.write(path.join('src/routes', moduleDir, 'index.ts'), router1, policy)
-      this.ctx.project.write(path.join('src/routes', moduleDir, '[id]', 'index.ts'), router2, policy)
+      files.push(
+        {
+          path: path.join('src/routes', moduleDir, 'index.ts'),
+          content: renderTemplate(this.ctx.project.template('generator/module/filerouting/router.template.ts'), {
+            modulename: moduleDir,
+          }),
+        },
+        {
+          path: path.join('src/routes', moduleDir, '[id]', 'index.ts'),
+          content: renderTemplate(this.ctx.project.template('generator/module/filerouting/[id]/router.template.ts'), {
+            modulename: moduleDir,
+          }),
+        }
+      )
     } else {
-      const routes = renderTemplate(this.ctx.project.template('generator/module/routes.template.ts'), {
-        modulename: moduleDir,
+      files.push({
+        path: path.join(dir, `${moduleDir}.routes.ts`),
+        content: renderTemplate(this.ctx.project.template('generator/module/routes.template.ts'), {
+          modulename: moduleDir,
+        }),
       })
-      this.ctx.project.write(path.join(dir, `${moduleDir}.routes.ts`), routes, policy)
+    }
+
+    // Preflight: si uno de los destinos existe, no se escribe ninguno. Sin esto,
+    // `create` fallaba en el primer archivo y dejaba el resto ya escrito.
+    this.ctx.project.assertCanCreate(files.map((file) => file.path))
+
+    for (const file of files) {
+      this.ctx.project.write(file.path, file.content, policy)
     }
   }
 }

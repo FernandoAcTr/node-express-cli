@@ -1,6 +1,6 @@
 import { Context } from '../context'
 import { IFileSystemGenerator, IInstallerGenerator, IPostGenerator } from '../interfaces/generator.interface'
-import { Reporter } from '../report'
+import { OperationResult, Reporter, createResult } from '../report'
 import { InstallerSpec } from './spec'
 import { applyWireSteps, isMainStep } from './wire'
 
@@ -49,10 +49,15 @@ export class SpecGenerator implements IFileSystemGenerator, IInstallerGenerator,
     if (devDeps.length > 0) {
       await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} ${devDeps.join(' ')}`, this.ctx.cwd)
     }
+
+    // El package manager escribe package.json; registrar el archivo mantiene el
+    // manifest alineado con lo que hay en disco.
+    this.ctx.project.record('package.json')
   }
 
-  async post(): Promise<void> {
+  async post(): Promise<OperationResult> {
     const reporter = new Reporter(this.ctx.logger, this.spec.skippedSuffix)
+    const result = createResult()
     const steps = this.spec.wire ?? []
     const mainSteps = steps.filter(isMainStep)
     const otherSteps = steps.filter((step) => !isMainStep(step))
@@ -60,20 +65,20 @@ export class SpecGenerator implements IFileSystemGenerator, IInstallerGenerator,
     // Primero `main.ts`: si falta un anchor, no tiene sentido escribir config,
     // env o scripts de una feature que quedaría desconectada.
     if (mainSteps.length > 0) {
-      const result = this.ctx.wiring.transaction((wiring) => applyWireSteps(wiring, mainSteps, this.ctx.config))
-      reporter.add(result)
+      const mainResult = this.ctx.wiring.transaction((wiring) => applyWireSteps(wiring, mainSteps, this.ctx.config))
+      this.merge(reporter, result, mainResult)
 
-      if (result.warnings.length > 0) {
-        return
+      if (mainResult.warnings.length > 0) {
+        return result
       }
     }
 
     if (otherSteps.length > 0) {
-      const result = this.ctx.wiring.transaction((wiring) => applyWireSteps(wiring, otherSteps, this.ctx.config))
-      reporter.add(result)
+      const otherResult = this.ctx.wiring.transaction((wiring) => applyWireSteps(wiring, otherSteps, this.ctx.config))
+      this.merge(reporter, result, otherResult)
 
-      if (result.warnings.length > 0) {
-        return
+      if (otherResult.warnings.length > 0) {
+        return result
       }
     }
 
@@ -83,7 +88,11 @@ export class SpecGenerator implements IFileSystemGenerator, IInstallerGenerator,
       const scripts = typeof this.spec.scripts === 'function' ? this.spec.scripts(this.ctx.config) : this.spec.scripts
 
       for (const [name, command] of Object.entries(scripts)) {
-        reporter.add(this.ctx.wiring.script(name, command))
+        this.merge(reporter, result, this.ctx.wiring.script(name, command))
+      }
+
+      if (result.warnings.length > 0) {
+        return result
       }
     }
 
@@ -91,6 +100,31 @@ export class SpecGenerator implements IFileSystemGenerator, IInstallerGenerator,
 
     for (const message of success ?? []) {
       this.ctx.logger.success(message)
+    }
+
+    return result
+  }
+
+  /** Imprime el resultado y lo acumula para que `run()` decida si marca la feature. */
+  private merge(reporter: Reporter, target: OperationResult, next: OperationResult): void {
+    reporter.add(next)
+
+    for (const file of next.changed) {
+      if (!target.changed.includes(file)) {
+        target.changed.push(file)
+      }
+    }
+
+    for (const file of next.skipped) {
+      if (!target.skipped.includes(file)) {
+        target.skipped.push(file)
+      }
+    }
+
+    for (const warning of next.warnings) {
+      if (!target.warnings.includes(warning)) {
+        target.warnings.push(warning)
+      }
     }
   }
 

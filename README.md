@@ -148,6 +148,16 @@ Como un módulo puede contener varios archivos de código, para identificar el a
 
 Con esto y sin mayor configuración adicional, las rutas del módulo ya estarán disponibles.
 
+Puedes listar las rutas del proyecto con `route:list`:
+
+```bash
+node-express-cli route:list
+node-express-cli route:list --prefix /v1
+node-express-cli route:list --prefix /v1 --omit /v1
+```
+
+El prefijo por defecto es `/api`. `--prefix` cambia el prefijo con el que se muestran las rutas de módulos y `--omit` quita ese prefijo de la salida.
+
 Para crear un módulo se utiliza el comando:
 ```bash
 node-express-cli make:module
@@ -254,7 +264,7 @@ Para instalar ESlint
 ```bash
 node-express-cli install:eslint
 ```
-Es necesario instalar prettier para poder instalar eslint. 
+Es necesario instalar prettier para poder instalar eslint. `install:eslint` usa la configuración plana de ESLint (`eslint.config.mjs`) con `typescript-eslint` y añade los scripts `lint` y `lint:fix`, que revisan `src/**/*.ts`.
 
 ## Scaffolding de autenticación
 Es posible instalar un módulo de autenticación con lo básico necesario para autenticar un usuario con JWT, haciendo uso de la conocida librería [Passport](https://www.npmjs.com/package/passport).  
@@ -262,6 +272,8 @@ Para instalarlo utiliza el comando `node-express-cli install:auth`.
 Esta acción creará un modelo básico de usuario, una estrategia de passport y un módulo de autenticación. 
 El módulo queda cableado automáticamente en `src/main.ts` (se registran `passport.initialize()` y la estrategia JWT) y las rutas del módulo auth se montan solas gracias al enrutador. 
 Para TypeORM también se inicializa `AppDataSource` y para Mongoose se importa la conexión. Solamente deberás crear/ejecutar las migraciones para la base de datos, de ser necesario. 
+
+Si usas Prisma, los modelos de auth se añaden dentro de un bloque reemplazable en `src/database/prisma/schema.prisma` (después del anchor `// @nec:prisma`), sin reemplazar los modelos que ya tengas. Si el schema no tiene el anchor ni los modelos de auth, recibirás un aviso: añade `// @nec:prisma` al final del schema y vuelve a ejecutar `install:auth`.
 
 ## Envío de Emails
 Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  

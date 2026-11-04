@@ -1,6 +1,6 @@
 import { Command, Generator } from './interfaces/generator.interface'
 import { Context } from './context'
-import { CommandArgs, Feature, RequiredFeature } from './types'
+import { Feature, RequiredFeature } from './types'
 import { AuthGenerator } from './generators/auth.generator'
 import { BaseGenerator } from './generators/base.generator'
 import { EntityGenerator } from './generators/entity.generator'
@@ -37,12 +37,18 @@ export interface CommandDefinition {
   /** Feature que se marca en cli.config.json cuando el comando termina bien. */
   feature?: Feature
   options?: Record<string, CommandOptionDefinition>
-  create(ctx: Context, args: CommandArgs): Generator | Command
+  create(ctx: Context): Generator | Command
 }
 
 const NAME_OPTION: CommandOptionDefinition = {
   type: 'string',
   description: 'Name to use instead of the interactive prompt',
+}
+
+/** Requisito compartido por los comandos que generan código dependiente del ORM. */
+const REQUIRE_ORM: RequiredFeature = {
+  feature: 'orm',
+  hint: 'Run "node-express-cli install:orm" first.',
 }
 
 /**
@@ -110,7 +116,7 @@ export const commands: CommandDefinition[] = [
     name: 'install:auth',
     description: 'Add basic scaffolding to auth with jwt and passport',
     requiresProject: true,
-    requires: [{ feature: 'orm', hint: 'Run "node-express-cli install:orm" first.' }],
+    requires: [REQUIRE_ORM],
     feature: 'auth',
     create: (ctx) => new AuthGenerator(ctx),
   },
@@ -120,6 +126,7 @@ export const commands: CommandDefinition[] = [
     name: 'make:seeder',
     description: 'Generate a new seeder class',
     requiresProject: true,
+    requires: [REQUIRE_ORM],
     options: { name: NAME_OPTION },
     create: (ctx) => new SeederGenerator(ctx),
   },
@@ -127,6 +134,7 @@ export const commands: CommandDefinition[] = [
     name: 'make:entity',
     description: 'Generate a new entity class',
     requiresProject: true,
+    requires: [REQUIRE_ORM],
     options: { name: NAME_OPTION },
     create: (ctx) => new EntityGenerator(ctx),
   },
@@ -134,6 +142,7 @@ export const commands: CommandDefinition[] = [
     name: 'make:migration',
     description: 'Generate a new database migration',
     requiresProject: true,
+    requires: [REQUIRE_ORM],
     options: { name: NAME_OPTION },
     create: (ctx) => new MigrationGenerator(ctx),
   },
@@ -141,18 +150,24 @@ export const commands: CommandDefinition[] = [
     name: 'make:factory',
     description: 'Generate a new Factory class for a Model',
     requiresProject: true,
+    requires: [REQUIRE_ORM],
     options: { name: NAME_OPTION },
     create: (ctx) => new FactoryGenerator(ctx),
   },
   installer(testsSpec),
   {
     name: 'route:list',
-    description: 'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',
+    description: 'List all routes in the project. Use --omit to remove a prefix from the routes and --prefix to change the API prefix.',
     requiresProject: true,
     options: {
       omit: {
         type: 'string',
         description: 'Prefix to remove from the listed routes, e.g. /api',
+      },
+      prefix: {
+        type: 'string',
+        description: 'API prefix used by module routes (default: /api)',
+        default: '/api',
       },
     },
     create: (ctx) => new RouteListCommand(ctx),

@@ -1,8 +1,9 @@
 import { IFileSystemGenerator, IInstallerGenerator, IPostGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { DbType } from '../types'
-import { Reporter } from '../report'
+import { OperationResult, Reporter, createResult } from '../report'
 import { WritePolicy } from '../services/project.service'
+import { PRISMA_ANCHOR } from '../patch/anchors'
 
 export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IInstallerGenerator {
   constructor(private readonly ctx: Context) {}
@@ -55,23 +56,32 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
       project.copyDir('src/modules/auth/services', 'generator/auth/mongo/services', policy)
     } else if (this.dbType == DbType.PRISMA) {
       project.copyDir('src/modules/auth/services', 'generator/auth/prisma/services', policy)
-
-      // El schema puede contener modelos propios: no se sobrescribe nunca sin
-      // `--force`. El merge por anchors queda para una fase posterior.
-      const schema = project.copy('src/database/prisma/schema.prisma', 'generator/auth/prisma/schema.prisma', 'skip')
-
-      if (schema.status === 'skipped' && schema.reason === 'exists') {
-        this.ctx.logger.warn('src/database/prisma/schema.prisma already exists; merge the auth models manually. Use --force to replace it.')
-      }
     }
   }
 
-  async post(): Promise<void> {
+  async post(): Promise<OperationResult> {
+    const result = createResult()
+
     if (this.dbType == DbType.PRISMA) {
-      await this.ctx.shell.execAsync(`${this.ctx.config.getRunCommand()} m:generate`, this.ctx.cwd)
+      const schema = this.mergePrismaSchema()
+      this.merge(result, schema)
+
+      // Si el schema no tiene el anchor, no se toca y no se genera un cliente
+      // a partir de un modelo incompleto. El warning impide marcar la feature.
+      // Si auth ya estaba instalada y el bloque no cambió, no hace falta volver
+      // a generar el cliente.
+      const shouldGenerate = schema.changed.length > 0 || !this.ctx.has('auth')
+
+      if (schema.warnings.length === 0 && shouldGenerate) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getRunCommand()} m:generate`, this.ctx.cwd)
+      }
     }
 
-    this.wireAuth()
+    this.merge(result, this.wireAuth())
+
+    if (result.warnings.length > 0) {
+      return result
+    }
 
     this.ctx.logger.success('-------------------------------------------------------------------------------------------')
     this.ctx.logger.success('Auth module was wired up: passport.initialize() and the JWT strategy are registered in src/main.ts')
@@ -80,9 +90,53 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
       'You need to run the database migrations. Depending on the ORM you chose it is necessary to run a specific command'
     )
     this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+
+    return result
   }
 
-  private wireAuth(): void {
+  /**
+   * Fusiona los modelos de auth en el schema de Prisma mediante un bloque
+   * reemplazable. Así no se reemplaza el schema completo ni se pierden modelos
+   * propios; en proyectos sin el anchor de Prisma el bloque no se escribe.
+   */
+  private mergePrismaSchema(): OperationResult {
+    const models = this.ctx.project.readTemplate('generator/auth/prisma/auth.prisma')
+    const reporter = new Reporter(this.ctx.logger)
+    const result = this.ctx.wiring.transaction((wiring) => {
+      wiring.block('src/database/prisma/schema.prisma', 'auth', models, {
+        after: PRISMA_ANCHOR,
+        // Proyectos antiguos ya tienen los modelos copiados sin bloque: no se
+        // duplican y se consideran integrados.
+        key: 'model Role {',
+      })
+    })
+
+    reporter.add(result)
+
+    return result
+  }
+
+  private merge(target: OperationResult, next: OperationResult): void {
+    for (const file of next.changed) {
+      if (!target.changed.includes(file)) {
+        target.changed.push(file)
+      }
+    }
+
+    for (const file of next.skipped) {
+      if (!target.skipped.includes(file)) {
+        target.skipped.push(file)
+      }
+    }
+
+    for (const warning of next.warnings) {
+      if (!target.warnings.includes(warning)) {
+        target.warnings.push(warning)
+      }
+    }
+  }
+
+  private wireAuth(): OperationResult {
     const reporter = new Reporter(this.ctx.logger)
     const imports: string[] = []
 
@@ -115,6 +169,8 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
     })
 
     reporter.add(result)
+
+    return result
   }
 
   async installDependencies(): Promise<void> {
@@ -129,5 +185,6 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
       `${this.ctx.config.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`,
       this.ctx.cwd
     )
+    this.ctx.project.record('package.json')
   }
 }

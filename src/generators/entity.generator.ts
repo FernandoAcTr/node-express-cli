@@ -4,6 +4,7 @@ import { DbType } from '../types'
 import { kebabCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
 import { CliError } from '../errors'
+import { validateIdentifier } from '../utils/validation'
 
 export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
   private entityName: string
@@ -21,15 +22,13 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
     }
     this.dbType = config.orm ?? DbType.TYPEORM
 
-    this.entityName = await this.ctx.prompter.input({
-      message: 'Name of entity:',
-      name: 'name',
-    })
-    if (!this.entityName) {
-      throw new CliError('Entity name is required', {
-        hint: 'Run "node-express-cli make:entity" again and enter a name.',
-      })
-    }
+    this.entityName = validateIdentifier(
+      await this.ctx.prompter.input({
+        message: 'Name of entity:',
+        name: 'name',
+      }),
+      'Entity name'
+    )
   }
 
   async createDirectories(): Promise<void> {
@@ -46,10 +45,9 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
       [DbType.SEQUELIZE]: 'sequelize',
     }
 
-    const entity = renderTemplate(
-      this.ctx.project.template('generator/orm', codeDirs[this.dbType], 'entity.template.ts'),
-      { EntityName: entityName }
-    )
+    const entity = renderTemplate(this.ctx.project.template('generator/orm', codeDirs[this.dbType], 'entity.template.ts'), {
+      EntityName: entityName,
+    })
     this.ctx.project.write(`src/entities/${fileName}.entity.ts`, entity, 'create')
   }
 }

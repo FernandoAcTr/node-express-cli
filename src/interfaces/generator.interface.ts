@@ -1,3 +1,4 @@
+import { OperationResult } from '../report'
 import { FeatureMetadata } from '../types'
 
 export interface IFileSystemGenerator {
@@ -10,7 +11,11 @@ export interface IPreGenerator {
 }
 
 export interface IPostGenerator {
-  post(): Promise<void>
+  /**
+   * `post` puede devolver el resultado del wiring. Si incluye warnings, `run()`
+   * NO marca la feature como instalada: el proyecto quedaría con estado falso.
+   */
+  post(): Promise<void | OperationResult>
 }
 
 export interface IInstallerGenerator {
@@ -33,7 +38,11 @@ export interface Lifecycle {
   createDirectories?(): Promise<void>
   copyFiles?(): Promise<void>
   installDependencies?(): Promise<void>
-  post?(): Promise<void>
+  /**
+   * Puede devolver el resultado del wiring. Un resultado con warnings impide
+   * que `run()` persista la feature: el estado debe reflejar lo que funciona.
+   */
+  post?(): Promise<void | OperationResult>
   run?(): Promise<void>
   /** Limpieza opcional si una fase falla (p. ej. borrar un proyecto a medias). */
   rollback?(): Promise<void> | void

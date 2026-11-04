@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../../src/context'
+import { CliError } from '../../src/errors'
 import { MigrationGenerator } from '../../src/generators/migration.generator'
 import { NonInteractivePrompter } from '../../src/prompts'
 import { ShellService } from '../../src/services/shell.service'
@@ -20,10 +21,7 @@ const silentLogger = {
 function project(orm: DbType): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-migration-'))
   dirs.push(dir)
-  fs.writeFileSync(
-    path.join(dir, 'cli.config.json'),
-    JSON.stringify({ orm, package_manger: 'npm', fileBasedRouting: false, features: [] })
-  )
+  fs.writeFileSync(path.join(dir, 'cli.config.json'), JSON.stringify({ orm, package_manger: 'npm', fileBasedRouting: false, features: [] }))
   return dir
 }
 
@@ -85,4 +83,30 @@ describe('MigrationGenerator', () => {
 
     expect(commands).toEqual(['npm run db:make:migration add-users'])
   })
+
+  it.each(['', '   ', 'foo bar', 'foo; touch pwned', '$(whoami)', 'foo/bar'])(
+    'rejects the invalid migration name "%s" before running shell',
+    async (name) => {
+      const commands: string[] = []
+      const shell = {
+        execAsync: async (command: string) => {
+          commands.push(command)
+          return ''
+        },
+        exec: () => {
+          throw new Error('exec should not be used')
+        },
+      }
+      const ctx = createContext({
+        cwd: project(DbType.TYPEORM),
+        shell: shell as unknown as ShellService,
+        logger: silentLogger,
+        prompter: new NonInteractivePrompter({ name }),
+      })
+      const generator = new MigrationGenerator(ctx)
+
+      await expect(generator.pre()).rejects.toThrow(CliError)
+      expect(commands).toEqual([])
+    }
+  )
 })

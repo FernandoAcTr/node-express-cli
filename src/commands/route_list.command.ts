@@ -70,20 +70,28 @@ async function listFilebasedRoutes(baseDir: string, omit?: string): Promise<void
   printGroups(groups)
 }
 
-function joinRoutePath(prefix: string, routePath: string): string {
+/** Normaliza `api`, `/v1/` o una cadena vacía al formato del router: `/v1`. */
+function normalizePrefix(prefix: string | undefined): string {
+  const value = (prefix ?? '/api').trim()
+  const segments = value.split('/').filter((segment) => !!segment)
+
+  return segments.length > 0 ? `/${segments.join('/')}` : '/api'
+}
+
+function joinRoutePath(apiPrefix: string, prefix: string, routePath: string): string {
   // Older projects declare the /api prefix inside the route file itself.
-  if (/^\/api(\/|$)/.test(routePath)) {
+  if (routePath === apiPrefix || routePath.startsWith(`${apiPrefix}/`)) {
     return routePath
   }
 
-  const segments = ['/api', prefix, routePath]
+  const segments = [apiPrefix, prefix, routePath]
     .join('/')
     .split('/')
     .filter((value) => !!value)
   return `/${segments.join('/')}`
 }
 
-function extractRoutesFromFile(filePath: string): Route[] {
+function extractRoutesFromFile(filePath: string, apiPrefix: string): Route[] {
   const code = fs.readFileSync(filePath, 'utf-8')
   const ast = parser.parse(code, {
     sourceType: 'module',
@@ -127,12 +135,13 @@ function extractRoutesFromFile(filePath: string): Route[] {
     },
   })
 
-  return routes.map((route) => ({ ...route, path: joinRoutePath(prefix, route.path) }))
+  return routes.map((route) => ({ ...route, path: joinRoutePath(apiPrefix, prefix, route.path) }))
 }
 
 async function listRoutes(
   baseDir: string,
   omit?: string,
+  apiPrefix = '/api',
   nestedPath: string[] = [],
   routeGroups: Record<string, Route[]> = {}
 ): Promise<void> {
@@ -146,10 +155,10 @@ async function listRoutes(
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      await listRoutes(baseDir, omit, [...nestedPath, entry.name], routeGroups)
+      await listRoutes(baseDir, omit, apiPrefix, [...nestedPath, entry.name], routeGroups)
     } else if (entry.name.includes('routes')) {
       const filePath = path.join(currentDir, entry.name)
-      routeGroups[filePath] = extractRoutesFromFile(filePath)
+      routeGroups[filePath] = extractRoutesFromFile(filePath, apiPrefix)
     }
   }
 
@@ -169,26 +178,19 @@ async function listRoutes(
   }
 }
 
-export interface RouteListOptions {
-  /** Prefijo a quitar de las rutas mostradas, p. ej. `/api`. */
-  omit?: string
-}
-
 export class RouteListCommand implements Command {
-  constructor(
-    private readonly ctx: Context,
-    private readonly options: RouteListOptions = {}
-  ) {}
+  constructor(private readonly ctx: Context) {}
 
   async run(): Promise<void> {
     const config = this.ctx.config.getConfig()
     const srcDir = path.join(this.ctx.cwd, 'src')
-    const omit = this.options.omit ?? stringFlag(this.ctx.args, 'omit')
+    const omit = stringFlag(this.ctx.args, 'omit')
+    const apiPrefix = normalizePrefix(stringFlag(this.ctx.args, 'prefix'))
 
     if (config.fileBasedRouting) {
       await listFilebasedRoutes(path.join(srcDir, 'routes'), omit)
     } else {
-      await listRoutes(path.join(srcDir, 'modules'), omit)
+      await listRoutes(path.join(srcDir, 'modules'), omit, apiPrefix)
     }
   }
 }

@@ -21,6 +21,15 @@ describe('command registry', () => {
     expect(auth?.requires?.every((requirement) => requirement.hint.length > 0)).toBe(true)
   })
 
+  it('declares an ORM requirement for the commands that generate ORM code', () => {
+    for (const name of ['make:entity', 'make:migration', 'make:seeder', 'make:factory']) {
+      const command = commands.find((candidate) => candidate.name === name)
+
+      expect(command?.requires?.map((requirement) => requirement.feature)).toContain('orm')
+      expect(command?.requires?.every((requirement) => requirement.hint.length > 0)).toBe(true)
+    }
+  })
+
   it('requires an explicit project decision for every command', () => {
     const init = commands.find((command) => command.name === 'init')
 

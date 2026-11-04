@@ -4,8 +4,10 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../../src/context'
+import { CliError } from '../../src/errors'
 import { BaseGenerator } from '../../src/generators/base.generator'
 import { NonInteractivePrompter } from '../../src/prompts'
+import { Logger } from '../../src/logger'
 import { CommandDefinition, commands } from '../../src/registry'
 import { run } from '../../src/run'
 import { ShellService } from '../../src/services/shell.service'
@@ -52,17 +54,18 @@ async function createProject(orm: DbType = DbType.TYPEORM): Promise<string> {
   return path.join(root, 'app')
 }
 
-async function runInstall(project: string, command: CommandDefinition, flags: Record<string, unknown> = {}) {
+async function runInstall(project: string, command: CommandDefinition, flags: Record<string, unknown> = {}, logger: Logger = silentLogger) {
   const shell = new FakeShell()
+  const args = { positionals: [], flags }
   const ctx = createContext({
     cwd: project,
-    logger: silentLogger,
+    logger,
     shell: shell as unknown as ShellService,
     prompter: new NonInteractivePrompter({ orm: DbType.TYPEORM, ...flags }),
+    args,
   })
-  const args = { positionals: [], flags }
 
-  await run(command.create(ctx, args), { ctx, feature: command.feature })
+  await run(command.create(ctx), { ctx, feature: command.feature })
 
   return { shell, ctx }
 }
@@ -105,6 +108,17 @@ function readConfig(project: string): ProjectConfig {
 
 function readScripts(project: string): Record<string, string> {
   return readJson<{ scripts?: Record<string, string> }>(path.join(project, 'package.json')).scripts ?? {}
+}
+
+function readManifest(project: string): { version: number; generated: Record<string, string> } {
+  return readJson(path.join(project, '.nec/manifest.json'))
+}
+
+function manifestHash(project: string, file: string): string {
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(fs.readFileSync(path.join(project, file)))
+    .digest('hex')}`
 }
 
 /** Hash de cada archivo para comparar el árbol completo entre ejecuciones. */
@@ -195,9 +209,7 @@ describe('install command state', () => {
       prompter: new NonInteractivePrompter({ orm: DbType.TYPEORM }),
     })
 
-    await expect(run(ormCommand.create(ctx, { positionals: [], flags: { orm: DbType.TYPEORM } }), { ctx, feature: 'orm' })).rejects.toThrow(
-      'dependency installation failed'
-    )
+    await expect(run(ormCommand.create(ctx), { ctx, feature: 'orm' })).rejects.toThrow('dependency installation failed')
 
     const config = readConfig(project)
 
@@ -217,6 +229,101 @@ describe('install command state', () => {
 
     expect(readConfig(project).orm).toBe(DbType.PRISMA)
     expect(placeholders(project)).toEqual([])
+  })
+})
+
+describe('ORM change policy', () => {
+  it('refuses to switch the ORM before touching the project', async () => {
+    const project = await createProject()
+    const orm = commands.find((command) => command.name === 'install:orm')
+
+    if (!orm) {
+      throw new Error('install:orm is not registered')
+    }
+
+    await runInstall(project, orm, { orm: DbType.TYPEORM })
+    const before = snapshot(project)
+
+    const error = await runInstall(project, orm, { orm: DbType.MONGO }).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(CliError)
+    expect((error as CliError).hint).toContain('new project')
+    expect(snapshot(project)).toEqual(before)
+  })
+})
+
+describe('manifest after install:*', () => {
+  it('records the final hashes of cli.config.json and package.json', async () => {
+    const project = await createProject()
+    const orm = commands.find((command) => command.name === 'install:orm')
+    const mailer = commands.find((command) => command.name === 'install:mailer')
+
+    if (!orm || !mailer) {
+      throw new Error('install:orm and install:mailer must be registered')
+    }
+
+    await runInstall(project, orm, { orm: DbType.TYPEORM })
+    await runInstall(project, mailer)
+
+    expect(readManifest(project).generated['cli.config.json']).toBe(manifestHash(project, 'cli.config.json'))
+    expect(readManifest(project).generated['package.json']).toBe(manifestHash(project, 'package.json'))
+
+    await runInstall(project, mailer)
+
+    expect(readManifest(project).generated['cli.config.json']).toBe(manifestHash(project, 'cli.config.json'))
+    expect(readManifest(project).generated['package.json']).toBe(manifestHash(project, 'package.json'))
+  })
+})
+
+describe('feature state when the wiring is incomplete', () => {
+  it('does not mark install:push when main.ts has no imports anchor', async () => {
+    const project = await createProject()
+    const push = commands.find((command) => command.name === 'install:push')
+
+    if (!push) {
+      throw new Error('install:push is not registered')
+    }
+
+    const mainFile = path.join(project, 'src/main.ts')
+    const withoutAnchor = fs.readFileSync(mainFile, 'utf-8').replace('// @nec:imports', '// imports anchor removed')
+    const warnings: string[] = []
+
+    fs.writeFileSync(mainFile, withoutAnchor)
+
+    await runInstall(project, push, {}, { ...silentLogger, warn: (message) => warnings.push(message) })
+
+    expect(readConfig(project).features).not.toContain('push')
+    expect(fs.readFileSync(mainFile, 'utf-8')).toBe(withoutAnchor)
+    expect(warnings.join('\n')).toContain('@nec:imports')
+    expect(warnings.join('\n')).toContain('was not marked as installed')
+
+    // Al corregir el anchor, el reintento debe completar y marcar la feature.
+    fs.writeFileSync(mainFile, withoutAnchor.replace('// imports anchor removed', '// @nec:imports'))
+    await runInstall(project, push)
+
+    expect(readConfig(project).features).toContain('push')
+  })
+
+  it('does not mark install:mailer when config has no config anchor', async () => {
+    const project = await createProject()
+    const mailer = commands.find((command) => command.name === 'install:mailer')
+
+    if (!mailer) {
+      throw new Error('install:mailer is not registered')
+    }
+
+    const configFile = path.join(project, 'src/config/index.ts')
+    const withoutAnchor = fs.readFileSync(configFile, 'utf-8').replace('// @nec:config', '// config anchor removed')
+    const warnings: string[] = []
+
+    fs.writeFileSync(configFile, withoutAnchor)
+
+    await runInstall(project, mailer, {}, { ...silentLogger, warn: (message) => warnings.push(message) })
+
+    expect(readConfig(project).features).not.toContain('mailer')
+    expect(fs.readFileSync(configFile, 'utf-8')).toBe(withoutAnchor)
+    expect(warnings.join('\n')).toContain('@nec:config')
+    expect(warnings.join('\n')).toContain('was not marked as installed')
   })
 })
 

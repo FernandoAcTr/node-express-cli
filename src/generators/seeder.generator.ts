@@ -2,7 +2,7 @@ import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.int
 import { Context } from '../context'
 import { camelCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
-import { CliError } from '../errors'
+import { validateIdentifier } from '../utils/validation'
 
 export class SeederGenerator implements IPreGenerator, IFileSystemGenerator {
   private seederName: string
@@ -10,15 +10,13 @@ export class SeederGenerator implements IPreGenerator, IFileSystemGenerator {
   constructor(private readonly ctx: Context) {}
 
   async pre(): Promise<void> {
-    this.seederName = await this.ctx.prompter.input({
-      message: 'Name of seeder:',
-      name: 'name',
-    })
-    if (!this.seederName) {
-      throw new CliError('Seeder name is required', {
-        hint: 'Run "node-express-cli make:seeder" again and enter a name.',
-      })
-    }
+    this.seederName = validateIdentifier(
+      await this.ctx.prompter.input({
+        message: 'Name of seeder:',
+        name: 'name',
+      }),
+      'Seeder name'
+    )
   }
 
   async createDirectories(): Promise<void> {

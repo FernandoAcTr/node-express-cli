@@ -104,7 +104,7 @@ describe('--dry-run', () => {
     const args = { positionals: ['install:prettier'], flags: { 'dry-run': true, 'no-interaction': true } }
     const ctx = createContext({ cwd, logger: silentLogger, args })
 
-    await executeCommand(findCommand('install:prettier')!, ctx, args)
+    await executeCommand(findCommand('install:prettier')!, ctx)
 
     expect(fs.readdirSync(cwd).sort()).toEqual(['cli.config.json', 'package.json'])
     expect(JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')).scripts).toEqual({})

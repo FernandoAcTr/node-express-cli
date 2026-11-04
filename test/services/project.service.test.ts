@@ -204,6 +204,43 @@ describe('ProjectService', () => {
     expect(() => project.write('/tmp/evil.ts', 'x')).toThrow(CliError)
   })
 
+  it('preflights a group of create paths before writing any of them', () => {
+    const cwd = tmpDir()
+    const project = new ProjectService(cwd)
+    project.write('src/a.ts', 'a\n', 'create')
+
+    expect(() => project.assertCanCreate(['src/a.ts', 'src/b.ts'])).toThrow(CliError)
+    expect(project.exists('src/b.ts')).toBe(false)
+  })
+
+  it('reports every existing file in the preflight error', () => {
+    const cwd = tmpDir()
+    const project = new ProjectService(cwd)
+    project.write('src/a.ts', 'a\n', 'create')
+    project.write('src/b.ts', 'b\n', 'create')
+
+    try {
+      project.assertCanCreate(['src/a.ts', 'src/b.ts', 'src/c.ts'])
+      throw new Error('expected assertCanCreate to throw')
+    } catch (error) {
+      expect(error).toBeInstanceOf(CliError)
+      expect((error as CliError).message).toContain('src/a.ts')
+      expect((error as CliError).message).toContain('src/b.ts')
+      expect((error as CliError).message).not.toContain('src/c.ts')
+      expect((error as CliError).hint).toContain('--force')
+    }
+  })
+
+  it('skips the create preflight with --force', () => {
+    const cwd = tmpDir()
+    const project = new ProjectService(cwd)
+    project.write('src/a.ts', 'a\n', 'create')
+
+    const forced = new ProjectService(cwd, { force: true })
+
+    expect(() => forced.assertCanCreate(['src/a.ts', 'src/b.ts'])).not.toThrow()
+  })
+
   it('detects a generated project', () => {
     const cwd = tmpDir()
     const project = new ProjectService(cwd)

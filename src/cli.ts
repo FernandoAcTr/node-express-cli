@@ -80,9 +80,9 @@ export function assertCommandCanRun(definition: CommandDefinition, ctx: Context)
 }
 
 /** Ejecuta un comando ya resuelto con el lifecycle común. */
-export async function executeCommand(definition: CommandDefinition, ctx: Context, args: CommandArgs): Promise<void> {
+export async function executeCommand(definition: CommandDefinition, ctx: Context): Promise<void> {
   assertCommandCanRun(definition, ctx)
-  await run(definition.create(ctx, args), { ctx, feature: definition.feature })
+  await run(definition.create(ctx), { ctx, feature: definition.feature })
 }
 
 export async function main(raw: ParsedArgv, commandList: CommandDefinition[] = commands): Promise<void> {
@@ -103,5 +103,5 @@ export async function main(raw: ParsedArgv, commandList: CommandDefinition[] = c
     })
   }
 
-  await executeCommand(definition, ctx, args)
+  await executeCommand(definition, ctx)
 }

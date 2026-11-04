@@ -2,6 +2,7 @@ import { IPostGenerator, IPreGenerator } from '../interfaces/generator.interface
 import { Context } from '../context'
 import { DbType } from '../types'
 import { CliError } from '../errors'
+import { validateCommandName } from '../utils/validation'
 
 export class MigrationGenerator implements IPreGenerator, IPostGenerator {
   private migrationName: string
@@ -27,13 +28,8 @@ export class MigrationGenerator implements IPreGenerator, IPostGenerator {
       message: 'Name of migration:',
       name: 'name',
     })
-    if (!name) {
-      throw new CliError('Migration name is required', {
-        hint: 'Run "node-express-cli make:migration" again and enter a name.',
-      })
-    }
 
-    this.migrationName = name
+    this.migrationName = validateCommandName(name, 'Migration name')
   }
 
   async post(): Promise<void> {

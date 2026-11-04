@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../src/context'
 import { ConfigService } from '../src/services/config.service'
 import { DbType } from '../src/types'
+import { WiringService } from '../src/wiring'
 
 const dirs: string[] = []
 
@@ -95,7 +96,8 @@ describe('createContext', () => {
     const ctx = createContext({ cwd })
 
     expect(ctx.wiring).toBeDefined()
-    expect(ctx.wiring.missing('src/main.ts', ['imports']).map((patch) => patch.status)).toEqual(['file-missing'])
+    expect(ctx.wiring).toBeInstanceOf(WiringService)
+    expect('missing' in ctx.wiring).toBe(false)
   })
 
   it('exposes --force through the context and the project service', () => {

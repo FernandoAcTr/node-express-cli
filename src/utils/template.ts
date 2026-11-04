@@ -8,11 +8,7 @@ const PLACEHOLDER = /__([A-Za-z0-9_]+)__/g
  * Falla si el template usa un placeholder que no fue provisto: mejor un error
  * explícito al generar que un archivo con `__Name__` dentro.
  */
-export function renderTemplateString(
-  template: string,
-  vars: Record<string, string>,
-  source = '<template>'
-): string {
+export function renderTemplateString(template: string, vars: Record<string, string>, source = '<template>'): string {
   return template.replace(PLACEHOLDER, (placeholder, key: string) => {
     if (!Object.prototype.hasOwnProperty.call(vars, key)) {
       throw new CliError(`Missing template variable "${key}"`, {

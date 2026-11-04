@@ -140,13 +140,14 @@ export interface InstallAllFeaturesOptions {
  * presentes. Con el `FakeShell` por defecto no toca la red.
  */
 export async function installAllFeatures(project: string, options: InstallAllFeaturesOptions = {}): Promise<Context> {
+  const args: CommandArgs = { positionals: [], flags: {} }
   const ctx = createContext({
     cwd: project,
     logger: options.logger ?? silentLogger,
     shell: (options.shell ?? new FakeShell()) as ShellService,
     prompter: new NonInteractivePrompter({ orm: DbType.TYPEORM }),
+    args,
   })
-  const args: CommandArgs = { positionals: [], flags: {} }
 
   for (const command of commands) {
     if (!command.name.startsWith('install:') || !command.feature) {
@@ -157,7 +158,7 @@ export async function installAllFeatures(project: string, options: InstallAllFea
       continue
     }
 
-    await executeCommand(command, ctx, args)
+    await executeCommand(command, ctx)
   }
 
   return ctx

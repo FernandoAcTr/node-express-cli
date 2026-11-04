@@ -32,19 +32,27 @@ pre -> createDirectories -> copyFiles -> installDependencies -> post -> run
 - `pre`: prompts y validaciones previas. No debe crear archivos ni directorios.
 - `createDirectories` / `copyFiles`: estructura y plantillas.
 - `installDependencies`: instala paquetes; debe poder repetirse.
-- `post`: parches sobre `main.ts` u otros archivos, mensajes finales.
+- `post`: parches sobre `main.ts` u otros archivos, mensajes finales. Puede
+  devolver un `OperationResult`; si contiene warnings, el wiring quedó
+  incompleto.
 - `run`: comandos que solo ejecutan una acción (por ejemplo `route:list`).
 - `rollback` (opcional): limpia lo creado si una fase anterior lanza. `init` lo
   usa para borrar el proyecto a medias; el resto de generadores no lo necesitan.
 - `installMetadata` (opcional): devuelve el estado que `run()` debe persistir
   junto con la feature. `install:orm` lo usa para guardar `{ orm }` al final.
 
-Si el comando declara `feature` en el registry y todas las fases terminan bien,
-`run()` llama a `ctx.markInstalled(feature, metadata)`. La feature y su metadata
-se escriben en una sola operación atómica sobre `cli.config.json`. Si una fase
-lanza, no se escribe nada y `src/index.ts` muestra el error con `handleError`.
-Por eso `install:orm` ya no escribe `config.orm` en `pre()`: un fallo de
-instalación deja el proyecto sin ORM persistido.
+Si el comando declara `feature` en el registry, todas las fases terminan bien y
+`post` no devolvió warnings de wiring, `run()` llama a
+`ctx.markInstalled(feature, metadata)`. La feature y su metadata se escriben en
+una sola operación atómica sobre `cli.config.json`. Si una fase lanza, no se
+escribe nada y `src/index.ts` muestra el error con `handleError`.
+
+Si `post` devuelve un `OperationResult` con warnings (por ejemplo, falta un
+anchor), `run()` **no** marca la feature: el proyecto quedaría con
+`features` diciendo que está instalada aunque `main.ts`, config o `.env.example`
+no estén conectados. El comando termina con un mensaje que pide corregir el
+wiring y reintentar. Por eso `install:orm` ya no escribe `config.orm` en
+`pre()`: un fallo de instalación deja el proyecto sin ORM persistido.
 
 ## Comandos, flags y `--help`
 
@@ -63,9 +71,17 @@ necesita un proyecto generado. Solo `init` usa `false`. `requires` son objetos
 entrypoint.
 
 Las opciones globales son solo `--no-interaction`, `--ci`, `--force` y
-`--dry-run`. Las opciones propias (`--name`, `--omit`, `--orm`, etc.) se
-registran con `yargs.command()` y solo aparecen en el help de su comando. El
-snapshot vive en `test/cli/__snapshots__/help.test.ts.snap`.
+`--dry-run`. Las opciones propias (`--name`, `--omit`, `--prefix`, `--orm`,
+etc.) se registran con `yargs.command()` y solo aparecen en el help de su
+comando. El snapshot vive en `test/cli/__snapshots__/help.test.ts.snap`.
+
+`route:list` usa `--prefix` para el prefijo de los módulos (por defecto `/api`)
+y `--omit` para quitar ese prefijo de la salida:
+
+```bash
+node-express-cli route:list --prefix /v1
+node-express-cli route:list --prefix /v1 --omit /v1
+```
 
 Los flags ya parseados están en `ctx.args` (`positionals` y `flags`).
 `ctx.force` y `ctx.dryRun` son atajos derivados de `ctx.args`; usa
@@ -139,7 +155,7 @@ Políticas disponibles:
 | Política                  | Cuándo usarla              | Comportamiento                                        |
 | ------------------------- | -------------------------- | ----------------------------------------------------- |
 | `create`                  | `make:*`                   | Falla si el archivo existe; `--force` lo sobrescribe. |
-| `skip`                    | merges imposibles (Prisma) | No toca el archivo si existe.                         |
+| `skip`                    | no tocar archivos existentes | No toca el archivo si existe.                        |
 | `overwrite`               | reemplazo explícito        | Solo sobrescribe con `--force`.                       |
 | `overwrite-if-unmodified` | `install:*`                | Sobrescribe solo si el hash coincide con el manifest. |
 
@@ -149,6 +165,18 @@ sobrescribe archivos que no creó. Si el contenido existente es idéntico al que
 el CLI generaría, se adopta en el manifest sin warning (compatibilidad con
 proyectos anteriores a `.nec/manifest.json`). Los archivos binarios se copian
 como `Buffer`, sin pasar por UTF-8.
+
+Los comandos que escriben varios archivos con política `create` llaman antes a
+`project.assertCanCreate(paths)`. El preflight comprueba todos los destinos y
+falla con la lista de archivos existentes antes de escribir el primero; con
+`--force` no bloquea. `make:module` lo usa para no dejar un módulo a medias.
+
+Toda escritura de `cli.config.json` o `package.json` debe registrar el archivo
+con `project.record(...)`. `Context.markInstalled` lo hace para
+`cli.config.json`; `install:orm`, `install:*` con dependencias y `auth` lo hacen
+para `package.json` después de que el package manager lo modifique o de que
+`ConfigService.setScripts` lo reescriba. Así el manifest describe el archivo
+final y no parece modificado por el usuario en la siguiente ejecución.
 
 Un comando con `requiresProject` (todos menos `init`) exige `cli.config.json` y
 `package.json` en `ctx.cwd`. Si faltan, `src/cli.ts` falla antes de crear nada;
@@ -178,8 +206,18 @@ completo se valida sin tocar el proyecto.
   lanza `CliError` con un hint.
 - `features` es la fuente de verdad de la idempotencia. Las features válidas se
   declaran en `FEATURES` (`src/types/index.ts`); `Feature` se deriva de esa lista.
+- Una feature solo se escribe si el lifecycle terminó sin errores y `post` no
+  devolvió warnings de wiring. Así `ctx.has(feature)` nunca dice `true` para una
+  feature desconectada.
 - `features` y `orm` se escriben juntos al final de `install:orm` mediante
   `ctx.markInstalled('orm', { orm })`; un fallo no deja el ORM persistido.
+- `markInstalled` registra `cli.config.json` en `.nec/manifest.json` después de
+  `markFeature`. Sin ese registro, el hash quedaría viejo y el archivo parecería
+  editado por el usuario.
+- Cambiar el ORM de un proyecto existente está bloqueado en `OrmGenerator.pre()`:
+  la limpieza automática necesita un manifest con propietario por feature. Para
+  usar otro motor hay que crear un proyecto nuevo o borrar los archivos y la
+  feature `orm` a mano.
 - Los proyectos viejos sin `features` siguen funcionando: `has('orm')` usa
   `config.orm` como fallback y emite un warning por contexto.
 
@@ -236,10 +274,19 @@ installer(mailerSpec),
 - `scripts` se escriben con `WiringService.script` después del wiring.
 - `success` imprime el cierre de la feature.
 
+`install:eslint` declara `requires: [{ feature: 'prettier' }]` y copia
+`eslint.config.mjs` (flat config) con `typescript-eslint`,
+`@eslint/js` y `eslint-config-prettier`. Los scripts `lint`/`lint:fix` apuntan a
+`src/**/*.ts`; Prettier sigue siendo un comando aparte (`prettier:fix`), por eso
+el config solo desactiva reglas que chocan con el formato. El smoke de todas las
+features ejecuta `eslint src` además de `tsc --noEmit`.
+
 Los instaladores con lógica propia siguen siendo custom: `orm` (elige el ORM,
 copia templates por motor y calcula scripts), `auth` (templates por ORM) y
 `migration` (shell). `orm` reutiliza `ormWireSteps()` para la configuración
-`DB` y las variables `DB_*`, que ya no viven en `templates/base`.
+`DB` y las variables `DB_*`, que ya no viven en `templates/base`. Cambiar de ORM
+en un proyecto existente se rechaza en `pre()` antes de copiar archivos: no hay
+limpieza automática y el proyecto quedaría mezclado.
 
 `templates/base` solo contiene lo común a todos los proyectos. `MAILER`,
 `MAIL_*`, `VAPID`, `DB_*`, `prettier:fix` y `vapid:generate` pertenecen a los
@@ -274,12 +321,18 @@ solo se modifican en los puntos marcados:
 | `templates/base/src/config/index.ts`            | `// @nec:config`            | `config()`                | `DB`, `MAILER`, `VAPID` y cualquier config  |
 | `templates/base/.env.example`                   | `# @nec:env`                | `env()`                   | variables sueltas                           |
 | `templates/base/.env.example`                   | `# @nec:<marker>:start/end` | `envBlock(marker, …)`     | bloques reemplazables (mailer, webpush, DB) |
-| `templates/generator/auth/prisma/schema.prisma` | ninguno                     | —                         | no se parchea: se copia con política `skip` |
+| `templates/generator/orm/prisma/schema.prisma`  | `// @nec:prisma`            | `block(..., 'auth', …)`   | modelos de `install:auth` para Prisma       |
 
-`schema.prisma` es la excepción conocida: mergear modelos con anchors todavía no
-está implementado y el CLI prefiere no tocar un schema que puede tener modelos
-del usuario. `install:auth` con Prisma copia el archivo solo si no existe y
-avisa de que hay que fusionar los modelos a mano (o usar `--force`).
+El schema de Prisma usa un bloque reemplazable `// @nec:auth:start` /
+`// @nec:auth:end`, insertado después de `// @nec:prisma`. `install:auth` nunca
+reemplaza el schema completo: añade o actualiza los modelos de auth y conserva
+los modelos propios. En proyectos anteriores sin `// @nec:prisma` y sin los
+modelos de auth, el wiring devuelve un warning, no toca el schema y no marca
+`auth` como instalada. Si los modelos ya existen (schema copiado por una versión
+anterior), el bloque se omite para no duplicarlos. El motor de bloques aborta si
+encuentra un bloque incompleto, así que no deja el schema a medias. El anchor se
+exporta como `PRISMA_ANCHOR` (`src/patch/anchors.ts`) para que los generadores no
+contengan markers literales.
 
 Los anchors son un contrato público: si renombras uno, los proyectos generados
 con versiones anteriores dejan de recibir parches. En ese caso el wiring devuelve
@@ -310,6 +363,14 @@ API de `WiringService`:
 | `script(name, command)`           | `package.json`        | Escribe un script sin duplicarlo.         |
 | `block(file, marker, code, opts)` | cualquiera            | Bloque delimitado y reemplazable.         |
 
+Los métodos de staging (`import`, `main`, `config`, `env`, `envBlock`, `block`)
+devuelven `void`: el resultado real solo lo dan `commit()` o `transaction()`. Así
+no se puede interpretar un `changed` que todavía no se escribió.
+
+`transaction()` no es reentrante. Si hay operaciones encoladas o un staging
+fallido pendiente, lanza un error en vez de descartarlas en silencio; para
+limpiar la cola de forma explícita se usa `discard()`.
+
 Detalles del motor (`src/patch/`):
 
 - `patchAtMarker(file, marker, snippet, options)` acepta un marker literal o un
@@ -317,13 +378,16 @@ Detalles del motor (`src/patch/`):
 - Los parches de un mismo archivo se aplican en **una sola escritura**. Si falta
   cualquier marker del grupo, no se escribe nada (`anchor-missing`) y el
   generador recibe un warning: nunca queda runtime sin import.
+- Dos parches sobre el mismo anchor respetan el orden de declaración: `A` y
+  después `B` producen `A` antes que `B`, tanto en `after` como en `before`.
 - Los imports se deduplican por módulo, aceptando comillas simples/dobles y
   espacios distintos. `sort: true` solo ordena bloques de imports de una línea;
   si hay imports multilínea o comentarios, el bloque se deja intacto.
 - `patchBlock` mantiene bloques `@nec:<marker>:start` / `@nec:<marker>:end`.
 - El filesystem del motor es inyectable (`PatchFileSystem`) para tests.
-- La feature se escribe en `cli.config.json` solo si el lifecycle termina bien;
-  un wiring con warnings no lanza, pero deja constancia en consola.
+- La feature se escribe en `cli.config.json` solo si el lifecycle termina bien y
+  el wiring no devolvió warnings. Un wiring con warnings no lanza, pero impide
+  marcar la feature: el comando pide corregir el anchor y reintentar.
 
 Nunca reemplaces `main.ts` completo desde un comando nuevo.
 
@@ -378,9 +442,10 @@ installer(cacheSpec),
    todos los `install:*` automáticamente (idempotencia, estado y placeholders).
    Si la feature tiene wiring o scripts propios, añade una aserción específica.
 
-El instalador en sí son dos archivos: el spec y la línea del registry. `FEATURES`
-solo declara el nombre de la feature para que el tipo y `cli.config.json` la
-conozcan.
+El instalador toca tres sitios: el spec, la línea del registry y la entrada en
+`FEATURES`. `FEATURES` solo declara el nombre de la feature para que el tipo y
+`cli.config.json` la conozcan; `installer(spec)` deriva el comando
+`install:<feature>`.
 
 ### `make:*` (generador de archivos)
 
@@ -397,11 +462,8 @@ export class CacheGenerator implements IPreGenerator, IFileSystemGenerator {
   constructor(private readonly ctx: Context) {}
 
   async pre(): Promise<void> {
-    this.name = await this.ctx.prompter.input({ message: 'Name of cache:', name: 'name' })
-
-    if (!this.name) {
-      throw new CliError('Cache name is required', { hint: 'Pass --name <value>.' })
-    }
+    const name = await this.ctx.prompter.input({ message: 'Name of cache:', name: 'name' })
+    this.name = validateIdentifier(name, 'Cache name')
   }
 
   async createDirectories(): Promise<void> {
@@ -409,20 +471,36 @@ export class CacheGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async copyFiles(): Promise<void> {
-    const code = renderTemplate(this.ctx.project.template('generator/cache/store.template.ts'), {
-      ServiceName: pascalCase(this.name),
-    })
+    const files = [
+      {
+        path: `src/cache/${kebabCase(this.name)}.ts`,
+        content: renderTemplate(this.ctx.project.template('generator/cache/store.template.ts'), {
+          ServiceName: pascalCase(this.name),
+        }),
+      },
+      // …otros archivos del comando
+    ]
 
-    this.ctx.project.write(`src/cache/${kebabCase(this.name)}.ts`, code, 'create')
+    this.ctx.project.assertCanCreate(files.map((file) => file.path))
+
+    for (const file of files) {
+      this.ctx.project.write(file.path, file.content, 'create')
+    }
   }
 }
 ```
 
 2. Usa `ctx.prompter.input({ name: 'name' })` para que `--no-interaction` pueda
-   leer `--name` o el primer posicional. Valida el nombre antes de escribir.
+   leer `--name` o el primer posicional. Para nombres que se normalizan a rutas
+   usa `validateIdentifier`: rechaza vacíos, nombres solo de símbolos, demasiado
+   largos y separadores de ruta. Para valores que se interpolan en un comando de
+   shell usa `validateCommandName`. Si el comando depende del ORM, declara
+   `requires: [{ feature: 'orm', hint: '…' }]` en el registry.
 
 3. Escribe con política `create`: el comando falla si el archivo existe y
-   `--force` es la salida explícita. No sobrescribas archivos del usuario.
+   `--force` es la salida explícita. Si el comando crea varios archivos, calcula
+   primero todas las rutas y llama a `this.ctx.project.assertCanCreate(paths)`
+   antes de la primera escritura. No sobrescribas archivos del usuario.
 
 4. Registra el comando:
 

@@ -70,6 +70,21 @@ describe.skipIf(!enabled)('generated project with every feature compiles', () =>
       const output = [result.stdout, result.stderr].filter(Boolean).join('\n')
 
       expect(result.status, output).toBe(0)
+
+      // `install:eslint` debe dejar un config que ESLint 9 pueda cargar y que
+      // pase sobre el código generado. `tsc` no valida el config ni las reglas.
+      const eslint = path.join(project, 'node_modules', '.bin', 'eslint')
+      expect(fs.existsSync(eslint)).toBe(true)
+
+      const lint = spawnSync(eslint, ['src'], {
+        cwd: project,
+        encoding: 'utf-8',
+        env: { ...process.env, CI: '1' },
+      })
+
+      const lintOutput = [lint.stdout, lint.stderr].filter(Boolean).join('\n')
+
+      expect(lint.status, lintOutput).toBe(0)
     },
     20 * 60 * 1000
   )

@@ -87,6 +87,47 @@ describe('ModuleGenerator', () => {
     }
   })
 
+  it('fails before writing when only one generated file is missing', async () => {
+    const cwd = project()
+    await generate(cwd)
+
+    const dir = path.join(cwd, 'src/modules/users')
+    const validator = path.join(dir, 'users.validator.ts')
+    const service = path.join(dir, 'users.service.ts')
+    const serviceBefore = fs.readFileSync(service, 'utf-8')
+
+    fs.rmSync(validator)
+
+    await expect(generate(cwd)).rejects.toBeInstanceOf(CliError)
+    expect(fs.existsSync(validator)).toBe(false)
+    expect(fs.readFileSync(service, 'utf-8')).toBe(serviceBefore)
+  })
+
+  it('overwrites the whole set with --force', async () => {
+    const cwd = project()
+    await generate(cwd)
+
+    const validator = path.join(cwd, 'src/modules/users/users.validator.ts')
+    fs.writeFileSync(validator, '// custom\n')
+
+    await generate(cwd, true)
+
+    expect(fs.readFileSync(validator, 'utf-8')).not.toBe('// custom\n')
+  })
+
+  it('rejects a name that normalizes to an empty identifier before creating files', async () => {
+    const cwd = project()
+    const ctx = createContext({
+      cwd,
+      logger: silentLogger,
+      prompter: new NonInteractivePrompter({ name: '!!!' }),
+    })
+    const module = new ModuleGenerator(ctx)
+
+    await expect(module.pre()).rejects.toBeInstanceOf(CliError)
+    expect(fs.existsSync(path.join(cwd, 'src'))).toBe(false)
+  })
+
   it('overwrites user changes with --force', async () => {
     const cwd = project()
     await generate(cwd)

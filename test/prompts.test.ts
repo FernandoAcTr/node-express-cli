@@ -60,9 +60,9 @@ describe('NonInteractivePrompter', () => {
   it('rejects an invalid choice', async () => {
     const prompter = new NonInteractivePrompter({ orm: 'unknown' })
 
-    await expect(
-      prompter.select({ message: 'ORM', name: 'orm', choices: [{ name: 'TypeORM', value: 'typeorm' }] })
-    ).rejects.toBeInstanceOf(CliError)
+    await expect(prompter.select({ message: 'ORM', name: 'orm', choices: [{ name: 'TypeORM', value: 'typeorm' }] })).rejects.toBeInstanceOf(
+      CliError
+    )
   })
 
   it('confirms with --yes', async () => {

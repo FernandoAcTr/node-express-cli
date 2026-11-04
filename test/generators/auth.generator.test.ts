@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../../src/context'
 import { AuthGenerator } from '../../src/generators/auth.generator'
 import { Logger } from '../../src/logger'
+import { run } from '../../src/run'
+import { DbType } from '../../src/types'
+import { FakeShell, scaffoldProject } from '../helpers/project'
 
 const dirs: string[] = []
 
@@ -15,19 +18,41 @@ const silentLogger: Logger = {
   error: () => undefined,
 }
 
-function project(orm = 'typeorm'): string {
+function tmpRoot(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-auth-'))
   dirs.push(dir)
-  fs.writeFileSync(
-    path.join(dir, 'cli.config.json'),
-    JSON.stringify({ orm, package_manger: 'npm', fileBasedRouting: false, features: [] })
-  )
+  return dir
+}
+
+function project(orm = 'typeorm'): string {
+  const dir = tmpRoot()
+  fs.writeFileSync(path.join(dir, 'cli.config.json'), JSON.stringify({ orm, package_manger: 'npm', fileBasedRouting: false, features: [] }))
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'app' }))
   return dir
 }
 
+function count(content: string, needle: string): number {
+  return content.split(needle).length - 1
+}
+
+function prismaProject(installAuth = false): Promise<string> {
+  return scaffoldProject({ root: tmpRoot(), orm: DbType.PRISMA, installAuth, logger: silentLogger })
+}
+
+function context(cwd: string, logger: Logger = silentLogger) {
+  return createContext({ cwd, logger, shell: new FakeShell() as never })
+}
+
 function generator(cwd: string, force = false, logger: Logger = silentLogger): AuthGenerator {
   return new AuthGenerator(createContext({ cwd, force, logger }))
+}
+
+function schemaPath(projectDir: string): string {
+  return path.join(projectDir, 'src/database/prisma/schema.prisma')
+}
+
+function features(projectDir: string): string[] {
+  return JSON.parse(fs.readFileSync(path.join(projectDir, 'cli.config.json'), 'utf-8')).features
 }
 
 afterEach(() => {
@@ -77,14 +102,103 @@ describe('AuthGenerator', () => {
     expect(fs.readFileSync(controller, 'utf-8')).not.toBe('// custom controller\n')
   })
 
-  it('never overwrites an existing Prisma schema without --force', async () => {
-    const cwd = project('prisma')
-    const schema = path.join(cwd, 'src/database/prisma/schema.prisma')
-    fs.mkdirSync(path.dirname(schema), { recursive: true })
-    fs.writeFileSync(schema, 'model User {\n  id Int @id\n}\n')
+  it('merges the Prisma auth models into the schema without replacing it', async () => {
+    const cwd = await prismaProject()
+    const ctx = context(cwd)
 
-    await generator(cwd).copyFiles()
+    await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
 
-    expect(fs.readFileSync(schema, 'utf-8')).toBe('model User {\n  id Int @id\n}\n')
+    const schema = fs.readFileSync(schemaPath(cwd), 'utf-8')
+
+    expect(count(schema, 'generator client')).toBe(1)
+    expect(count(schema, 'datasource db')).toBe(1)
+    expect(schema).toContain('// @nec:prisma')
+    expect(schema).toContain('// @nec:auth:start')
+
+    for (const model of ['model Role', 'model User', 'model RefreshToken', 'model ResetPasswordToken']) {
+      expect(count(schema, `${model} {`)).toBe(1)
+    }
+
+    expect(features(cwd)).toContain('auth')
+  })
+
+  it('is idempotent when auth is installed twice', async () => {
+    const cwd = await prismaProject()
+    const first = context(cwd)
+
+    await run(new AuthGenerator(first), { ctx: first, feature: 'auth' })
+    const schema = fs.readFileSync(schemaPath(cwd), 'utf-8')
+
+    const second = context(cwd)
+    await run(new AuthGenerator(second), { ctx: second, feature: 'auth' })
+
+    expect(fs.readFileSync(schemaPath(cwd), 'utf-8')).toBe(schema)
+    expect(count(schema, '// @nec:auth:start')).toBe(1)
+  })
+
+  it('warns and leaves an older schema untouched when the Prisma anchor is missing', async () => {
+    const cwd = await prismaProject()
+    const file = schemaPath(cwd)
+    const withoutAnchor = fs.readFileSync(file, 'utf-8').replace('\n// @nec:prisma\n', '\n')
+    const warnings: string[] = []
+    const ctx = context(cwd, { ...silentLogger, warn: (message) => warnings.push(message) })
+
+    fs.writeFileSync(file, withoutAnchor)
+
+    await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
+
+    expect(warnings.join('\n')).toContain('@nec:prisma')
+    expect(fs.readFileSync(file, 'utf-8')).toBe(withoutAnchor)
+    expect(features(cwd)).not.toContain('auth')
+  })
+
+  it('merges the models after the anchor is added to an older schema', async () => {
+    const cwd = await prismaProject()
+    const file = schemaPath(cwd)
+    const schema = fs.readFileSync(file, 'utf-8')
+    const withoutAnchor = schema.replace('\n// @nec:prisma\n', '\n')
+
+    fs.writeFileSync(file, withoutAnchor)
+    const first = context(cwd)
+    await run(new AuthGenerator(first), { ctx: first, feature: 'auth' })
+
+    fs.writeFileSync(file, `${withoutAnchor}\n// @nec:prisma\n`)
+    const second = context(cwd)
+    await run(new AuthGenerator(second), { ctx: second, feature: 'auth' })
+
+    expect(fs.readFileSync(file, 'utf-8')).toContain('// @nec:auth:start')
+    expect(features(cwd)).toContain('auth')
+  })
+
+  it('aborts an incomplete auth block without touching the schema', async () => {
+    const cwd = await prismaProject()
+    const file = schemaPath(cwd)
+    const broken = `${fs.readFileSync(file, 'utf-8')}\n// @nec:auth:start\nmodel Broken {\n  id Int @id\n}\n`
+    const warnings: string[] = []
+    const ctx = context(cwd, { ...silentLogger, warn: (message) => warnings.push(message) })
+
+    fs.writeFileSync(file, broken)
+
+    await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
+
+    expect(warnings.join('\n')).toContain('incomplete')
+    expect(fs.readFileSync(file, 'utf-8')).toBe(broken)
+    expect(features(cwd)).not.toContain('auth')
+  })
+
+  it('returns the wiring warnings instead of pretending the auth module is connected', async () => {
+    const cwd = project()
+    const mainFile = path.join(cwd, 'src/main.ts')
+    const original = 'const app = 1\n'
+    const warnings: string[] = []
+
+    fs.mkdirSync(path.dirname(mainFile), { recursive: true })
+    fs.writeFileSync(mainFile, original)
+
+    const result = await generator(cwd, false, { ...silentLogger, warn: (message) => warnings.push(message) }).post()
+
+    expect(result?.warnings.length).toBeGreaterThan(0)
+    expect(fs.readFileSync(mainFile, 'utf-8')).toBe(original)
+    expect(warnings.join('\n')).toContain('@nec:imports')
   })
 })

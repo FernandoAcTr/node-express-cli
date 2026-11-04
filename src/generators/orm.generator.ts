@@ -3,10 +3,11 @@ import { Context } from '../context'
 import { DbType, FeatureMetadata } from '../types'
 import { renderTemplate } from '../utils/template'
 import { ormScripts } from '../utils/scripts'
-import { Reporter } from '../report'
+import { OperationResult, Reporter } from '../report'
 import { WritePolicy } from '../services/project.service'
 import { WireStep, applyWireSteps } from '../installers'
 import { ormWireSteps } from '../installers/specs/orm.spec'
+import { CliError } from '../errors'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
@@ -14,12 +15,27 @@ export class OrmGenerator implements IGenerator {
   constructor(private readonly ctx: Context) {}
 
   async pre(): Promise<void> {
-    this.orm = await this.ctx.prompter.select<DbType>({
+    // En proyectos existentes, `--no-interaction` debe conservar el ORM actual
+    // en vez de volver siempre a TypeORM.
+    const current = this.ctx.config.getConfig().orm
+
+    const selected = await this.ctx.prompter.select<DbType>({
       message: 'Choose an ORM',
       name: 'orm',
       choices: Object.values(DbType).map((x) => ({ name: x, value: x })),
-      default: DbType.TYPEORM,
+      default: current ?? DbType.TYPEORM,
     })
+
+    // Cambiar de motor dejaría entidades, datasources y scripts del anterior.
+    // La limpieza automática necesita un manifest con propietario por feature;
+    // hasta entonces se bloquea antes de escribir nada.
+    if (current && current !== selected) {
+      throw new CliError(`Changing the ORM from "${current}" to "${selected}" is not supported`, {
+        hint: 'Create a new project with "node-express-cli init", or remove the old ORM files and the "orm" feature from cli.config.json manually before installing another ORM.',
+      })
+    }
+
+    this.orm = selected
   }
 
   /** `run()` persiste el ORM elegido junto con la feature al terminar todo. */
@@ -68,7 +84,7 @@ export class OrmGenerator implements IGenerator {
     }
   }
 
-  async post(): Promise<void> {
+  async post(): Promise<OperationResult> {
     const reporter = new Reporter(this.ctx.logger)
     const steps: WireStep[] = []
 
@@ -82,6 +98,10 @@ export class OrmGenerator implements IGenerator {
 
     const result = this.ctx.wiring.transaction((wiring) => applyWireSteps(wiring, steps, this.ctx.config))
     reporter.add(result)
+
+    if (result.warnings.length > 0) {
+      return result
+    }
 
     if (this.orm == DbType.TYPEORM) {
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
@@ -103,11 +123,14 @@ export class OrmGenerator implements IGenerator {
       this.ctx.logger.success('Now you need to import datasources.ts in your index.ts in order to connect with mongo')
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
     }
+
+    return result
   }
 
   async installDependencies(): Promise<void> {
-    // `has('orm')` ya se apoya en `features`; comparar con el ORM guardado evita
-    // reinstalar dependencias al repetir el mismo motor y permite cambiar de ORM.
+    // `has('orm')` se apoya en `features`; comparar con el ORM guardado evita
+    // reinstalar dependencias al repetir el mismo motor. Cambiar de ORM está
+    // bloqueado en `pre()`: un proyecto no puede tener dos motores a la vez.
     const alreadyInstalled = this.ctx.has('orm') && this.ctx.config.getConfig().orm === this.orm
     const runner = this.ctx.config.getPackageRunnerCommand()
     const cwd = this.ctx.cwd
@@ -127,13 +150,25 @@ export class OrmGenerator implements IGenerator {
       } else if (this.orm == DbType.PRISMA) {
         await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @prisma/client@^6`, cwd)
         await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prisma@^6 @prisma/config@^6`, cwd)
-        this.ctx.config.deletePackageField('prisma')
+
+        if (this.ctx.config.deletePackageField('prisma')) {
+          this.ctx.project.record('package.json')
+        }
+
         await this.ctx.shell.execAsync(`${runner} prisma generate`, cwd)
       } else if (this.orm == DbType.MONGO) {
         await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} mongoose`, cwd)
       }
+
+      // El package manager modifica package.json al instalar; registrarlo antes
+      // de setScripts mantiene el manifest en sincronía con el disco.
+      this.ctx.project.record('package.json')
     }
 
-    this.ctx.config.setScripts(ormScripts(this.orm, this.ctx.config))
+    const scripts = this.ctx.config.setScripts(ormScripts(this.orm, this.ctx.config))
+
+    if (scripts.changed.length > 0) {
+      this.ctx.project.record('package.json')
+    }
   }
 }

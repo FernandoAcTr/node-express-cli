@@ -2,7 +2,7 @@ import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.int
 import { Context } from '../context'
 import { kebabCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
-import { CliError } from '../errors'
+import { validateIdentifier } from '../utils/validation'
 
 export class FactoryGenerator implements IPreGenerator, IFileSystemGenerator {
   private factoryName: string
@@ -14,13 +14,8 @@ export class FactoryGenerator implements IPreGenerator, IFileSystemGenerator {
       message: 'Name of the model that belongs to Factory:',
       name: 'name',
     })
-    if (!name) {
-      throw new CliError('Factory model name is required', {
-        hint: 'Run "node-express-cli make:factory" again and enter a name.',
-      })
-    }
 
-    this.factoryName = name
+    this.factoryName = validateIdentifier(name, 'Factory model name')
   }
 
   async createDirectories(): Promise<void> {

@@ -26,10 +26,7 @@ export class CliError extends Error {
  * permitir que stdout/stderr se vacíen; solo fija el exit code.
  */
 export function handleError(error: unknown): void {
-  const cliError =
-    error instanceof CliError
-      ? error
-      : new CliError(error instanceof Error ? error.message : String(error))
+  const cliError = error instanceof CliError ? error : new CliError(error instanceof Error ? error.message : String(error))
 
   console.error(`\nError: ${cliError.message}`)
 

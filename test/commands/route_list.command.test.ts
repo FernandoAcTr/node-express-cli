@@ -103,4 +103,82 @@ describe('route:list', () => {
     expect(printed).not.toContain('/api/alpha')
     expect(printed.indexOf('ALPHA')).toBeLessThan(printed.indexOf('ZEBRA'))
   })
+
+  it('uses --prefix for module routes', async () => {
+    const cwd = project(false)
+    const modules = path.join(cwd, 'src', 'modules', 'users')
+    fs.mkdirSync(modules, { recursive: true })
+    fs.writeFileSync(
+      path.join(modules, 'routes.ts'),
+      [
+        "import { Router } from 'express'",
+        'const router = Router()',
+        "export const PREFIX = '/users'",
+        'router.get("/", () => undefined)',
+        'export default router',
+        '',
+      ].join('\n')
+    )
+
+    const output = captureConsole()
+    const ctx = createContext({ cwd, args: { positionals: ['route:list'], flags: { prefix: '/v1' } } })
+
+    await new RouteListCommand(ctx).run()
+
+    const printed = output.join('\n').replace(/\u001b\[[0-9;]*m/g, '')
+
+    expect(printed).toContain('/v1/users')
+    expect(printed).not.toContain('/api/users')
+  })
+
+  it('normalizes a prefix without a leading slash', async () => {
+    const cwd = project(false)
+    const modules = path.join(cwd, 'src', 'modules', 'users')
+    fs.mkdirSync(modules, { recursive: true })
+    fs.writeFileSync(
+      path.join(modules, 'routes.ts'),
+      [
+        "import { Router } from 'express'",
+        'const router = Router()',
+        "export const PREFIX = '/users'",
+        'router.get("/", () => undefined)',
+        'export default router',
+        '',
+      ].join('\n')
+    )
+
+    const output = captureConsole()
+    const ctx = createContext({ cwd, args: { positionals: ['route:list'], flags: { prefix: 'v2/' } } })
+
+    await new RouteListCommand(ctx).run()
+
+    expect(output.join('\n')).toContain('/v2/users')
+  })
+
+  it('combines --prefix with --omit', async () => {
+    const cwd = project(false)
+    const modules = path.join(cwd, 'src', 'modules', 'users')
+    fs.mkdirSync(modules, { recursive: true })
+    fs.writeFileSync(
+      path.join(modules, 'routes.ts'),
+      [
+        "import { Router } from 'express'",
+        'const router = Router()',
+        "export const PREFIX = '/users'",
+        'router.get("/", () => undefined)',
+        'export default router',
+        '',
+      ].join('\n')
+    )
+
+    const output = captureConsole()
+    const ctx = createContext({ cwd, args: { positionals: ['route:list'], flags: { prefix: '/v1', omit: '/v1' } } })
+
+    await new RouteListCommand(ctx).run()
+
+    const printed = output.join('\n').replace(/\u001b\[[0-9;]*m/g, '')
+
+    expect(printed).toContain('GET      /users')
+    expect(printed).not.toContain('/v1/users')
+  })
 })

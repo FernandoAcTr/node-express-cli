@@ -147,6 +147,7 @@ export function applyPatches(file: string, patches: MarkerPatch[], fs: PatchFile
   }
 
   const results: PatchResult[] = []
+  const afterOffsets = new Map<string, number>()
   let changed = false
   let shouldSort = false
 
@@ -162,9 +163,21 @@ export function applyPatches(file: string, patches: MarkerPatch[], fs: PatchFile
 
     const markerIndex = lines.findIndex((line) => line.trim() === patch.markerLine)
     const position = patch.options?.position ?? 'after'
-    const insertAt = position === 'after' ? markerIndex + 1 : markerIndex
+    const snippet = snippetLines(patch.snippet)
 
-    lines.splice(insertAt, 0, ...snippetLines(patch.snippet))
+    if (position === 'after') {
+      // Sin este offset, cada parche nuevo se inserta justo después del anchor y
+      // el último declarado queda primero. El offset conserva el orden de
+      // declaración para los parches que comparten anchor.
+      const offset = afterOffsets.get(patch.markerLine) ?? 0
+
+      lines.splice(markerIndex + 1 + offset, 0, ...snippet)
+      afterOffsets.set(patch.markerLine, offset + snippet.length)
+    } else {
+      // Insertar siempre justo antes del anchor respeta el orden de declaración.
+      lines.splice(markerIndex, 0, ...snippet)
+    }
+
     results.push({ file, marker: patch.markerLine, status: 'changed' })
     changed = true
   }
