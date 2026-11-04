@@ -22,13 +22,17 @@ para añadir comandos sin volver a duplicar plantillas ni parches frágiles.
 
 ```
 pre -> createDirectories -> copyFiles -> installDependencies -> post -> run
+                                                              |
+                                              (si algo falla) rollback
 ```
 
-- `pre`: prompts y validaciones previas.
+- `pre`: prompts y validaciones previas. No debe crear archivos ni directorios.
 - `createDirectories` / `copyFiles`: estructura y plantillas.
 - `installDependencies`: instala paquetes; debe poder repetirse.
 - `post`: parches sobre `main.ts` u otros archivos, mensajes finales.
 - `run`: comandos que solo ejecutan una acción (por ejemplo `route:list`).
+- `rollback` (opcional): limpia lo creado si una fase anterior lanza. `init` lo
+  usa para borrar el proyecto a medias; el resto de generadores no lo necesitan.
 
 Si el comando declara `feature` en el registry y todas las fases terminan bien,
 `run()` llama a `ctx.markInstalled(feature)`. Si una fase lanza, la feature **no**

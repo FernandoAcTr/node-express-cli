@@ -58,6 +58,23 @@ describe('run', () => {
     ).rejects.toThrow('boom')
   })
 
+  it('calls rollback when a phase fails', async () => {
+    const calls: string[] = []
+
+    await expect(
+      run({
+        copyFiles: async () => {
+          throw new Error('boom')
+        },
+        rollback: async () => {
+          calls.push('rollback')
+        },
+      })
+    ).rejects.toThrow('boom')
+
+    expect(calls).toEqual(['rollback'])
+  })
+
   it('marks the feature only after every phase succeeds', async () => {
     const marked: string[] = []
 

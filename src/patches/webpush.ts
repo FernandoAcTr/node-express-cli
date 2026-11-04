@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { PatchResult, patchAtAnchor } from '../patch/anchor'
+import { PatchResult, findMissingAnchors, patchAtAnchor } from '../patch/anchor'
 import type { OperationResult } from '../report'
 
 export interface WirePushOptions {
@@ -39,20 +39,22 @@ VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:support@example.com
 `
 
-function wireMain(result: WirePushResult, cwd: string): void {
+function wireMain(result: WirePushResult, cwd: string): boolean {
   const mainFile = path.resolve(cwd, 'src/main.ts')
+  const missing = findMissingAnchors(mainFile, ['imports', 'beforeListen'])
 
-  const importPatch = patchAtAnchor(mainFile, 'imports', WEB_PUSH_IMPORT, { sort: true })
-  if (importPatch.status === 'file-missing') {
-    result.warnings.push(importPatch.message!)
-    return
+  if (missing.length > 0) {
+    missing.forEach((patch) => result.warnings.push(patch.message!))
+    return false
   }
 
+  const importPatch = patchAtAnchor(mainFile, 'imports', WEB_PUSH_IMPORT, { sort: true })
   const runtimePatch = patchAtAnchor(mainFile, 'beforeListen', VAPID_RUNTIME, {
     dedupeKey: 'setVapidDetails(',
   })
 
   recordPatches(result, mainFile, [importPatch, runtimePatch])
+  return true
 }
 
 function recordPatches(result: WirePushResult, file: string, patches: PatchResult[]): void {
@@ -175,7 +177,10 @@ export function wirePush(options: WirePushOptions = {}): WirePushResult {
   const { main = true, config = true, env = true, script = true, packageRunner = 'npx', cwd = process.cwd() } = options
   const result: WirePushResult = { changed: [], skipped: [], warnings: [] }
 
-  if (main) wireMain(result, cwd)
+  if (main && !wireMain(result, cwd)) {
+    return result
+  }
+
   if (config) wireConfig(result, cwd)
   if (env) wireEnv(result, packageRunner, cwd)
   if (script) wireScript(result, packageRunner, cwd)

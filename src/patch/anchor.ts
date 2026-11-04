@@ -20,6 +20,37 @@ export interface PatchOptions {
 }
 
 /**
+ * Devuelve un `PatchResult` por cada anchor que falta, sin modificar el archivo.
+ * Sirve para abortar un wiring completo antes de aplicar parches parciales.
+ */
+export function findMissingAnchors(file: string, anchors: AnchorName[]): PatchResult[] {
+  if (!fs.existsSync(file)) {
+    return anchors.map((anchor) => ({
+      file,
+      anchor,
+      status: 'file-missing',
+      message: `Could not find ${file}; add the ${anchor} block manually.`,
+    }))
+  }
+
+  const content = fs.readFileSync(file, 'utf-8')
+
+  return anchors
+    .filter((anchor) => !hasAnchorInContent(content, anchor))
+    .map((anchor) => ({
+      file,
+      anchor,
+      status: 'anchor-missing',
+      message: `Could not find ${anchorComment(anchor)} in ${file}; add the ${anchor} block manually.`,
+    }))
+}
+
+function hasAnchorInContent(content: string, anchor: AnchorName): boolean {
+  const marker = anchorComment(anchor)
+  return content.split(/\r?\n/).some((line) => line.trim() === marker)
+}
+
+/**
  * Inserta `snippet` junto al anchor `// @nec:<anchor>` de un archivo existente.
  * Es idempotente: si el dedupeKey ya aparece, no toca el archivo.
  */

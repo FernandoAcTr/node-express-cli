@@ -29,7 +29,7 @@
 
 1. Add a generator in `src/generators/` implementing whichever lifecycle interfaces it needs (`src/interfaces/generator.interface.ts`). It receives a `Context` (`config`, `shell`, `prompter`, `logger`, `fs`, `cwd`, `has`, `markInstalled`) via its constructor; do not import `configService`/`shellService` singletons (they no longer exist).
 2. Register it **once** in the `commands` array of `src/registry.ts` with `name`, `description`, optional `aliases`, `requires` (`orm`, `fileBasedRouting`), `feature`, `options` and `create(ctx, args)`. `src/index.ts` resolves dispatch from that registry and `src/utils/yargs.ts` generates `--help` from it. Install commands set `feature` so `run()` can call `ctx.markInstalled(feature)`. Use `ctx.has(feature)` to skip work that is already installed; the lifecycle must stay idempotent.
-3. Lifecycle order is fixed by `src/run.ts`: `pre` -> `createDirectories` + `copyFiles` -> `installDependencies` -> `post` -> `run`. Only implemented phases run.
+3. Lifecycle order is fixed by `src/run.ts`: `pre` -> `createDirectories` + `copyFiles` -> `installDependencies` -> `post` -> `run`. Only implemented phases run. If a phase throws, the optional `rollback()` hook runs before the error propagates (used by `init` to remove a half-created project).
 4. For non-interactive use, pass a `name` on each prompt option so `--no-interaction` can read it from a flag or positional argument.
 5. See `docs/architecture.md` for the full walkthrough, including tests and the patch/anchor contract.
 

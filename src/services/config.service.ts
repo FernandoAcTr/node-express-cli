@@ -138,6 +138,19 @@ export class ConfigService {
     return this.setScripts({ [name]: command }).changed.length > 0
   }
 
+  /** Escribe el nombre del paquete en package.json. Devuelve true si cambió. */
+  public setPackageName(name: string): boolean {
+    const packageJson = this.readPackageJson()
+
+    if (packageJson.name === name) {
+      return false
+    }
+
+    packageJson.name = name
+    this.writePackageJson(packageJson)
+    return true
+  }
+
   /** Elimina una clave de primer nivel de package.json. */
   public deletePackageField(field: string): boolean {
     const packageJson = this.readPackageJson()

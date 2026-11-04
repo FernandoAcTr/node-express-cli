@@ -104,6 +104,16 @@ describe('ConfigService', () => {
     expect(() => new ConfigService(root).getConfig()).toThrow(CliError)
   })
 
+  it('sets the package name idempotently', () => {
+    const root = tmpDir()
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'newproject', version: '1.0.0' }))
+    const config = new ConfigService(root)
+
+    expect(config.setPackageName('app')).toBe(true)
+    expect(config.setPackageName('app')).toBe(false)
+    expect(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8')).name).toBe('app')
+  })
+
   it('writes scripts and is idempotent', () => {
     const root = tmpDir()
     fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'app' }))

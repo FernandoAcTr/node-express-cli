@@ -75,12 +75,40 @@ describe('wirePush', () => {
 
   it('warns instead of failing when main.ts has no anchors', () => {
     const cwd = project()
-    fs.writeFileSync(path.join(cwd, 'src/main.ts'), 'export const server = null\n')
+    const mainFile = path.join(cwd, 'src/main.ts')
+    const configFile = path.join(cwd, 'src/config/index.ts')
+    const envFile = path.join(cwd, '.env.example')
+    const packageFile = path.join(cwd, 'package.json')
+    const original = 'export const server = null\n'
+    const configBefore = fs.readFileSync(configFile, 'utf-8')
+    const envBefore = fs.readFileSync(envFile, 'utf-8')
+    const packageBefore = fs.readFileSync(packageFile, 'utf-8')
+    fs.writeFileSync(mainFile, original)
 
     const result = wirePush({ cwd })
 
     expect(result.warnings.length).toBeGreaterThan(0)
     expect(result.warnings[0]).toContain('@nec:imports')
+    expect(fs.readFileSync(mainFile, 'utf-8')).toBe(original)
+    expect(fs.readFileSync(configFile, 'utf-8')).toBe(configBefore)
+    expect(fs.readFileSync(envFile, 'utf-8')).toBe(envBefore)
+    expect(fs.readFileSync(packageFile, 'utf-8')).toBe(packageBefore)
+    expect(result.changed).toEqual([])
+  })
+
+  it('does not add the runtime block when the import anchor is missing', () => {
+    const cwd = project()
+    const mainFile = path.join(cwd, 'src/main.ts')
+    const original = ['const app = express()', '// @nec:before-listen', 'export const server = app.listen(3000)', ''].join(
+      '\n'
+    )
+    fs.writeFileSync(mainFile, original)
+
+    const result = wirePush({ cwd })
+
+    expect(result.warnings.join('\n')).toContain('@nec:imports')
+    expect(fs.readFileSync(mainFile, 'utf-8')).toBe(original)
+    expect(result.changed).toEqual([])
   })
 
   it('uses the package runner of the selected package manager', () => {

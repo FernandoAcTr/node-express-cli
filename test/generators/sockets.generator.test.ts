@@ -71,4 +71,52 @@ describe('SocketsGenerator', () => {
     expect(main.match(/import SocketIO/g)).toHaveLength(1)
     expect(main.match(/new SocketIO\(server\)/g)).toHaveLength(1)
   })
+
+  it('leaves main.ts untouched when both anchors are missing', async () => {
+    const cwd = project()
+    const mainFile = path.join(cwd, 'src/main.ts')
+    const original = 'const app = 1\n'
+    const warnings: string[] = []
+    fs.writeFileSync(mainFile, original)
+
+    const ctx = createContext({
+      cwd,
+      logger: { ...silentLogger, warn: (message: string) => warnings.push(message) },
+    })
+    const generator = new SocketsGenerator(ctx)
+
+    await generator.copyFiles()
+
+    expect(fs.readFileSync(mainFile, 'utf-8')).toBe(original)
+    expect(warnings.join('\n')).toContain('@nec:imports')
+    expect(warnings.join('\n')).toContain('@nec:after-listen')
+    expect(fs.existsSync(path.join(cwd, 'src/socket.ts'))).toBe(false)
+  })
+
+  it('does not add the runtime block when only one anchor is missing', async () => {
+    const cwd = project()
+    const mainFile = path.join(cwd, 'src/main.ts')
+    const original = [
+      "import express from 'express'",
+      '// @nec:imports',
+      '',
+      'const app = express()',
+      'export const server = app.listen(3000)',
+      '',
+    ].join('\n')
+    const warnings: string[] = []
+    fs.writeFileSync(mainFile, original)
+
+    const ctx = createContext({
+      cwd,
+      logger: { ...silentLogger, warn: (message: string) => warnings.push(message) },
+    })
+    const generator = new SocketsGenerator(ctx)
+
+    await generator.copyFiles()
+
+    expect(fs.readFileSync(mainFile, 'utf-8')).toBe(original)
+    expect(warnings.join('\n')).toContain('@nec:after-listen')
+    expect(fs.existsSync(path.join(cwd, 'src/socket.ts'))).toBe(false)
+  })
 })

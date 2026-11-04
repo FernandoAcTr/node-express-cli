@@ -2,7 +2,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { patchAtAnchor } from '../../src/patch/anchor'
+import { findMissingAnchors, patchAtAnchor } from '../../src/patch/anchor'
 
 const dirs: string[] = []
 
@@ -81,6 +81,26 @@ describe('patchAtAnchor', () => {
     const result = patchAtAnchor(path.join(tmpDir(), 'missing.ts'), 'imports', 'import x from "x"')
 
     expect(result.status).toBe('file-missing')
+  })
+
+  it('finds missing anchors without modifying the file', () => {
+    const file = mainFile('const app = 1\n')
+    const content = fs.readFileSync(file, 'utf-8')
+
+    const missing = findMissingAnchors(file, ['imports', 'beforeListen'])
+
+    expect(missing.map((patch) => patch.status)).toEqual(['anchor-missing', 'anchor-missing'])
+    expect(fs.readFileSync(file, 'utf-8')).toBe(content)
+  })
+
+  it('returns no missing anchors when every anchor exists', () => {
+    expect(findMissingAnchors(mainFile(), ['imports', 'afterListen'])).toEqual([])
+  })
+
+  it('reports every anchor as missing when the file does not exist', () => {
+    const missing = findMissingAnchors(path.join(tmpDir(), 'missing.ts'), ['imports', 'beforeListen'])
+
+    expect(missing.map((patch) => patch.status)).toEqual(['file-missing', 'file-missing'])
   })
 
   it('produces the same file regardless of install order', () => {

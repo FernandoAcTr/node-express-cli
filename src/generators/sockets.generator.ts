@@ -2,7 +2,7 @@ import { IFileSystemGenerator, IInstallerGenerator } from '../interfaces/generat
 import { Context } from '../context'
 import fs from 'fs'
 import path from 'path'
-import { patchAtAnchor } from '../patch/anchor'
+import { findMissingAnchors, patchAtAnchor } from '../patch/anchor'
 import { Reporter } from '../report'
 
 export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerator {
@@ -13,6 +13,12 @@ export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerat
   async copyFiles(): Promise<void> {
     const mainFile = path.join(this.ctx.cwd, 'src/main.ts')
     const reporter = new Reporter(this.ctx.logger, 'already has the socket configuration')
+    const missing = findMissingAnchors(mainFile, ['imports', 'afterListen'])
+
+    if (missing.length > 0) {
+      reporter.patches(mainFile, missing)
+      return
+    }
 
     fs.copyFileSync(
       path.resolve(__dirname, '../../templates/generator/common/socketio/socket.ts'),
@@ -26,12 +32,6 @@ export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerat
     const importPatch = patchAtAnchor(mainFile, 'imports', "import SocketIO from './socket'", {
       sort: true,
     })
-
-    if (importPatch.status === 'file-missing') {
-      reporter.patches(mainFile, [importPatch])
-      return
-    }
-
     const listenPatch = patchAtAnchor(mainFile, 'afterListen', 'const socket = new SocketIO(server)', {
       dedupeKey: 'new SocketIO(server)',
     })

@@ -9,6 +9,8 @@ interface Lifecycle {
   installDependencies?(): Promise<void>
   post?(): Promise<void>
   run?(): Promise<void>
+  /** Limpieza opcional si una fase falla (p. ej. borrar un proyecto a medias). */
+  rollback?(): Promise<void> | void
 }
 
 export interface RunOptions {
@@ -24,12 +26,17 @@ export interface RunOptions {
 export async function run(generator: Generator | Command, options: RunOptions = {}): Promise<void> {
   const lifecycle = generator as Lifecycle
 
-  await lifecycle.pre?.()
-  await lifecycle.createDirectories?.()
-  await lifecycle.copyFiles?.()
-  await lifecycle.installDependencies?.()
-  await lifecycle.post?.()
-  await lifecycle.run?.()
+  try {
+    await lifecycle.pre?.()
+    await lifecycle.createDirectories?.()
+    await lifecycle.copyFiles?.()
+    await lifecycle.installDependencies?.()
+    await lifecycle.post?.()
+    await lifecycle.run?.()
+  } catch (error) {
+    await lifecycle.rollback?.()
+    throw error
+  }
 
   if (options.ctx && options.feature) {
     options.ctx.markInstalled(options.feature)

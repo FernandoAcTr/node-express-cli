@@ -4,16 +4,20 @@ import gradient from 'gradient-string'
 import { sleep } from '../utils/time'
 import { PackageManager } from '../types'
 import { Context } from '../context'
+import { NonInteractivePrompter } from '../prompts'
 import { ConfigService } from '../services/config.service'
 import path from 'path'
 import fs from 'fs-extra'
 import { CliError } from '../errors'
 import { baseScripts } from '../utils/scripts'
+import { validateProjectName } from '../utils/validation'
 
 export class BaseGenerator implements IGenerator {
   private projectName: string
+  private packageManager: PackageManager
   private fileBasedRouting: boolean
   private projectConfig: ConfigService
+  private createdProjectDir = false
 
   constructor(private readonly ctx: Context) {}
 
@@ -24,18 +28,17 @@ export class BaseGenerator implements IGenerator {
   async pre() {
     this.ctx.logger.info(gradient.pastel.multiline(figlet.textSync('Node-Express-CLI', { font: 'Standard' })))
 
-    await sleep(500)
+    if (process.stdout.isTTY && !(this.ctx.prompter instanceof NonInteractivePrompter)) {
+      await sleep(500)
+    }
 
     const name = await this.ctx.prompter.input({
       message: 'Enter the project name',
       name: 'name',
     })
-    if (!name) {
-      throw new CliError('Project name is required', {
-        hint: 'Run "node-express-cli init" again and enter a name.',
-      })
-    }
-    const manager = await this.ctx.prompter.select<PackageManager>({
+    this.projectName = validateProjectName(name)
+
+    this.packageManager = await this.ctx.prompter.select<PackageManager>({
       message: 'Choose package manager',
       name: 'package-manager',
       choices: Object.values(PackageManager).map((x) => ({ name: x, value: x })),
@@ -51,7 +54,19 @@ export class BaseGenerator implements IGenerator {
       default: false,
     })
 
-    this.projectName = name
+    if (fs.existsSync(this.projectDir)) {
+      throw new CliError(`The directory "${this.projectName}" already exists`, {
+        hint: 'Choose a different project name or remove the existing directory.',
+      })
+    }
+
+    this.projectConfig = this.ctx.config.forDirectory(this.projectName)
+  }
+
+  async createDirectories() {
+    if (!this.projectConfig) {
+      throw new CliError('Project configuration was not initialized')
+    }
 
     if (fs.existsSync(this.projectDir)) {
       throw new CliError(`The directory "${this.projectName}" already exists`, {
@@ -60,15 +75,13 @@ export class BaseGenerator implements IGenerator {
     }
 
     fs.mkdirSync(this.projectDir)
+    this.createdProjectDir = true
 
-    this.projectConfig = this.ctx.config.forDirectory(this.projectName)
     this.projectConfig.writeConfig({
-      package_manger: manager,
+      package_manger: this.packageManager,
       fileBasedRouting: this.fileBasedRouting,
     })
-  }
 
-  async createDirectories() {
     const src = path.join(this.projectDir, 'src')
     fs.mkdirSync(path.join(src, 'database'), { recursive: true })
     fs.mkdirSync(path.join(src, 'entities'), { recursive: true })
@@ -84,7 +97,12 @@ export class BaseGenerator implements IGenerator {
   }
 
   async copyFiles() {
+    if (!this.projectConfig) {
+      throw new CliError('Project configuration was not initialized')
+    }
+
     fs.copySync(path.resolve(__dirname, '../../templates/base'), this.projectDir)
+    this.projectConfig.setPackageName(this.projectName)
 
     const gitignore = path.join(this.projectDir, 'gitignore')
     if (fs.existsSync(gitignore)) {
@@ -141,5 +159,18 @@ export class BaseGenerator implements IGenerator {
     this.ctx.logger.success('cp .env.example .env')
     this.ctx.logger.success(`${run} dev`)
     this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+  }
+
+  /** Borra el proyecto si `init` falla después de haberlo creado. */
+  async rollback(): Promise<void> {
+    if (!this.createdProjectDir) {
+      return
+    }
+
+    if (fs.existsSync(this.projectDir)) {
+      fs.rmSync(this.projectDir, { recursive: true, force: true })
+    }
+
+    this.createdProjectDir = false
   }
 }

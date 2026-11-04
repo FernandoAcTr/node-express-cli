@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../../src/context'
+import { CliError } from '../../src/errors'
 import { BaseGenerator } from '../../src/generators/base.generator'
 import { NonInteractivePrompter } from '../../src/prompts'
 
@@ -78,6 +79,67 @@ describe('BaseGenerator routing selection', () => {
     expect(config.features).toEqual([])
     expect(config.orm).toBeUndefined()
     expect(config.version).toBeDefined()
+  })
+
+  it('writes the project name into package.json', async () => {
+    const project = await initProject(false)
+    const pkg = JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf-8'))
+
+    expect(pkg.name).toBe('app')
+    expect(pkg.version).toBe('1.0.0')
+  })
+
+  it('rejects an invalid project name before creating anything', async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-base-'))
+    dirs.push(cwd)
+    const prompter = new NonInteractivePrompter({
+      name: '../evil',
+      'package-manager': 'npm',
+      'file-based-routing': false,
+    })
+    const ctx = createContext({ cwd, prompter, logger: silentLogger })
+    const generator = new BaseGenerator(ctx)
+
+    await expect(generator.pre()).rejects.toBeInstanceOf(CliError)
+    expect(fs.readdirSync(cwd)).toEqual([])
+  })
+
+  it('does not create the project directory during pre', async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-base-'))
+    dirs.push(cwd)
+    const prompter = new NonInteractivePrompter({
+      name: 'app',
+      'package-manager': 'npm',
+      'file-based-routing': false,
+    })
+    const ctx = createContext({ cwd, prompter, logger: silentLogger })
+    const generator = new BaseGenerator(ctx)
+
+    await generator.pre()
+
+    expect(fs.existsSync(path.join(cwd, 'app'))).toBe(false)
+  })
+
+  it('removes a partially created project on rollback', async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-base-'))
+    dirs.push(cwd)
+    const prompter = new NonInteractivePrompter({
+      name: 'app',
+      'package-manager': 'npm',
+      'file-based-routing': false,
+    })
+    const ctx = createContext({ cwd, prompter, logger: silentLogger })
+    const generator = new BaseGenerator(ctx)
+
+    await generator.pre()
+    await generator.createDirectories()
+
+    const project = path.join(cwd, 'app')
+    expect(fs.existsSync(project)).toBe(true)
+
+    await generator.rollback()
+
+    expect(fs.existsSync(project)).toBe(false)
   })
 
   it('writes the base scripts for the selected package manager', async () => {
