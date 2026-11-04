@@ -35,7 +35,7 @@ El proyecto incluye y debe incluir un archivo llamado cli.config.json con las op
     "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
     "fileBasedRouting": false, -> opciones disponibles: true | false
     "validation": "express-validator", -> opciones disponibles: express-validator | zod
-    "version": "4.1.0", -> versión del CLI que generó el proyecto
+    "version": "4.0.0", -> versión del CLI que generó el proyecto
     "features": ["orm", "auth", "mailer", "notifications"] -> features instaladas; las escribe el CLI automáticamente
 }
 ```
