@@ -1,6 +1,6 @@
 import * as Controller from '@/modules/auth/auth.controller'
-import { authenticate } from '@/middlewares/passport'
+import { refreshTokenValidators } from '@/modules/auth/auth.validator'
 
 export default {
-  POST: [authenticate, Controller.refreshToken],
+  POST: [...refreshTokenValidators, Controller.refreshToken],
 } satisfies RestController

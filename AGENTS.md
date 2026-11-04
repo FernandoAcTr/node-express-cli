@@ -1,31 +1,66 @@
 # AGENTS.md
 
 ## What this repo is
+
 - `node-express-cli` is a TypeScript CLI that **scaffolds** Express + TS projects. It is not an Express app itself.
-- `src/` = the CLI. `templates/` = files copied into generated projects (`base/` for `init`, `generator/` for every other command). `docs/` is images only.
+- `src/` = the CLI. `templates/` = files copied into generated projects (`base/` for `init`, `generator/` for every other command). `docs/` holds images, `docs/architecture.md` and the ADRs in `docs/adr/`.
 - Published bins `node-express-cli` and `nec` both point to `dist/index.js`.
 
 ## Commands
+
 - Build: `npm run build` (runs `tsc`, emits `dist/`). `prepare` also builds, so it runs automatically on install.
 - Run the CLI locally: `npm run build && node dist/index <command>`.
-- Format: `npm run prettier:fix` — the only scripted check.
-- There is **no** test, lint, or separate typecheck script; `npm run build` is the typecheck. The CLI has no test suite (`templates/generator/common/tests` is scaffolding for *generated* projects).
+- Test: `npm test` (vitest, only `test/**/*.test.ts`). Unit + golden tests, no network.
+- Smoke test: `npm run test:smoke` (sets `NEC_SMOKE=1`, `SMOKE_PROFILE=core`). Generates a real project (`init + orm + mailer + auth + notifications`), installs dependencies and runs `tsc --noEmit`; slow, so it is skipped by default. CI runs it in a `{npm, pnpm} × {fileBasedRouting true,false}` matrix for TypeORM and a `SMOKE_ORM` matrix (`mongoose`, `sequelize`, `prisma`) for the other ORMs.
+- All-features smoke: `npm run test:smoke:all` (sets `SMOKE_PROFILE=all`). Installs every `install:*` on one project and runs `tsc --noEmit`; this is what proves each installable feature compiles. CI runs it in a separate `smoke-all` job.
+- Format: `npm run prettier:fix` writes the style; `npm run format:check` verifies it. CI runs the check on `src/**/*.ts` and `test/**/*.ts`.
+- There is **no** lint or separate typecheck script; `npm run build` is the typecheck. `npm test` covers helpers, config, context, registry, run, CLI dispatch and `--help` snapshot, `--dry-run`, `WiringService`, patch markers/blocks, `SpecGenerator`/installer specs, install contracts, key generators, golden project output and `route:list`; `templates/generator/common/tests` is scaffolding for _generated_ projects.
 
 ## Gotchas
-- `templates/` is excluded in `tsconfig.json`. Template `.ts` files are copied as text and never compiled or type-checked, so the compiler will not catch errors in them.
+
+- `templates/` is excluded in `tsconfig.json`. Template `.ts` files are copied as text and never compiled or type-checked by `tsc`; the smoke test (`npm run test:smoke`) is what catches compile errors in them by generating a project and running `tsc --noEmit`.
+- Golden snapshots live in `test/golden/__snapshots__/` and `test/cli/__snapshots__/`. If you change the generated project or the help text on purpose, update them with `npm test -- -u` and review the diff.
 - Template placeholders are substituted by string replace and must be preserved exactly: `__ServiceName__`, `__servicefile__`, `__modulename__`, `__ClassName__`, `__EntityName__`, `__PRISMA_SEED_COMMAND__`.
 - Config key is intentionally misspelled `package_manger` (in `src/types/index.ts`, `cli.config.json`, all code). Keep it.
-- Version lives in two places: `package.json` and `src/version.ts`. `src/version.ts` is what gets written into a generated project's `cli.config.json`. Update both (currently out of sync: `3.2.2` vs `3.2.1`).
+- Version lives in `package.json`, `package-lock.json` and `src/version.ts`. `src/version.ts` is what gets written into a generated project's `cli.config.json`. Update all three and keep them in sync.
+- Never hardcode `npm`, `npm run` or `npx` in generators/templates. Use `ConfigService.getInstallCommand()`, `getDevInstallCommand()`, `getRunCommand()`, `getPackageRunnerCommand()` and `setScript`/`setScripts`.
 - Root `.prettierrc.json` differs from the one shipped to generated projects (`templates/generator/common/prettier/.prettierrc.json`). Edit the right one.
+- `post()` may return an `OperationResult`. Any warning in it (normally a missing anchor) prevents `run()` from calling `markInstalled`; do not “fix” that by ignoring the warnings. Add the missing anchor or leave the feature unmarked.
+- `make:entity`, `make:migration`, `make:seeder` and `make:factory` declare `requires: [{ feature: 'orm' }]`. Any new `make:*` that imports ORM code (or faker installed by the ORM) must do the same.
+- Validate user-provided names with `validateCommandName` before using them in shell commands. For names that become paths/templates (`make:module`, `make:entity`, `make:seeder`, `make:factory`), use `validateIdentifier`: it rejects empty/symbol-only names, overlong names and path separators before any directory is created.
+- Changing the ORM of an existing project is blocked in `OrmGenerator.pre()`. Do not add automatic cleanup without a manifest that records the owner feature; remove the old ORM manually or start a new project.
+- Commands that write several files with `create` must call `ctx.project.assertCanCreate(paths)` before the first write, so a pre-existing file does not leave a half-generated module.
+- `WiringService` staging methods (`import`, `main`, `config`, `env`, `envBlock`, `block`) return `void`. Only `commit()`/`transaction()` return `OperationResult`. `transaction()` is not reentrant; use `discard()` explicitly if you need to clear staged work.
+- Any write to `cli.config.json` or `package.json` must end with `ctx.project.record('cli.config.json' | 'package.json')`. `markInstalled` already records `cli.config.json`; dependency installs and `setScripts` must record `package.json`.
+- Prisma 7 uses a multi-file schema: `templates/generator/orm/prisma/schema.prisma` only has `generator`/`datasource`, `install:auth` copies `src/database/prisma/schemas/auth.prisma`, and `install:notifications` copies `notifications.prisma`/`push_subscriptions.prisma`. Do not copy a whole `schema.prisma` over an existing one. For legacy projects with `// @nec:auth:start`, `AuthGenerator` keeps merging that block via `PRISMA_ANCHOR` so models are not duplicated.
+- `install:mailer` owns `src/utils/mailer.ts` and `src/notifications/{registry.ts,emails,notifications}`. `Notifiable` must not import entities, repositories or database clients: the database/push/socket channels and the store are registered by `install:notifications` through `src/notifications/registry.ts`. Keep `Mailer.sendNotification` for backward compatibility.
+- `install:notifications` requires `install:auth` (`REQUIRE_AUTH` in `src/registry.ts`) because its endpoints use `authenticate` and `req.user`. It generates `src/modules/notifications`, `src/notifications/channels`, and an ORM-specific repository; `push` and `socket` are optional and must be installed first. If `src/socket.ts` is from an older version and lacks `Socket.emitToUser`, the generator warns and uses the no-op event emitter instead of breaking the build.
+- File-based routing registers static paths before dynamic ones (`[id]`) via `compareEntries` in `templates/base/src/routing/filebased.ts` and `src/utils/file_routes.ts`. Keep both in sync when adding nested dynamic routes.
+- Prisma client uses `@prisma/adapter-mariadb` and is generated into `src/database/prisma/generated` (gitignored). `prisma.config.ts` reads `DB_URL`; if it is missing, `prisma generate` is skipped with a warning instead of failing the install.
+- `install:auth` requires `install:mailer` (`REQUIRE_MAILER` in `src/registry.ts`) for verification/reset emails. The auth domain is shared; only `src/modules/auth/auth.repository.ts` changes per ORM. Auth emails are classes (`PasswordResetEmail`, `VerifyEmailEmail`) sent through `Mailable`; `auth.mailer.ts` only builds URLs.
+- `install:eslint` ships a flat `eslint.config.mjs` and requires `install:prettier`. Keep the config compatible with the current ESLint major and make sure `eslint src` passes on a freshly generated project (the `all-features` smoke runs it).
+- `init` persists the validation library in `cli.config.json` (`validation`: `express-validator` | `zod`; projects without the key default to express-validator). `src/generators/validation.ts` is the only map of template paths. Any new `*.validator.ts` must exist in both variants, keep the `RequestHandler[]` shape and the `{ errors, message }` response, and be covered by the smoke test with `SMOKE_VALIDATION=zod`. The middleware is copied from `templates/generator/validation/<lib>/validator.ts` to `src/middlewares/validator.ts`; changing the library in an existing project is not supported.
+- `CommandDefinition.create` receives only `ctx`; commands read flags from `ctx.args`. Do not reintroduce a separate `args` parameter.
 
 ## Adding a command
-1. Add a generator in `src/generators/` implementing whichever lifecycle interfaces it needs (`src/interfaces/generator.interface.ts`).
-2. Register it in **two** places: a `case` in the `switch` in `src/index.ts`, and an option in `src/utils/yargs.ts`. Dispatch is an exact string match on `argv._[0]`; yargs only provides `--help` and flags.
-3. Lifecycle order is fixed by `src/run.ts`: `pre` -> `createDirectories` + `copyFiles` -> `installDependencies` -> `post` -> `run`. Only implemented phases run.
+
+1. For a simple `install:*`, add an `InstallerSpec` in `src/installers/specs/` and register it with one line in `src/registry.ts`: `installer(yourSpec)`. The spec declares `feature`, `description`, optional `requires`, `deps`/`devDeps`, `dirs`, `files`/`copyDir`, `scripts`, `wire` steps and success messages. Adding a feature to `FEATURES` (`src/types/index.ts`) derives the `Feature` type automatically; `installer()` derives the `install:<feature>` name.
+2. For anything that needs prompts or custom shell (choosing an ORM, auth repositories, notification persistence, migrations), add a generator in `src/generators/` implementing whichever lifecycle interfaces it needs (`src/interfaces/generator.interface.ts`). It receives a `Context` (`config`, `project`, `wiring`, `shell`, `prompter`, `logger`, `fs`, `cwd`, `args`, `force`, `dryRun`, `has`, `markInstalled`) via its constructor; do not import `configService`/`shellService` singletons (they no longer exist).
+3. Register custom generators **once** in the `commands` array of `src/registry.ts` with `name`, `description`, optional `aliases`, optional `requires` as `[{ feature, hint }]`, required `requiresProject` (only `init` sets it to `false`), `feature`, `options` and `create(ctx)`. `src/cli.ts` resolves dispatch from that registry and `src/utils/yargs.ts` generates `--help` from it. Install commands set `feature` so `run()` can call `ctx.markInstalled(feature, metadata)`. Use `ctx.has(feature)` to skip work that is already installed; the lifecycle must stay idempotent. If a generator must persist state with its feature (like `orm`), implement `installMetadata()`; `run()` writes both atomically at the end.
+4. Lifecycle order is fixed by `src/run.ts`: `pre` -> `createDirectories` + `copyFiles` -> `installDependencies` -> `post` -> `run`. Only implemented phases run. If a phase throws, the optional `rollback()` hook runs before the error propagates (used by `init` to remove a half-created project). Do not persist feature state in `pre()`: a later failure must leave `cli.config.json` untouched.
+5. For non-interactive use, pass a `name` on each prompt option so `--no-interaction` can read it from a flag or positional argument.
+6. Write project files through `ctx.project`, never with `fs.writeFileSync`/`copyFileSync` and `./src` paths. `ProjectService` enforces `.nec/manifest.json` hashes and `WritePolicy` (`create`, `skip`, `overwrite`, `overwrite-if-unmodified`); `--force` is exposed as `ctx.force` and `--dry-run` as `ctx.dryRun`. In dry-run the context injects a shared `VirtualFileSystem`, so do not bypass `ctx.project`/`ctx.config`; otherwise the write leaks to disk. Pass `ctx.cwd` to `execAsync` instead of relying on `process.cwd()`.
+7. Modify existing files only through `ctx.wiring` (`import`, `main`, `config`, `env`, `envBlock`, `script`, `block`). Specs declare `wire` steps; generators must not contain `@nec:` markers nor import `patchAtAnchor`. Use `ctx.wiring.transaction(...)` when several patches must be atomic, then print the result with one `Reporter`.
+8. Keep optional feature config/env/scripts out of `templates/base` and `baseScripts`: `MAILER`/`MAIL_*` belong to the mailer spec, `VAPID`/`vapid:generate` to push, `DB_*` to `ormWireSteps()`, and `prettier:fix` to prettier. `templates/base` must stay feature-agnostic.
+9. See `docs/architecture.md` for the full walkthrough, including tests, the patch engine and the anchor/block contract, and `docs/adr/0001-provider-system.md` for why wiring uses anchors instead of auto-discovered providers.
+
 - Template paths resolve via `path.resolve(__dirname, '../../templates/...')`, so `templates/` must ship next to `dist/` (it does; `.npmignore` excludes only `src`, configs, `logs`, `docs`).
 
 ## Generated-project facts (relevant when editing templates/generators)
+
 - Entrypoint is `src/main.ts`; compiled output is `build/` (not `dist/`). Module alias `@/*` -> `src/*`, rewritten at runtime by `tsc-alias`.
-- `cli.config.json` records `orm` (`mongoose|typeorm|sequelize|prisma`), `package_manger`, `fileBasedRouting`, and `version`.
-- `fileBasedRouting: true` switches routing from `src/modules/**` route files to a filesystem router under `src/routes/**` (placeholders `[id]` become `:id`).
+- `src/main.ts` is a single template with `// @nec:*` anchors. Installers must patch it through `ctx.wiring` and must never copy a whole `main.ts` over it. `WiringService` applies all patches for a file in one atomic write: if an anchor is missing, the file is left untouched and a warning is returned. `src/config/index.ts` (`// @nec:config`) and `.env.example` (`# @nec:env`) have their own anchors.
+- Routing lives in `src/routing/index.ts`, chosen by `init` from `templates/base/src/routing/{modules,filebased}.ts`. `fileBasedRouting: true` uses `src/routes/**` (folders like `[id]` become `:id`); otherwise `src/modules/**`.
+- `cli.config.json` records `orm` (`mongoose|typeorm|sequelize|prisma`), `package_manger`, `fileBasedRouting`, `version` and `features`. `features` is written after a successful install command and is what `ctx.has(...)` checks. Modern projects use `features` as the source of truth; older projects without it fall back to `orm`/`fileBasedRouting` (the ORM fallback warns once). `install:orm` persists `{ orm }` together with the feature only after every phase succeeds. Valid features live in `FEATURES` (`src/types/index.ts`).
+- `.nec/manifest.json` records the SHA-256 of every generated file. Do not edit it by hand; delete it to make the next command regenerate it, and do not commit code that assumes every project has one (older projects do not).
 - The generated `dev` script uses `tsc-watch`; if `build/` does not exist yet it may need to be stopped and re-run once.

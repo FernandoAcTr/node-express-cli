@@ -1,6 +1,6 @@
 {
   "name": "node-express-cli",
-  "version": "3.2.3",
+  "version": "4.0.0",
   "description": "Simple express cli generator",
   "main": "dist/index.js",
   "bin": {
@@ -11,7 +11,14 @@
     "build": "tsc",
     "start": "node dist/index",
     "prepare": "npm run build",
-    "prettier:fix": "prettier --config .prettierrc.json --write src/**/**/*.ts && prettier --config .prettierrc.json"
+    "test": "vitest run",
+    "test:smoke": "NEC_SMOKE=1 vitest run test/smoke",
+    "test:smoke:all": "NEC_SMOKE=1 SMOKE_PROFILE=all vitest run test/smoke",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "prettier:fix": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
+  },
+  "engines": {
+    "node": ">=20"
   },
   "keywords": [
     "express",
@@ -40,7 +47,11 @@
     "@types/figlet": "^1.5.8",
     "@types/fs-extra": "^11.0.4",
     "@types/gradient-string": "^1.1.2",
+    "@types/node": "^22.20.5",
     "@types/shelljs": "^0.8.15",
-    "@types/yargs": "^17.0.32"
+    "@types/yargs": "^17.0.32",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
   }
 }

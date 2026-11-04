@@ -9,7 +9,7 @@ export class RefreshToken extends BaseEntity {
   @Column()
   refresh_token: string
 
-  @Column()
+  @Column({ unique: true })
   user_id: number
 
   @OneToOne(() => User)
@@ -18,7 +18,7 @@ export class RefreshToken extends BaseEntity {
 
   @Column()
   expires_at: Date
-  
+
   @CreateDateColumn()
   created_at: Date
 }

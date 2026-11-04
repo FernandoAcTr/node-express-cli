@@ -1,42 +1,46 @@
-import { input } from '@inquirer/prompts'
 import { IPostGenerator, IPreGenerator } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
+import { Context } from '../context'
 import { DbType } from '../types'
-import { shellService } from '../services/shell.service'
+import { CliError } from '../errors'
+import { validateCommandName } from '../utils/validation'
 
 export class MigrationGenerator implements IPreGenerator, IPostGenerator {
+  private migrationName: string
+
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
     const dbType = config.orm ?? DbType.TYPEORM
 
     if (dbType == DbType.MONGO) {
-      console.log('================================'.yellow)
-      console.log("Since you are using MongoDB, you don't need migrations.".yellow)
-      console.log('================================'.yellow)
-      process.exit(0)
+      throw new CliError("MongoDB doesn't use SQL migrations", {
+        hint: 'Change your entity models instead; migrations are not needed with mongoose.',
+      })
     }
     if (dbType == DbType.PRISMA) {
-      console.log('================================'.yellow)
-      console.log("Prisma doesn't need custom migrations, please use the command to generate them.".yellow)
-      console.log('================================'.yellow)
-      process.exit(0)
+      throw new CliError("Prisma doesn't use custom migration files", {
+        hint: 'Edit the schema and run "m:run" to let Prisma generate the migration.',
+      })
     }
-  }
-  async post(): Promise<void> {
-    const config = configService.getConfig()
-    const dbType = config.orm ?? DbType.TYPEORM
 
-    const name = await input({
+    const name = await this.ctx.prompter.input({
       message: 'Name of migration:',
+      name: 'name',
     })
-    if (!name) {
-      process.exit(0)
-    }
+
+    this.migrationName = validateCommandName(name, 'Migration name')
+  }
+
+  async post(): Promise<void> {
+    const config = this.ctx.config.getConfig()
+    const dbType = config.orm ?? DbType.TYPEORM
+    const run = this.ctx.config.getRunCommand()
 
     if (dbType == DbType.SEQUELIZE) {
-      shellService.exec(`npm run db:make:migration ${name}`)
+      await this.ctx.shell.execAsync(`${run} db:make:migration ${this.migrationName}`, this.ctx.cwd)
     } else if (dbType == DbType.TYPEORM) {
-      shellService.exec(`npm run m:create ./src/database/migrations/${name}`)
+      await this.ctx.shell.execAsync(`${run} m:create ./src/database/migrations/${this.migrationName}`, this.ctx.cwd)
     }
   }
 }

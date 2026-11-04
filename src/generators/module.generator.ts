@@ -1,77 +1,102 @@
-import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
-import fs from 'fs'
+import { Context } from '../context'
 import path from 'path'
-import { configService } from '../services/config.service'
+import { kebabCase, pascalCase } from '../utils/naming'
+import { renderTemplate } from '../utils/template'
+import { validateIdentifier } from '../utils/validation'
+import { validationTemplates } from './validation'
 
 export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   private moduleName: string
 
+  constructor(private readonly ctx: Context) {}
+
+  private get moduleDir(): string {
+    return kebabCase(this.moduleName)
+  }
+
   private getModuleDirectory(): string {
-    return `./src/modules/${this.moduleName.toLowerCase()}`
+    return path.join('src/modules', this.moduleDir)
   }
 
   async pre(): Promise<void> {
-    const moduleName = await input({
+    const moduleName = await this.ctx.prompter.input({
       message: 'Name of module:',
+      name: 'name',
     })
 
-    if (!moduleName) {
-      console.error('Module name is required')
-      process.exit(0)
-    }
-
-    this.moduleName = moduleName.toLowerCase()
+    this.moduleName = validateIdentifier(moduleName, 'Module name')
   }
 
   async createDirectories(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
 
-    const dir = this.getModuleDirectory()
-
-    fs.mkdirSync(dir, { recursive: true })
+    this.ctx.project.ensureDir(this.getModuleDirectory())
 
     if (config.fileBasedRouting) {
-      fs.mkdirSync(`./src/routes/${this.moduleName}`, { recursive: true })
-      fs.mkdirSync(`./src/routes/${this.moduleName}/[id]`, { recursive: true })
+      this.ctx.project.ensureDir(path.join('src/routes', this.moduleDir))
+      this.ctx.project.ensureDir(path.join('src/routes', this.moduleDir, '[id]'))
     }
   }
 
   async copyFiles(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
     const dir = this.getModuleDirectory()
+    const moduleDir = this.moduleDir
+    const serviceName = pascalCase(this.moduleName)
+    const policy = 'create' as const
+    const validation = validationTemplates(config.validation)
 
-    const validator = fs.readFileSync(path.resolve(__dirname, `../../templates/generator/module/validator.ts`), 'utf-8')
-    fs.writeFileSync(`${dir}/${this.moduleName}.validator.ts`, validator)
-
-    const serviceName = `${this.moduleName[0].toUpperCase()}${this.moduleName.substring(1).toLowerCase()}`
-    const service = fs
-      .readFileSync(path.resolve(__dirname, `../../templates/generator/module/service.template.ts`), 'utf-8')
-      .replace(/__ServiceName__/g, serviceName)
-    fs.writeFileSync(`${dir}/${this.moduleName}.service.ts`, service)
-
-    const controller = fs
-      .readFileSync(path.resolve(__dirname, `../../templates/generator/module/controller.template.ts`), 'utf-8')
-      .replace(/__ServiceName__/g, serviceName)
-      .replace(/__servicefile__/g, this.moduleName)
-    fs.writeFileSync(`${dir}/${this.moduleName}.controller.ts`, controller)
+    const files: Array<{ path: string; content: string }> = [
+      {
+        path: path.join(dir, `${moduleDir}.validator.ts`),
+        content: renderTemplate(this.ctx.project.template(validation.module), {}),
+      },
+      {
+        path: path.join(dir, `${moduleDir}.service.ts`),
+        content: renderTemplate(this.ctx.project.template('generator/module/service.template.ts'), {
+          ServiceName: serviceName,
+        }),
+      },
+      {
+        path: path.join(dir, `${moduleDir}.controller.ts`),
+        content: renderTemplate(this.ctx.project.template('generator/module/controller.template.ts'), {
+          ServiceName: serviceName,
+          servicefile: moduleDir,
+        }),
+      },
+    ]
 
     if (config.fileBasedRouting) {
-      let router1 = fs.readFileSync(path.resolve(__dirname, `../../templates/generator/module/filerouting/router.template.ts`), 'utf-8')
-      router1 = router1.replace(/__modulename__/g, this.moduleName)
-      let router2 = fs.readFileSync(
-        path.resolve(__dirname, `../../templates/generator/module/filerouting/[id]/router.template.ts`),
-        'utf-8'
+      files.push(
+        {
+          path: path.join('src/routes', moduleDir, 'index.ts'),
+          content: renderTemplate(this.ctx.project.template('generator/module/filerouting/router.template.ts'), {
+            modulename: moduleDir,
+          }),
+        },
+        {
+          path: path.join('src/routes', moduleDir, '[id]', 'index.ts'),
+          content: renderTemplate(this.ctx.project.template('generator/module/filerouting/[id]/router.template.ts'), {
+            modulename: moduleDir,
+          }),
+        }
       )
-      router2 = router2.replace(/__modulename__/g, this.moduleName)
-
-      fs.writeFileSync(`./src/routes/${this.moduleName}/index.ts`, router1)
-      fs.writeFileSync(`./src/routes/${this.moduleName}/[id]/index.ts`, router2)
     } else {
-      const routes = fs
-        .readFileSync(path.resolve(__dirname, `../../templates/generator/module/routes.template.ts`), 'utf-8')
-        .replace(/__modulename__/g, this.moduleName)
-      fs.writeFileSync(`${dir}/${this.moduleName}.routes.ts`, routes)
+      files.push({
+        path: path.join(dir, `${moduleDir}.routes.ts`),
+        content: renderTemplate(this.ctx.project.template('generator/module/routes.template.ts'), {
+          modulename: moduleDir,
+        }),
+      })
+    }
+
+    // Preflight: si uno de los destinos existe, no se escribe ninguno. Sin esto,
+    // `create` fallaba en el primer archivo y dejaba el resto ya escrito.
+    this.ctx.project.assertCanCreate(files.map((file) => file.path))
+
+    for (const file of files) {
+      this.ctx.project.write(file.path, file.content, policy)
     }
   }
 }

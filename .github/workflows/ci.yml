@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit + golden tests
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run format:check
+
+  smoke:
+    name: Smoke core (${{ matrix.package-manager }}, fileBasedRouting=${{ matrix.file-based-routing }})
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        package-manager: [npm, pnpm]
+        file-based-routing: ['true', 'false']
+    env:
+      CI: true
+      NEC_SMOKE: '1'
+      SMOKE_PROFILE: core
+      SMOKE_PACKAGE_MANAGER: ${{ matrix.package-manager }}
+      SMOKE_FILE_BASED: ${{ matrix.file-based-routing }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: pnpm/action-setup@v4
+        if: matrix.package-manager == 'pnpm'
+        with:
+          version: 12
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx vitest run test/smoke
+
+  smoke-orms:
+    name: Smoke ORM (${{ matrix.orm }}, fileBasedRouting=${{ matrix.file-based-routing }})
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        orm: [mongoose, sequelize, prisma]
+        file-based-routing: ['true', 'false']
+    env:
+      CI: true
+      NEC_SMOKE: '1'
+      SMOKE_PROFILE: core
+      SMOKE_PACKAGE_MANAGER: npm
+      SMOKE_FILE_BASED: ${{ matrix.file-based-routing }}
+      SMOKE_ORM: ${{ matrix.orm }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx vitest run test/smoke
+
+  smoke-all:
+    name: Smoke all features (${{ matrix.validation }})
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        validation: [express-validator, zod]
+    env:
+      CI: true
+      NEC_SMOKE: '1'
+      SMOKE_PROFILE: all
+      SMOKE_PACKAGE_MANAGER: npm
+      SMOKE_FILE_BASED: 'false'
+      SMOKE_VALIDATION: ${{ matrix.validation }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx vitest run test/smoke

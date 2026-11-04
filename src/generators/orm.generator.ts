@@ -1,138 +1,192 @@
-import fs, { copySync } from 'fs-extra'
-import path from 'path'
-import { select } from '@inquirer/prompts'
 import { IGenerator } from '../interfaces/generator.interface'
-import { DbType } from '../types'
-import { configService } from '../services/config.service'
-import { shellService } from '../services/shell.service'
+import { Context } from '../context'
+import { DbType, FeatureMetadata } from '../types'
+import { renderTemplate } from '../utils/template'
+import { ormScripts } from '../utils/scripts'
+import { OperationResult, Reporter } from '../report'
+import { WritePolicy } from '../services/project.service'
+import { WireStep, applyWireSteps } from '../installers'
+import { ormWireSteps } from '../installers/specs/orm.spec'
+import { CliError } from '../errors'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
 
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    const orm = await select({
+    // En proyectos existentes, `--no-interaction` debe conservar el ORM actual
+    // en vez de volver siempre a TypeORM.
+    const current = this.ctx.config.getConfig().orm
+
+    const selected = await this.ctx.prompter.select<DbType>({
       message: 'Choose an ORM',
+      name: 'orm',
       choices: Object.values(DbType).map((x) => ({ name: x, value: x })),
+      default: current ?? DbType.TYPEORM,
     })
 
-    const config = configService.getConfig()
-    config.orm = orm
-    configService.writeConfig(config)
+    // Cambiar de motor dejaría entidades, datasources y scripts del anterior.
+    // La limpieza automática necesita un manifest con propietario por feature;
+    // hasta entonces se bloquea antes de escribir nada.
+    if (current && current !== selected) {
+      throw new CliError(`Changing the ORM from "${current}" to "${selected}" is not supported`, {
+        hint: 'Create a new project with "node-express-cli init", or remove the old ORM files and the "orm" feature from cli.config.json manually before installing another ORM.',
+      })
+    }
 
-    this.orm = orm
+    this.orm = selected
+  }
+
+  /** `run()` persiste el ORM elegido junto con la feature al terminar todo. */
+  installMetadata(): FeatureMetadata {
+    return { orm: this.orm }
   }
 
   async createDirectories(): Promise<void> {
-    const dirs = ['./src/database/seeds', './src/database/factories', './src/entities']
+    this.ctx.project.ensureDir('src/database/seeds')
+    this.ctx.project.ensureDir('src/database/factories')
+    this.ctx.project.ensureDir('src/entities')
+
     if (this.orm == DbType.TYPEORM || this.orm == DbType.SEQUELIZE) {
-      dirs.push('./src/database/migrations')
+      this.ctx.project.ensureDir('src/database/migrations')
     }
     if (this.orm == DbType.PRISMA) {
-      dirs.push('./src/database/prisma')
-      dirs.push('./src/database/prisma/migrations')
+      this.ctx.project.ensureDir('src/database/prisma')
+      this.ctx.project.ensureDir('src/database/prisma/migrations')
     }
-
-    dirs.forEach((dir) => fs.mkdirSync(dir, { recursive: true }))
   }
 
   async copyFiles(): Promise<void> {
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/seed/seeder.ts'), './src/database/seeder.ts')
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/seed/seed.ts'), './src/database/seed.ts')
+    const policy: WritePolicy = 'overwrite-if-unmodified'
+    const project = this.ctx.project
+
+    project.copy('src/database/seeder.ts', 'generator/common/seed/seeder.ts', policy)
+    project.copy('src/database/seed.ts', 'generator/common/seed/seed.ts', policy)
 
     if (this.orm == DbType.TYPEORM) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/typeorm/datasources.ts'), './src/database/datasources.ts')
-      fs.copySync(path.resolve(__dirname, '../../templates/generator/orm/typeorm/audit'), './src/entities/audit')
+      project.copy('src/database/datasources.ts', 'generator/orm/typeorm/datasources.ts', policy)
+      project.copyDir('src/entities/audit', 'generator/orm/typeorm/audit', policy)
     } else if (this.orm == DbType.SEQUELIZE) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/sequelize/datasources.ts'), './src/database/datasources.ts')
-      fs.copyFileSync(
-        path.resolve(__dirname, '../../templates/generator/orm/sequelize/sequelize-cli.json'),
-        './src/database/sequelize-cli.json'
-      )
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/sequelize/.sequelizerc'), './.sequelizerc')
+      project.copy('src/database/datasources.ts', 'generator/orm/sequelize/datasources.ts', policy)
+      project.copy('src/database/sequelize-cli.json', 'generator/orm/sequelize/sequelize-cli.json', policy)
+      project.copy('.sequelizerc', 'generator/orm/sequelize/.sequelizerc', policy)
     } else if (this.orm == DbType.PRISMA) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/schema.prisma'), './src/database/prisma/schema.prisma')
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/client.ts'), './src/database/client.ts')
-      const prismaConfig = fs
-        .readFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/prisma.config.ts'), 'utf-8')
-        .replace('__PRISMA_SEED_COMMAND__', `${configService.getTypeScriptExecutionCommand()} src/database/seeder.ts`)
-      fs.writeFileSync('./prisma.config.ts', prismaConfig)
+      project.copy('src/database/prisma/schema.prisma', 'generator/orm/prisma/schema.prisma', policy)
+      project.copy('src/database/client.ts', 'generator/orm/prisma/client.ts', policy)
+
+      const prismaConfig = renderTemplate(project.template('generator/orm/prisma/prisma.config.ts'), {
+        PRISMA_SEED_COMMAND: `${this.ctx.config.getTypeScriptExecutionCommand()} src/database/seeder.ts`,
+      })
+      project.write('prisma.config.ts', prismaConfig, policy)
     } else if (this.orm == DbType.MONGO) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/mongo/datasources.ts'), './src/database/datasources.ts')
+      project.copy('src/database/datasources.ts', 'generator/orm/mongo/datasources.ts', policy)
     }
   }
 
-  async post(): Promise<void> {
+  async post(): Promise<OperationResult> {
+    const reporter = new Reporter(this.ctx.logger)
+    const steps: WireStep[] = []
+
     if (this.orm == DbType.TYPEORM) {
-      const indexContent = fs.readFileSync('./src/main.ts', 'utf-8')
-      if (!indexContent.includes('reflect-metadata')) {
-        const lines = indexContent.split('\n')
-        lines.splice(0, 0, "import 'reflect-metadata'")
-        fs.writeFileSync('./src/main.ts', lines.join('\n'))
-      }
-
-      console.log('-------------------------------------------------------------------------------------------'.green)
-      console.log('You must install specific database driver like mysql or pg'.yellow)
-      console.log('You need to initialize the AppDataSource manually.'.green)
-      console.log('-------------------------------------------------------------------------------------------'.green)
-    } else if (this.orm == DbType.SEQUELIZE) {
-      console.log('-------------------------------------------------------------------------------------------'.green)
-      console.log('You must install specific database driver like mysql2 or pg'.yellow)
-      console.log(`You can use the .authenticate() function to test if the connection is OK`.green)
-      console.log(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`.green)
-      console.log('-------------------------------------------------------------------------------------------'.green)
-    } else if (this.orm == DbType.PRISMA) {
-      const packageContent = fs.readFileSync('./package.json', 'utf-8')
-      const packageJson = JSON.parse(packageContent)
-      delete packageJson.prisma
-      fs.writeFileSync('./package.json', JSON.stringify(packageJson, null, 2))
-
-      console.log('-------------------------------------------------------------------------------------------'.green)
-      console.log(`You need to create your first migration. Run ${configService.getConfig().package_manger} run m:run`.green)
-      console.log('-------------------------------------------------------------------------------------------'.green)
-    } else if (this.orm == DbType.MONGO) {
-      console.log('-------------------------------------------------------------------------------------------'.green)
-      console.log('Now you need to import datasources.ts in your index.ts in order to connect with mongo'.green)
-      console.log('-------------------------------------------------------------------------------------------'.green)
+      steps.push({ kind: 'import', statement: "import 'reflect-metadata'" })
     }
+
+    // La configuración y el `.env.example` de la base de datos pertenecen al
+    // ORM, no al template base. Se escriben en el mismo wiring que el resto.
+    steps.push(...ormWireSteps())
+
+    const result = this.ctx.wiring.transaction((wiring) => applyWireSteps(wiring, steps, this.ctx.config))
+    reporter.add(result)
+
+    if (result.warnings.length > 0) {
+      return result
+    }
+
+    if (this.orm == DbType.TYPEORM) {
+      this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+      this.ctx.logger.warn('You must install specific database driver like mysql or pg')
+      this.ctx.logger.success('You need to initialize the AppDataSource manually.')
+      this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+    } else if (this.orm == DbType.SEQUELIZE) {
+      this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+      this.ctx.logger.warn('You must install specific database driver like mysql2 or pg')
+      this.ctx.logger.success(`You can use the .authenticate() function to test if the connection is OK`)
+      this.ctx.logger.success(`sequelize.authenticate().then((x) => logger.info('🚀 Database is ready'))`)
+      this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+    } else if (this.orm == DbType.PRISMA) {
+      this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+      this.ctx.logger.success(`You need to create your first migration. Run ${this.ctx.config.getRunCommand()} m:run`)
+      this.ctx.logger.success('Prisma 7 generates its client inside src/database/prisma/generated')
+      this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+    } else if (this.orm == DbType.MONGO) {
+      this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+      this.ctx.logger.success('Now you need to import datasources.ts in your index.ts in order to connect with mongo')
+      this.ctx.logger.success('-------------------------------------------------------------------------------------------')
+    }
+
+    return result
+  }
+
+  private hasDatabaseUrl(): boolean {
+    if (process.env.DB_URL) {
+      return true
+    }
+
+    if (!this.ctx.project.exists('.env')) {
+      return false
+    }
+
+    return /^DB_URL=\S+/m.test(this.ctx.project.read('.env'))
   }
 
   async installDependencies(): Promise<void> {
-    console.log('================= Installing ORM ================='.yellow)
+    // `has('orm')` se apoya en `features`; comparar con el ORM guardado evita
+    // reinstalar dependencias al repetir el mismo motor. Cambiar de ORM está
+    // bloqueado en `pre()`: un proyecto no puede tener dos motores a la vez.
+    const alreadyInstalled = this.ctx.has('orm') && this.ctx.config.getConfig().orm === this.orm
+    const runner = this.ctx.config.getPackageRunnerCommand()
+    const cwd = this.ctx.cwd
+    if (alreadyInstalled) {
+      this.ctx.logger.info(`${this.orm} is already installed; skipping dependency installation`)
+    } else {
+      this.ctx.logger.info('================= Installing ORM =================')
 
-    await shellService.execAsync(`${configService.getInstallCommand()} @faker-js/faker`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`, cwd)
 
-    if (this.orm == DbType.TYPEORM) {
-      await shellService.execAsync(`${configService.getInstallCommand()} typeorm reflect-metadata`)
-      shellService.exec('npm pkg set scripts.typeorm="npx typeorm -d build/database/datasources.js"')
-      shellService.exec('npm pkg set scripts.m:run="npm run build && npm run typeorm migration:run"')
-      shellService.exec('npm pkg set scripts.m:revert="npm run build && npm run typeorm migration:revert"')
-      shellService.exec('npm pkg set scripts.m:generate="npm run build && npm run typeorm migration:generate"')
-      shellService.exec('npm pkg set scripts.m:create="npx typeorm migration:create"')
-      shellService.exec('npm pkg set scripts.m:drop="npm run build && npm run typeorm schema:drop"')
-      shellService.exec('npm pkg set scripts.m:run:fresh="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run"')
-      shellService.exec(
-        'npm pkg set scripts.m:run:fresh:seed="npm run build && npm run typeorm schema:drop && npm run typeorm migration:run && node build/database/seeder.js"'
-      )
-    } else if (this.orm == DbType.SEQUELIZE) {
-      await shellService.execAsync(`${configService.getInstallCommand()} sequelize`)
-      await shellService.execAsync(`${configService.getDevInstallCommand()} sequelize-cli`)
-      shellService.exec('npm pkg set scripts.db:migrate="npx sequelize-cli db:migrate"')
-      shellService.exec('npm pkg set scripts.db:migrate:undo="npx sequelize-cli db:migrate:undo"')
-      shellService.exec('npm pkg set scripts.db:migrate:fresh="npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate"')
-      shellService.exec('npm pkg set scripts.db:make:migration="npx sequelize-cli migration:generate --name"')
-    } else if (this.orm == DbType.PRISMA) {
-      await shellService.execAsync(`${configService.getInstallCommand()} @prisma/client@^6`)
-      await shellService.execAsync(`${configService.getDevInstallCommand()} prisma@^6 @prisma/config@^6`)
-      shellService.exec('npm pkg delete prisma')
-      shellService.exec('npm pkg set scripts.m:run="npx prisma migrate dev"')
-      shellService.exec('npm pkg set scripts.m:run:deploy="npx prisma migrate deploy"')
-      shellService.exec('npm pkg set scripts.m:reset="npx prisma migrate reset"')
-      shellService.exec('npm pkg set scripts.m:generate="npx prisma generate"')
-      await shellService.execAsync('npx prisma generate')
-    } else if (this.orm == DbType.MONGO) {
-      await shellService.execAsync(`${configService.getInstallCommand()} mongoose`)
+      if (this.orm == DbType.TYPEORM) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} typeorm reflect-metadata`, cwd)
+      } else if (this.orm == DbType.SEQUELIZE) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} sequelize`, cwd)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} sequelize-cli`, cwd)
+      } else if (this.orm == DbType.PRISMA) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @prisma/client@^7 @prisma/adapter-mariadb@^7`, cwd)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prisma@^7 @prisma/config@^7`, cwd)
+
+        if (this.ctx.config.deletePackageField('prisma')) {
+          this.ctx.project.record('package.json')
+        }
+
+        if (this.hasDatabaseUrl()) {
+          await this.ctx.shell.execAsync(`${runner} prisma generate`, cwd)
+        } else {
+          this.ctx.logger.warn(
+            'Skipped "prisma generate" because DB_URL is not set. Create .env with DB_URL and run the "m:generate" script.'
+          )
+        }
+      } else if (this.orm == DbType.MONGO) {
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} mongoose`, cwd)
+      }
+
+      // El package manager modifica package.json al instalar; registrarlo antes
+      // de setScripts mantiene el manifest en sincronía con el disco.
+      this.ctx.project.record('package.json')
     }
 
-    shellService.exec('npm pkg set scripts.db:seed="npm run build && node build/database/seeder.js"')
+    const scripts = this.ctx.config.setScripts(ormScripts(this.orm, this.ctx.config))
+
+    if (scripts.changed.length > 0) {
+      this.ctx.project.record('package.json')
+    }
   }
 }

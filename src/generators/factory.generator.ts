@@ -1,36 +1,34 @@
-import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
-import fs from 'fs-extra'
-import path from 'path'
+import { Context } from '../context'
+import { kebabCase, pascalCase } from '../utils/naming'
+import { renderTemplate } from '../utils/template'
+import { validateIdentifier } from '../utils/validation'
 
 export class FactoryGenerator implements IPreGenerator, IFileSystemGenerator {
   private factoryName: string
 
-  async pre(): Promise<void> {
-    const name = await input({
-      message: 'Name of the model that belongs to Factory:',
-    })
-    if (!name) {
-      process.exit(0)
-    }
+  constructor(private readonly ctx: Context) {}
 
-    this.factoryName = name
+  async pre(): Promise<void> {
+    const name = await this.ctx.prompter.input({
+      message: 'Name of the model that belongs to Factory:',
+      name: 'name',
+    })
+
+    this.factoryName = validateIdentifier(name, 'Factory model name')
   }
 
   async createDirectories(): Promise<void> {
-    fs.mkdirSync('./src/database/factories', {
-      recursive: true,
-    })
+    this.ctx.project.ensureDir('src/database/factories')
   }
 
   async copyFiles(): Promise<void> {
-    const factoryName = `${this.factoryName[0].toUpperCase()}${this.factoryName.substring(1).toLowerCase()}`
-    const fileName = `${this.factoryName.toLowerCase()}.factory.ts`
+    const factoryName = pascalCase(this.factoryName)
+    const fileName = `${kebabCase(this.factoryName)}.factory.ts`
 
-    const entity = fs
-      .readFileSync(path.resolve(__dirname, '../../templates/generator/common/factory/factory.template.ts'), 'utf-8')
-      .toString()
-      .replace(/__ClassName__/g, factoryName)
-    fs.writeFileSync(`./src/database/factories/${fileName}`, entity)
+    const factory = renderTemplate(this.ctx.project.template('generator/common/factory/factory.template.ts'), {
+      ClassName: factoryName,
+    })
+    this.ctx.project.write(`src/database/factories/${fileName}`, factory, 'create')
   }
 }

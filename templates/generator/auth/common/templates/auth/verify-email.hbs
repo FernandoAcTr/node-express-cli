@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Verify your email</title>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #edf2f7; font-family: Arial, sans-serif">
+    <div style="max-width: 600px; margin: 0 auto; padding: 24px">
+      <div style="background-color: #ffffff; padding: 24px; border-radius: 8px">
+        <h2 style="color: #2d3748">Hi {{name}},</h2>
+        <p style="color: #4a5568; line-height: 1.5">Confirm your email address to finish setting up your account.</p>
+
+        <p style="text-align: center; padding: 16px 0">
+          <a
+            href="{{verificationUrl}}"
+            style="background-color: #2d3748; color: #ffffff; padding: 10px 16px; border-radius: 5px; text-decoration: none"
+          >
+            Verify email
+          </a>
+        </p>
+
+        <p style="color: #4a5568">If you did not create this account, you can ignore this email.</p>
+      </div>
+    </div>
+  </body>
+</html>

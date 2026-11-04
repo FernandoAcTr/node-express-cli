@@ -1,0 +1,13 @@
+model Notification {
+  id              String    @id @default(uuid())
+  notifiable_id   String
+  notifiable_type String
+  type            String
+  data            Json?
+  read_at         DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @default(now()) @updatedAt
+
+  @@index([notifiable_id, read_at])
+  @@map("notifications")
+}

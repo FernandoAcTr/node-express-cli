@@ -18,7 +18,13 @@ o en su versión corta, la cuál puedes usar para ejecutar cualquier comando que
 nec init
 ```
 
-Este comando te preguntará el nombre de tu proyecto y creará un nuevo directorio con ese nombre, el cuál contendrá todo el código fuente.
+Este comando te preguntará el nombre de tu proyecto, el package manager, si quieres routing file-based y qué librería de validación usar (`express-validator` o `zod`), y creará un nuevo directorio con ese nombre, el cuál contendrá todo el código fuente.
+
+En un entorno no interactivo puedes pasar las respuestas por flags:
+
+```bash
+node-express-cli init --name my-app --package-manager npm --validation zod
+```
 
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
 
@@ -28,8 +34,15 @@ El proyecto incluye y debe incluir un archivo llamado cli.config.json con las op
     "orm": "mongoose", -> opciones disponibles: mongoose | typeorm | sequelize | prisma
     "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
     "fileBasedRouting": false, -> opciones disponibles: true | false
+    "validation": "express-validator", -> opciones disponibles: express-validator | zod
+    "version": "4.0.0", -> versión del CLI que generó el proyecto
+    "features": ["orm", "auth", "mailer", "notifications"] -> features instaladas; las escribe el CLI automáticamente
 }
 ```
+
+El CLI guarda en `.nec/manifest.json` el hash de cada archivo que generó. Si modificas un archivo generado, los comandos `install:*` no lo sobrescriben: muestran un aviso y continúan. Usa `--force` para forzar la sobrescritura explícita. Todos los comandos excepto `init` deben ejecutarse dentro de un proyecto generado (con `cli.config.json` y `package.json`).
+
+Usa `--dry-run` para ver qué archivos y comandos cambiaría una operación sin escribir nada. Las lecturas van al proyecto real y las escrituras quedan en memoria; los comandos de instalación solo se imprimen.
 
 ## Estructura de directorios
 
@@ -102,28 +115,56 @@ Para el caso de [Sequelize](https://sequelize.org) también se incluyen una list
 - m:run:deploy
 - m:reset
 - m:generate
+- db:seed
 
-Cuando eliges Prisma también se genera un archivo raíz llamado `prisma.config.ts`, el cual apunta al schema en `src/database/prisma/schema.prisma`, usa `src/database/prisma/migrations` como directorio de migraciones y configura el comando de `seed` según el package manager elegido. La conexión a la base de datos se toma de la variable de entorno `DB_URL` definida en tu `.env`.
+Cuando eliges Prisma (v7) se genera un archivo raíz `prisma.config.ts` que apunta al directorio `src/database/prisma`, usa `src/database/prisma/migrations` como directorio de migraciones y configura el `seed` según el package manager elegido. La conexión del CLI se toma de `DB_URL` en tu `.env`; el cliente de la app usa `@prisma/adapter-mariadb` con las variables `DB_*`. El cliente se genera en `src/database/prisma/generated` y se ignora en git. `m:run` y `m:run:deploy` ejecutan `prisma generate` después de migrar.
 
 ## Creación de módulos
-Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables. 
-El archivo de rutas deben exportar por defecto una instancia de un `Router` de `express` porque será leído automáticamente en el archivo principal del servidor `index.ts`. Ejemplo:
+Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables.
+
+El archivo de rutas debe exportar por defecto una instancia de un `Router` de `express` porque será leído automáticamente en el archivo principal del servidor `main.ts`. Opcionalmente también puede exportar:
+
+- `PREFIX`: prefijo con el que se montará el router. Si se omite, se monta directamente en `/api`.
+- `MIDDLEWARES`: arreglo de middlewares que se aplican a todas las rutas del archivo.
+
+Las rutas declaradas dentro del router son relativas al prefijo, por lo que no debes repetir `/api` en ellas. Ejemplo para `src/modules/products/products.routes.ts`:
 
 ```TS
-import { Router } from 'express';
+import { RequestHandler, Router } from 'express';
+import * as Controller from './products.controller';
+import { storeValidators, updateValidators } from './products.validator';
 
 const router = Router();
 
-router.get('/api/products', (req, res) => {
-  res.send('Hello World');
-});
+export const PREFIX = '/products';
+
+// Middlewares que aplican a todas las rutas de este archivo (ej. autenticación)
+export const MIDDLEWARES: RequestHandler[] = [];
+
+router.get('/', Controller.index);
+router.get('/:id', Controller.show);
+router.post('/', storeValidators, Controller.store);
+router.put('/:id', updateValidators, Controller.update);
+router.delete('/:id', Controller.destroy);
 
 export default router;
 ```
 
-Como un módulo puede contener varios archivos de código, para identificar el archivo de rutas, este debe contener la palabra `routes` en su nombre, por ejemplo `products.routes.ts` o `products_routes.ts`, `routes.ts`, etc.
+Con esto se generan las rutas `/api/products`, `/api/products/:id`, etc. Si necesitas rutas que no deben pasar por los `MIDDLEWARES` de un prefijo protegido, colócalas en un directorio `public`: sus routers se montan antes que los de sus directorios hermanos.
+
+Como un módulo puede contener varios archivos de código, para identificar el archivo de rutas, este debe llamarse `routes.ts`, `router.ts` o terminar en `.routes.ts` / `.router.ts`, por ejemplo `products.routes.ts` o `products.router.ts`.
 
 Con esto y sin mayor configuración adicional, las rutas del módulo ya estarán disponibles.
+
+Puedes listar las rutas del proyecto con `route:list`:
+
+```bash
+node-express-cli route:list
+node-express-cli route:list --prefix /v1
+node-express-cli route:list --prefix /v1 --omit /v1
+```
+
+El prefijo por defecto es `/api`. `--prefix` cambia el prefijo con el que se muestran las rutas de módulos y `--omit` quita ese prefijo de la salida.
 
 Para crear un módulo se utiliza el comando:
 ```bash
@@ -132,8 +173,29 @@ node-express-cli make:module
 Cada que se crea un módulo debes asignarle un nombre.
 
 ## Validación de Request
-El body de un request puede ser validado utilizando la librería [express-validator](https://www.npmjs.com/package/express-validator). 
-Para esto un módulo incluye un archivo de validación en donde se colocan cada conjunto de validaciones dentro de un array y en la última posición se coloca el middleware requestValidator, el cual se encarga de obtener los mensajes de error generados por express-validator y devolverlos como una respuesta estándar al cliente.
+Al crear el proyecto, `init` pregunta qué librería de validación quieres usar. La elección se guarda en `cli.config.json` (`validation`) y determina cómo se escriben los archivos `*.validator.ts` de `make:module`, `install:auth` e `install:notifications`:
+
+- `express-validator` (por defecto).
+- `zod` (Zod 4).
+
+En ambos casos los validadores se exportan como un arreglo de middlewares, así que las rutas no cambian:
+
+```TS
+import { storeValidators } from './user.validator';
+
+router.post('/', storeValidators, userController.store);
+```
+
+El middleware responde `400` con el mismo formato en las dos variantes:
+
+```JSON
+{
+  "errors": [{ "type": "field", "value": "", "msg": "field email is required", "path": "email", "location": "body" }],
+  "message": "field email is required"
+}
+```
+
+### express-validator
 
 ```TS
 import { check } from 'express-validator';
@@ -154,13 +216,29 @@ export const updateValidators = [
 ];
 ```
 
-Y para utilizarlos se pasan como middleware, ya que express permite pasar un array de middlewares a una ruta.
-Para más información acerca del uso de express validator visita la [documentación oficial](https://express-validator.github.io/docs/)
+Para más información visita la [documentación oficial](https://express-validator.github.io/docs/).
+
+### zod
 
 ```TS
-import { storeValidators } from './user.validators';
-router.post('/', storeValidators, userController.store);
+import { z } from 'zod';
+import { validate } from '@/middlewares/validator';
+
+export const storeSchema = z.object({
+  name: z.string().min(3, 'field name must have at least 3 characters'),
+  email: z.email('field email is required'),
+  password: z.string().min(6, 'password must be at least 6 characters'),
+});
+
+export const storeValidators = [validate(storeSchema)];
+
+export const updateSchema = storeSchema.partial();
+export const updateValidators = [validate(updateSchema)];
 ```
+
+`validate(schema, source)` acepta `'body'` (por defecto), `'query'` o `'params'`. Solo valida: no reemplaza `req.body`, `req.query` ni `req.params`. Si necesitas los datos transformados, vuelve a llamar `schema.parse(req.body)` en el controller.
+
+La librería se elige en `init`; no está pensado para cambiarla después en un proyecto existente, igual que el ORM.
 
 ## Logger
 
@@ -231,33 +309,132 @@ Para instalar ESlint
 ```bash
 node-express-cli install:eslint
 ```
-Es necesario instalar prettier para poder instalar eslint. 
+Es necesario instalar prettier para poder instalar eslint. `install:eslint` usa la configuración plana de ESLint (`eslint.config.mjs`) con `typescript-eslint` y añade los scripts `lint` y `lint:fix`, que revisan `src/**/*.ts`.
 
 ## Scaffolding de autenticación
-Es posible instalar un módulo de autenticación con lo básico necesario para autenticar un usuario con JWT, haciendo uso de la conocida librería [Passport](https://www.npmjs.com/package/passport).  
-Para instalarlo utiliza el comando `node-express-cli install:auth`.
-Esta acción creará un modelo básico de usuario, una estrategia de passport y un módulo de autenticación. 
-El módulo queda cableado automáticamente en `src/main.ts` (se registran `passport.initialize()` y la estrategia JWT) y las rutas del módulo auth se montan solas gracias al enrutador. 
-Para TypeORM también se inicializa `AppDataSource` y para Mongoose se importa la conexión. Solamente deberás crear/ejecutar las migraciones para la base de datos, de ser necesario. 
+Es posible instalar un módulo de autenticación con JWT usando [Passport](https://www.npmjs.com/package/passport). El módulo incluye registro, login, logout, refresh token, recuperación y restablecimiento de contraseña, verificación de correo, `/me` y un middleware para proteger rutas.
+
+`install:auth` requiere que `install:mailer` esté instalado, porque la verificación de correo y el reset de contraseña envían emails:
+
+```bash
+node-express-cli install:mailer
+node-express-cli install:auth
+```
+
+El módulo queda cableado automáticamente en `src/main.ts` (`passport.initialize()` y la estrategia JWT) y las rutas se montan solas. Añade `FRONTEND_URL` a `src/config/index.ts` y `.env.example`; los enlaces de los correos usan esa URL. También necesitas `SECRET` en `.env`.
+
+### Endpoints
+
+```
+POST /auth/register            (alias /auth/signup)
+POST /auth/login
+POST /auth/logout              requiere Bearer token
+POST /auth/refresh-token       público; body { refresh_token }
+POST /auth/refresh             alias de /refresh-token
+POST /auth/forgot-password
+POST /auth/reset-password      { email, token, password, password_confirmation }
+POST /auth/resend-verification requiere Bearer token
+GET  /auth/verify-email/:id/:token
+GET  /auth/me                  requiere Bearer token
+```
+
+El access token dura 1 hora y el refresh token 7 días. Hay un refresh activo por usuario: `logout` lo invalida y `reset-password` invalida además los refresh tokens.
+
+Los correos de verificación y reset se modelan como clases (`PasswordResetEmail` y `VerifyEmailEmail` en `src/notifications/emails`) y se envían con `Mailable`; `auth.mailer.ts` solo construye el enlace y elige la clase.
+
+### Estructura
+
+La lógica de negocio es común a todos los ORMs (`auth.service.ts`, `auth.controller.ts`, `auth.validator.ts`, `auth.tokens.ts`, `auth.mailer.ts`, `passport.ts`). Solo cambia `auth.repository.ts`, que traduce las entidades de cada motor al contrato normalizado de `auth.types.ts`. Añadir un ORM nuevo requiere sus entidades y un repositorio.
+
+### Prisma 7
+
+Si usas Prisma, el proyecto se genera con `prisma.config.ts`, `provider = "prisma-client"` y el cliente dentro de `src/database/prisma/generated`. La conexión usa `@prisma/adapter-mariadb` con las variables `DB_*`:
+
+- `prisma.config.ts` lee `DB_URL` de `.env`; si no existe, `install:orm`/`install:auth` avisan y omiten `prisma generate`. Crea `.env` y ejecuta `m:generate`.
+- Los modelos de auth se añaden en `src/database/prisma/schemas/auth.prisma` (multi-file schema), sin reemplazar tus modelos.
+- Los proyectos antiguos con el bloque `// @nec:auth:start` en `schema.prisma` siguen funcionando; no se duplican modelos.
+
+```bash
+cp .env.example .env   # configura DB_* y DB_URL
+node-express-cli install:orm --orm prisma --no-interaction
+node-express-cli install:mailer
+node-express-cli install:auth
+npm run m:run
+```
+
+Para TypeORM se inicializa `AppDataSource`; para Mongoose se importa la conexión. Solo debes crear/ejecutar las migraciones del motor elegido.
 
 ## Envío de Emails
-Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  
-Esta acción instalará una clase Mailer, dentro del directorio utils, la cual tiene la lógica necesaria para envío de emails y notificaciones.  
-Se instala además un template básico html para las notificaciones, el cuál es compilado mediante handlebars. Un ejemplo de envío de una notificación es: 
+Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.
 
-```TS
-Mailer.sendNotification({
-    to: 'joe@gmail.com',
-    subject: 'Asunto del mensaje',
-    atte: 'Foo Bar',
-    content: 'Contenido de la notificación',
-    greeting: 'Hola!',
-    action: {
-      title: 'Visita nuestro sitio',
-      url: 'http://www.my-site.com',
-    },
-})
+El comando instala:
+
+- `src/utils/mailer.ts`: transporte SMTP y renderizado de plantillas Handlebars.
+- `src/notifications/emails/mailable.ts` y un email de ejemplo (`welcome.email.ts`).
+- `src/notifications/notifications/notifiable.ts` y una notificación de ejemplo (`welcome.notification.ts`).
+- `src/notifications/registry.ts`: registro de canales y del almacén de notificaciones.
+- Plantillas en `src/templates/notification` y `src/templates/emails`.
+
+Los emails se modelan como clases que implementan `IMail`:
+
+```ts
+import { Mailable } from '@/notifications/emails/mailable'
+import { WelcomeEmail } from '@/notifications/emails/welcome.email'
+
+await Mailable.from('joe@gmail.com').send(
+  new WelcomeEmail('Joe', 'https://my-site.com/login')
+)
 ```
+
+Las notificaciones se modelan con `INotification` y se envían por todos los canales instalados:
+
+```ts
+import { Notifiable } from '@/notifications/notifications/notifiable'
+import { WelcomeNotification } from '@/notifications/notifications/welcome.notification'
+
+await Notifiable.from({ id: user.id, email: user.email }).notify(
+  new WelcomeNotification(user.name, 'https://my-site.com/login')
+)
+```
+
+`Notifiable` siempre puede enviar email. Los canales `toDb` y `toPush` solo se ejecutan si `install:notifications` o `install:push` están instalados. Si necesitas el método antiguo, `Mailer.sendNotification(...)` sigue disponible.
+
+## Notificaciones persistidas
+El comando `node-express-cli install:notifications` añade persistencia y endpoints HTTP. Requiere `install:auth` (y por tanto `orm` y `mailer`):
+
+```bash
+node-express-cli install:orm
+node-express-cli install:mailer
+node-express-cli install:auth
+node-express-cli install:notifications
+```
+
+Crea la entidad/migración `notifications` para el ORM activo (o `src/database/prisma/schemas/notifications.prisma` en Prisma), un repositorio por motor, el store que consume `Notifiable` y el canal `database`. Los endpoints quedan autenticados con `authenticate`:
+
+```
+GET    /api/notifications
+GET    /api/notifications/count
+GET    /api/notifications/:id
+POST   /api/notifications/read
+POST   /api/notifications/:id/read
+DELETE /api/notifications/:id
+```
+
+Con routing file-based las rutas equivalentes viven en `src/routes/notifications`. Si instalas `install:push` **antes** de `install:notifications`, también se generan `push_subscriptions`, los endpoints `/api/notifications/push/*` y el canal push. Si instalas `install:socket` antes, se emite `notification:changed` al room `user-<id>` (el handshake debe autenticarse en producción; el scaffold acepta `auth.userId`).
+
+## Notificaciones Push
+Es posible agregar soporte para notificaciones push mediante la librería [web-push](https://github.com/web-push-libs/web-push) con el comando:
+```bash
+node-express-cli install:push
+```
+Esta acción instala `web-push` y sus tipos, agrega el bloque `VAPID` en `src/config/index.ts`, registra `webpush.setVapidDetails()` en `src/main.ts`, añade las variables correspondientes en `.env.example` y el script `vapid:generate` a tu `package.json`.
+
+Para generar las llaves VAPID ejecuta:
+```bash
+npm run vapid:generate
+```
+
+Usa el runner de tu package manager (`pnpm run vapid:generate`, `yarn vapid:generate` o `bun run vapid:generate`) y copia `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y opcionalmente `VAPID_SUBJECT` en tu archivo `.env`. Si las llaves no están configuradas el servidor arranca normalmente y solo registra una advertencia, dejando las notificaciones push deshabilitadas.
 
 ## Ruteo basado en archivos
 Al crear un proyecto puedes elegir si deseas que las rutas sean manejadas con base en tu sistema de archivos (similar a lo que hace Next.js) o si prefieres manejarlas de manera manual, exportando un router de express en cada archivo de rutas (como se mencionó en la sección de módulos).

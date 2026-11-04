@@ -1,40 +1,43 @@
-import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
+import { Context } from '../context'
 import { DbType } from '../types'
-import fs from 'fs-extra'
-import path from 'path'
+import { kebabCase, pascalCase } from '../utils/naming'
+import { renderTemplate } from '../utils/template'
+import { CliError } from '../errors'
+import { validateIdentifier } from '../utils/validation'
 
 export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
   private entityName: string
   private dbType: DbType
 
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
 
     if (config.orm == DbType.PRISMA) {
-      console.log('================================'.yellow)
-      console.log("Since you are using Prisma you don't need to make entities, Prisma generate them for you.".yellow)
-      console.log('================================'.yellow)
-      process.exit(0)
+      throw new CliError('Prisma generates entities automatically', {
+        hint: 'Edit src/database/prisma/schema.prisma and run "m:generate" instead.',
+      })
     }
     this.dbType = config.orm ?? DbType.TYPEORM
 
-    this.entityName = await input({
-      message: 'Name of entity:',
-    })
-    if (!this.entityName) {
-      process.exit(0)
-    }
+    this.entityName = validateIdentifier(
+      await this.ctx.prompter.input({
+        message: 'Name of entity:',
+        name: 'name',
+      }),
+      'Entity name'
+    )
   }
 
   async createDirectories(): Promise<void> {
-    fs.mkdirSync(`./src/entities`, { recursive: true })
+    this.ctx.project.ensureDir('src/entities')
   }
 
   async copyFiles(): Promise<void> {
-    const entityName = `${this.entityName[0].toUpperCase()}${this.entityName.substring(1).toLowerCase()}`
-    const fileName = this.entityName.toLowerCase()
+    const entityName = pascalCase(this.entityName)
+    const fileName = kebabCase(this.entityName)
 
     const codeDirs = {
       [DbType.MONGO]: 'mongo',
@@ -42,10 +45,9 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
       [DbType.SEQUELIZE]: 'sequelize',
     }
 
-    const entity = fs
-      .readFileSync(path.resolve(__dirname, '../../templates/generator/orm', codeDirs[this.dbType], 'entity.template.ts'))
-      .toString()
-      .replace(/__EntityName__/g, entityName)
-    fs.writeFileSync(`./src/entities/${fileName}.entity.ts`, entity)
+    const entity = renderTemplate(this.ctx.project.template('generator/orm', codeDirs[this.dbType], 'entity.template.ts'), {
+      EntityName: entityName,
+    })
+    this.ctx.project.write(`src/entities/${fileName}.entity.ts`, entity, 'create')
   }
 }

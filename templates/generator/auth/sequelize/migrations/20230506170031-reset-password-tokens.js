@@ -1,33 +1,41 @@
-"use strict";
+'use strict'
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("reset-password-tokens", {
+    await queryInterface.createTable('password_reset_tokens', {
       id: {
         type: Sequelize.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
       },
-      token: Sequelize.STRING,
-      user_id: {
-        type: Sequelize.INTEGER.UNSIGNED,
-        references: { model: "users", key: "id" },
-        onDelete: "CASCADE",
-        onUpdate: "CASCADE",
+      token: {
+        type: Sequelize.STRING,
         allowNull: false,
       },
-      createdAt: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.fn("now"),
+      user_id: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        references: { model: 'users', key: 'id' },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+        allowNull: false,
       },
-      expiresAt: {
+      created_at: {
         type: Sequelize.DATE,
+        defaultValue: Sequelize.fn('now'),
       },
-    });
+      updated_at: {
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.fn('now'),
+      },
+      expires_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+    })
   },
 
-  async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("reset-password-tokens");
+  async down(queryInterface) {
+    await queryInterface.dropTable('password_reset_tokens')
   },
-};
+}

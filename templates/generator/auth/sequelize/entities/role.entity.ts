@@ -15,9 +15,11 @@ Role.init(
     },
     name: {
       type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
     },
   },
-  { sequelize, timestamps: false }
+  { sequelize, tableName: 'roles', underscored: true, timestamps: false }
 )
 
 export enum RoleEnum {

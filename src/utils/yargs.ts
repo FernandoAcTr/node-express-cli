@@ -1,47 +1,70 @@
-import yargs from 'yargs'
+import yargs, { Argv } from 'yargs'
+import { CommandDefinition, CommandOptionDefinition, commands } from '../registry'
+import { ParsedArgv } from '../types'
 
-export const argv = yargs.options({
-  init: {
-    alias: 'i',
-    description: 'Init a new Express project',
-  },
-  'make:module': {
-    description: 'Generate a new resource module',
-  },
-  'make:seeder': {
-    description: 'Generate a new seeder class',
-  },
-  'make:entity': {
-    description: 'Generate a new entity class',
-  },
-  'make:migration': {
-    description: 'Generate a new database migration',
-  },
-  'make:factory': {
-    description: 'Generate a new Factory class for a Model',
-  },
-  'install:prettier': {
-    description: 'Add prettier to the project',
-  },
-  'install:eslint': {
-    description: 'Add eslint to the project',
-  },
-  'install:socket': {
-    description: 'Add Socket.io to the project',
-  },
-  'install:orm': {
-    description: 'Add Database support using an orm',
-  },
-  'install:auth': {
-    description: 'Add basic scaffolding to auth with jwt and passport',
-  },
-  'install:mailer': {
-    description: 'Add support for send mails via nodemailer library',
-  },
-  'install:tests': {
-    description: 'Add a library to do testing and some examples',
-  },
-  'route:list': {
-    description: 'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',
-  },
-}).argv
+function globalOptions(): Record<string, CommandOptionDefinition> {
+  return {
+    'no-interaction': {
+      type: 'boolean',
+      description: 'Disable prompts and read answers from flags or positional arguments',
+    },
+    ci: {
+      type: 'boolean',
+      description: 'Alias of --no-interaction',
+    },
+    force: {
+      type: 'boolean',
+      description: 'Overwrite files that the CLI did not generate or that you modified',
+    },
+    'dry-run': {
+      type: 'boolean',
+      description: 'Show the files and commands that would change without writing anything',
+    },
+  }
+}
+
+/** Opciones propias de un comando; el --help de cada comando solo muestra las suyas. */
+export function commandOptions(command: CommandDefinition): Record<string, CommandOptionDefinition> {
+  return command.options ?? {}
+}
+
+function registerCommand(cli: Argv, command: CommandDefinition): void {
+  cli.command({
+    command: command.name,
+    aliases: command.aliases,
+    describe: command.description,
+    builder: (instance) => instance.options(commandOptions(command)),
+    handler: () => undefined,
+  })
+}
+
+/**
+ * Construye el parser. Las opciones globales son solo las documentadas
+ * (`--force`, `--dry-run`, `--no-interaction`, `--ci`); las de cada comando se
+ * registran en su propio `command()` para que no colisionen ni ensucien el help.
+ */
+export function buildCli(rawArgv: string[] = process.argv.slice(2), commandList: CommandDefinition[] = commands): Argv {
+  const cli = yargs(rawArgv)
+    .scriptName('node-express-cli')
+    .usage('Usage: $0 <command> [options]')
+    .options(globalOptions())
+    .wrap(null)
+    .help()
+    .version()
+
+  for (const command of commandList) {
+    registerCommand(cli, command)
+  }
+
+  return cli
+}
+
+/** Parsea los argumentos reales del proceso. */
+export function parseArgv(rawArgv: string[] = process.argv.slice(2)): ParsedArgv {
+  return buildCli(rawArgv).parse() as ParsedArgv
+}
+
+/** Texto estable para el snapshot de `--help`. */
+export function helpText(): Promise<string> {
+  return buildCli([]).getHelp()
+}

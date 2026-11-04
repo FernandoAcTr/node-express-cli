@@ -1,0 +1,269 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generated project (init + orm + auth) > also produces the expected tree with file-based routing > file-tree-file-based 1`] = `
+[
+  ".env.example",
+  ".gitignore",
+  ".nec/manifest.json",
+  "@types/express/index.d.ts",
+  "CHANGELOG.md",
+  "README.md",
+  "cli.config.json",
+  "package.json",
+  "src/@types/global.d.ts",
+  "src/config/index.ts",
+  "src/database/datasources.ts",
+  "src/database/migrations/1677294697210-users.ts",
+  "src/database/migrations/1677304667455-refresh-tokens.ts",
+  "src/database/migrations/1677458918277-reset-password-tokens.ts",
+  "src/database/seed.ts",
+  "src/database/seeder.ts",
+  "src/entities/audit/auditable_entity.ts",
+  "src/entities/audit/date_time_auditable_entity.ts",
+  "src/entities/audit/soft_deletable_auditable_entity.ts",
+  "src/entities/audit/verifiable.ts",
+  "src/entities/password_reset_token.entity.ts",
+  "src/entities/refresh_token.entity.ts",
+  "src/entities/role.entity.ts",
+  "src/entities/user.entity.ts",
+  "src/main.ts",
+  "src/middlewares/error_handler.ts",
+  "src/middlewares/passport.ts",
+  "src/middlewares/rate_limiter.ts",
+  "src/middlewares/validator.ts",
+  "src/modules/auth/auth.controller.ts",
+  "src/modules/auth/auth.mailer.ts",
+  "src/modules/auth/auth.repository.ts",
+  "src/modules/auth/auth.service.ts",
+  "src/modules/auth/auth.tokens.ts",
+  "src/modules/auth/auth.types.ts",
+  "src/modules/auth/auth.validator.ts",
+  "src/notifications/emails/mailable.ts",
+  "src/notifications/emails/password_reset.email.ts",
+  "src/notifications/emails/verify_email.email.ts",
+  "src/notifications/emails/welcome.email.ts",
+  "src/notifications/index.ts",
+  "src/notifications/notifications/notifiable.ts",
+  "src/notifications/notifications/welcome.notification.ts",
+  "src/notifications/registry.ts",
+  "src/routes/auth/forgot-password.ts",
+  "src/routes/auth/login.ts",
+  "src/routes/auth/logout.ts",
+  "src/routes/auth/me.ts",
+  "src/routes/auth/refresh-token.ts",
+  "src/routes/auth/refresh.ts",
+  "src/routes/auth/register.ts",
+  "src/routes/auth/resend-verification.ts",
+  "src/routes/auth/reset-password.ts",
+  "src/routes/auth/signup.ts",
+  "src/routes/auth/verify-email/[id]/[token].ts",
+  "src/routes/healthcheck.ts",
+  "src/routing/index.ts",
+  "src/templates/auth/password-reset.hbs",
+  "src/templates/auth/verify-email.hbs",
+  "src/templates/emails/welcome.hbs",
+  "src/templates/notification/logo.png",
+  "src/templates/notification/notification.hbs",
+  "src/utils/colorize.ts",
+  "src/utils/context.ts",
+  "src/utils/file_routes.ts",
+  "src/utils/hash.ts",
+  "src/utils/logger.ts",
+  "src/utils/mailer.ts",
+  "tsconfig.json",
+]
+`;
+
+exports[`generated project (init + orm + auth) > also produces the expected tree with file-based routing > routing-file-based.ts 1`] = `
+"import fs from 'fs'
+import path from 'path'
+import { Router } from 'express'
+import logger from '../utils/logger'
+import { buildURLPath, routeResourceName } from '../utils/file_routes'
+
+export function registerRoutes(router: Router): void {
+  void initFileBasedRoutes(router, [])
+}
+
+async function initFileBasedRoutes(router: Router, segments: string[]) {
+  const BASE_FILE_PATH = path.resolve(__dirname, '../routes')
+  const currentDir = path.join(BASE_FILE_PATH, ...segments)
+
+  for await (const entry of fs.readdirSync(currentDir, { withFileTypes: true }).sort(compareEntries)) {
+    if (entry.isDirectory()) {
+      initFileBasedRoutes(router, [...segments, entry.name])
+    } else if (entry.name.endsWith('.js')) {
+      const controller = (await import(\`\${currentDir}/\${entry.name}\` + '')).default as RestController
+      if (!controller) {
+        continue
+      }
+
+      const resourceName = routeResourceName(entry.name)
+      const url = buildURLPath([...segments, resourceName])
+
+      if (controller.GET) {
+        logger.debug(\`GET \${url}\`)
+        router.get(url, controller.GET)
+      }
+      if (controller.POST) {
+        logger.debug(\`POST \${url}\`)
+        router.post(url, controller.POST)
+      }
+      if (controller.PUT) {
+        logger.debug(\`PUT \${url}\`)
+        router.put(url, controller.PUT)
+      }
+      if (controller.DELETE) {
+        logger.debug(\`DELETE \${url}\`)
+        router.delete(url, controller.DELETE)
+      }
+      if (controller.HEAD) {
+        logger.debug(\`HEAD \${url}\`)
+        router.head(url, controller.HEAD)
+      }
+      if (controller.OPTIONS) {
+        logger.debug(\`OPTIONS \${url}\`)
+        router.options(url, controller.OPTIONS)
+      }
+      if (controller.PATCH) {
+        logger.debug(\`PATCH \${url}\`)
+        router.patch(url, controller.PATCH)
+      }
+    }
+  }
+}
+
+/** Las rutas estáticas deben registrarse antes que las dinámicas ([id], [slug]). */
+function compareEntries(a: { name: string; isDirectory(): boolean }, b: { name: string; isDirectory(): boolean }): number {
+  const aDynamic = a.isDirectory() && a.name.startsWith('[')
+  const bDynamic = b.isDirectory() && b.name.startsWith('[')
+
+  return Number(aDynamic) - Number(bDynamic) || a.name.localeCompare(b.name)
+}
+"
+`;
+
+exports[`generated project (init + orm + auth) > produces a stable file tree, main.ts and cli.config.json > cli.config.json 1`] = `
+{
+  "features": [
+    "orm",
+    "mailer",
+    "auth",
+  ],
+  "fileBasedRouting": false,
+  "orm": "typeorm",
+  "package_manger": "npm",
+  "validation": "express-validator",
+  "version": "4.0.0",
+}
+`;
+
+exports[`generated project (init + orm + auth) > produces a stable file tree, main.ts and cli.config.json > file-tree 1`] = `
+[
+  ".env.example",
+  ".gitignore",
+  ".nec/manifest.json",
+  "@types/express/index.d.ts",
+  "CHANGELOG.md",
+  "README.md",
+  "cli.config.json",
+  "package.json",
+  "src/config/index.ts",
+  "src/database/datasources.ts",
+  "src/database/migrations/1677294697210-users.ts",
+  "src/database/migrations/1677304667455-refresh-tokens.ts",
+  "src/database/migrations/1677458918277-reset-password-tokens.ts",
+  "src/database/seed.ts",
+  "src/database/seeder.ts",
+  "src/entities/audit/auditable_entity.ts",
+  "src/entities/audit/date_time_auditable_entity.ts",
+  "src/entities/audit/soft_deletable_auditable_entity.ts",
+  "src/entities/audit/verifiable.ts",
+  "src/entities/password_reset_token.entity.ts",
+  "src/entities/refresh_token.entity.ts",
+  "src/entities/role.entity.ts",
+  "src/entities/user.entity.ts",
+  "src/main.ts",
+  "src/middlewares/error_handler.ts",
+  "src/middlewares/passport.ts",
+  "src/middlewares/rate_limiter.ts",
+  "src/middlewares/validator.ts",
+  "src/modules/auth/auth.controller.ts",
+  "src/modules/auth/auth.mailer.ts",
+  "src/modules/auth/auth.repository.ts",
+  "src/modules/auth/auth.routes.ts",
+  "src/modules/auth/auth.service.ts",
+  "src/modules/auth/auth.tokens.ts",
+  "src/modules/auth/auth.types.ts",
+  "src/modules/auth/auth.validator.ts",
+  "src/modules/healthcheck/routes.ts",
+  "src/notifications/emails/mailable.ts",
+  "src/notifications/emails/password_reset.email.ts",
+  "src/notifications/emails/verify_email.email.ts",
+  "src/notifications/emails/welcome.email.ts",
+  "src/notifications/index.ts",
+  "src/notifications/notifications/notifiable.ts",
+  "src/notifications/notifications/welcome.notification.ts",
+  "src/notifications/registry.ts",
+  "src/routing/index.ts",
+  "src/templates/auth/password-reset.hbs",
+  "src/templates/auth/verify-email.hbs",
+  "src/templates/emails/welcome.hbs",
+  "src/templates/notification/logo.png",
+  "src/templates/notification/notification.hbs",
+  "src/utils/colorize.ts",
+  "src/utils/context.ts",
+  "src/utils/file_routes.ts",
+  "src/utils/hash.ts",
+  "src/utils/logger.ts",
+  "src/utils/mailer.ts",
+  "tsconfig.json",
+]
+`;
+
+exports[`generated project (init + orm + auth) > produces a stable file tree, main.ts and cli.config.json > main.ts 1`] = `
+"import express from 'express'
+import morgan from 'morgan'
+import cors from 'cors'
+import helmet from 'helmet'
+import logger from './utils/logger'
+import rateLimiter from './middlewares/rate_limiter.js'
+import handleErrorMiddleware from './middlewares/error_handler'
+import { config } from './config'
+import { registerRoutes } from './routing'
+// @nec:imports
+import 'reflect-metadata'
+import passport from 'passport'
+import { AppDataSource } from './database/datasources'
+import { JWTStrategy } from './middlewares/passport'
+
+console.debug('Applied config: ', config)
+
+// @nec:before-app
+AppDataSource.initialize()
+  .then(() => logger.info('🚀 Database connection is online...'))
+  .catch((error) => logger.error(error))
+passport.use('jwt', JWTStrategy)
+const app = express()
+const router = express.Router()
+
+registerRoutes(router)
+
+app.use(morgan('[:date[iso]] (:status) ":method :url HTTP/:http-version" :response-time ms - [:res[content-length]]'))
+app.use(cors({ origin: '*' }))
+app.use(rateLimiter)
+app.use(helmet())
+// @nec:before-json
+app.use(passport.initialize())
+app.use(express.json())
+app.use(express.urlencoded({ extended: false }))
+app.use(router)
+app.use(handleErrorMiddleware)
+
+// @nec:before-listen
+export const server = app.listen(config.PORT, () => {
+  logger.info(\`🚀 Server listen on port \${config.PORT}\`)
+})
+// @nec:after-listen
+"
+`;

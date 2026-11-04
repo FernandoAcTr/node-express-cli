@@ -1,80 +1,97 @@
+import 'colors'
 import path from 'path'
 import fs from 'fs'
 import * as parser from '@babel/parser'
 import traverse from '@babel/traverse'
 import { Command } from '../interfaces/generator.interface'
-import { configService } from '../services/config.service'
+import { Context } from '../context'
+import { discoverFileRoutes, HTTP_METHODS } from '../utils/file_routes'
+import { stringFlag } from '../utils/args'
 
 interface Route {
   method: string
   path: string
 }
 
-function buildURLPath(path: string[]) {
-  const final = path.map((val) => (val.startsWith('[') && val.endsWith(']') ? `:${val.slice(1, val.length - 1)}` : val))
-  return ('/' + final.join('/').replace('//', '')).replace('//', '/')
+function formatMethod(method: string): string {
+  const name = method.toUpperCase().padEnd(8)
+
+  switch (method.toUpperCase()) {
+    case 'GET':
+      return name.green
+    case 'POST':
+      return name.blue
+    case 'PUT':
+      return name.magenta
+    case 'DELETE':
+      return name.red
+    case 'PATCH':
+      return name.magenta
+    default:
+      return name.gray
+  }
 }
 
-async function listFilebasedRoutes(paths: string[] = [], routeGroups: Record<string, string[]> = {}, omit?: string) {
-  const BASE_FILE_PATH = path.resolve('src', 'routes')
-  const currentDir = [BASE_FILE_PATH, ...paths].join('/').replace('//', '/')
-  const entries = fs.readdirSync(currentDir, { withFileTypes: true })
-
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      await listFilebasedRoutes([...paths, entry.name], routeGroups, omit)
-    } else if (entry.name.endsWith('.ts')) {
-      const fileContent = fs.readFileSync(path.join(currentDir, entry.name), 'utf-8')
-      const resourceName = entry.name.includes('index') ? '/' : entry.name.slice(0, entry.name.length - 3)
-      const url = buildURLPath([...paths, resourceName])
-
-      let prefix = url
-      if (omit) prefix = prefix.replace(omit, '')
-      prefix = prefix.split('/').filter((v) => !!v)[0]
-
-      if (!routeGroups[prefix]) {
-        routeGroups[prefix] = []
-      }
-
-      if (fileContent.includes('GET')) {
-        routeGroups[prefix].push(`GET     `.green + url)
-      }
-      if (fileContent.includes('POST')) {
-        routeGroups[prefix].push(`POST    `.blue + url)
-      }
-      if (fileContent.includes('PUT')) {
-        routeGroups[prefix].push(`PUT     `.magenta + url)
-      }
-      if (fileContent.includes('DELETE')) {
-        routeGroups[prefix].push(`DELETE  `.red + url)
-      }
-      if (fileContent.includes('HEAD')) {
-        routeGroups[prefix].push(`HEAD    `.gray + url)
-      }
-      if (fileContent.includes('OPTIONS')) {
-        routeGroups[prefix].push(`OPTIONS `.gray + url)
-      }
-      if (fileContent.includes('PATCH')) {
-        routeGroups[prefix].push(`PATCH   `.magenta + url)
-      }
-    }
-  }
-
-  if (paths.length === 0) {
-    Object.keys(routeGroups).forEach((prefix) => {
+function printGroups(groups: Record<string, string[]>): void {
+  Object.keys(groups)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((prefix) => {
       console.log('')
       console.log(`-----------------------`.green)
       console.log(`     ${prefix.toUpperCase()}    `.green)
       console.log(`-----------------------`.green)
       console.log('')
-      routeGroups[prefix].forEach((route) => {
+      groups[prefix].forEach((route) => {
         console.log(route)
       })
     })
-  }
 }
 
-function extractRoutesFromFile(filePath: string): Route[] {
+/**
+ * Lista las rutas file-based leyendo los métodos exportados con AST.
+ * Ignora `GET`/`POST` que solo aparecen en comentarios o strings.
+ */
+async function listFilebasedRoutes(baseDir: string, omit?: string): Promise<void> {
+  const routes = discoverFileRoutes(baseDir)
+  const groups: Record<string, string[]> = {}
+
+  for (const route of routes) {
+    const printedUrl = omit ? route.url.replace(omit, '') || '/' : route.url
+    let prefix = printedUrl
+    prefix = prefix.split('/').filter((value) => !!value)[0] ?? ''
+
+    groups[prefix] ??= []
+
+    for (const method of route.methods) {
+      groups[prefix].push(`${formatMethod(method)} ${printedUrl}`)
+    }
+  }
+
+  printGroups(groups)
+}
+
+/** Normaliza `api`, `/v1/` o una cadena vacía al formato del router: `/v1`. */
+function normalizePrefix(prefix: string | undefined): string {
+  const value = (prefix ?? '/api').trim()
+  const segments = value.split('/').filter((segment) => !!segment)
+
+  return segments.length > 0 ? `/${segments.join('/')}` : '/api'
+}
+
+function joinRoutePath(apiPrefix: string, prefix: string, routePath: string): string {
+  // Older projects declare the /api prefix inside the route file itself.
+  if (routePath === apiPrefix || routePath.startsWith(`${apiPrefix}/`)) {
+    return routePath
+  }
+
+  const segments = [apiPrefix, prefix, routePath]
+    .join('/')
+    .split('/')
+    .filter((value) => !!value)
+  return `/${segments.join('/')}`
+}
+
+function extractRoutesFromFile(filePath: string, apiPrefix: string): Route[] {
   const code = fs.readFileSync(filePath, 'utf-8')
   const ast = parser.parse(code, {
     sourceType: 'module',
@@ -82,15 +99,28 @@ function extractRoutesFromFile(filePath: string): Route[] {
   })
 
   const routes: Route[] = []
+  let prefix = ''
 
   traverse(ast, {
+    ExportNamedDeclaration({ node }) {
+      const declaration = node.declaration
+      if (declaration?.type !== 'VariableDeclaration') return
+
+      declaration.declarations.forEach((declarator) => {
+        if (declarator.id.type !== 'Identifier' || declarator.id.name !== 'PREFIX') return
+        const init = declarator.init
+        if (init?.type === 'StringLiteral') {
+          prefix = init.value
+        }
+      })
+    },
     CallExpression({ node }) {
-      // Detect calls like: router.get('/api/products', ...)
+      // Detect calls like: router.get('/', ...)
       if (
         node.callee.type === 'MemberExpression' &&
         node.callee.object.type === 'Identifier' &&
         node.callee.property.type === 'Identifier' &&
-        node.callee.property.name.match(/^(get|post|put|delete|patch|head|options)$/)
+        (HTTP_METHODS as readonly string[]).includes(node.callee.property.name.toUpperCase())
       ) {
         const method = node.callee.property.name
         const arg0 = node.arguments[0]
@@ -105,71 +135,62 @@ function extractRoutesFromFile(filePath: string): Route[] {
     },
   })
 
-  return routes
+  return routes.map((route) => ({ ...route, path: joinRoutePath(apiPrefix, prefix, route.path) }))
 }
 
-async function listRoutes(nestedPath: string[] = [], routeGroups: Record<string, Route[]> = {}): Promise<void> {
-  const baseDir = path.resolve('src', 'modules')
+async function listRoutes(
+  baseDir: string,
+  omit?: string,
+  apiPrefix = '/api',
+  nestedPath: string[] = [],
+  routeGroups: Record<string, Route[]> = {}
+): Promise<void> {
   const currentDir = path.join(baseDir, ...nestedPath)
-  const entries = fs.readdirSync(currentDir, { withFileTypes: true })
+
+  if (!fs.existsSync(currentDir)) {
+    return
+  }
+
+  const entries = fs.readdirSync(currentDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      await listRoutes([...nestedPath, entry.name], routeGroups)
+      await listRoutes(baseDir, omit, apiPrefix, [...nestedPath, entry.name], routeGroups)
     } else if (entry.name.includes('routes')) {
       const filePath = path.join(currentDir, entry.name)
-      const routes = extractRoutesFromFile(filePath)
-
-      routeGroups[filePath] = routes
+      routeGroups[filePath] = extractRoutesFromFile(filePath, apiPrefix)
     }
   }
 
   if (nestedPath.length === 0) {
-    const modulesDir = path.resolve('src')
+    const modulesDir = path.resolve(baseDir, '..')
+    const groups: Record<string, string[]> = {}
+
     Object.keys(routeGroups).forEach((prefix) => {
       const p = prefix.replace(modulesDir, '')
-      console.log('')
-      console.log(`--------------------------------`.green)
-      console.log(`  ${p}    `.green)
-      console.log(`--------------------------------`.green)
-      console.log('')
-      routeGroups[prefix].forEach(({ method, path: routePath }) => {
-        const m = method.toUpperCase()
-        if (m == 'GET') {
-          console.log(`GET     `.green + routePath)
-        }
-        if (m == 'POST') {
-          console.log(`POST    `.blue + routePath)
-        }
-        if (m == 'PUT') {
-          console.log(`PUT     `.magenta + routePath)
-        }
-        if (m == 'DELETE') {
-          console.log(`DELETE  `.red + routePath)
-        }
-        if (m == 'HEAD') {
-          console.log(`HEAD    `.gray + routePath)
-        }
-        if (m == 'OPTIONS') {
-          console.log(`OPTIONS `.gray + routePath)
-        }
-        if (m == 'PATCH') {
-          console.log(`PATCH   `.magenta + routePath)
-        }
+      groups[p] = routeGroups[prefix].map(({ method, path: routePath }) => {
+        const printedPath = omit ? routePath.replace(omit, '') || '/' : routePath
+        return `${formatMethod(method)} ${printedPath}`
       })
     })
+
+    printGroups(groups)
   }
 }
 
 export class RouteListCommand implements Command {
-  constructor(private readonly omit?: string) {}
+  constructor(private readonly ctx: Context) {}
 
   async run(): Promise<void> {
-    const config = configService.getConfig()
+    const config = this.ctx.config.getConfig()
+    const srcDir = path.join(this.ctx.cwd, 'src')
+    const omit = stringFlag(this.ctx.args, 'omit')
+    const apiPrefix = normalizePrefix(stringFlag(this.ctx.args, 'prefix'))
+
     if (config.fileBasedRouting) {
-      await listFilebasedRoutes([], {}, this.omit)
+      await listFilebasedRoutes(path.join(srcDir, 'routes'), omit)
     } else {
-      await listRoutes()
+      await listRoutes(path.join(srcDir, 'modules'), omit, apiPrefix)
     }
   }
 }

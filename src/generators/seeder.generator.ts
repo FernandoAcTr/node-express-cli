@@ -1,33 +1,36 @@
-import { input } from '@inquirer/prompts'
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
-import fs from 'fs-extra'
-import path from 'path'
+import { Context } from '../context'
+import { camelCase, pascalCase } from '../utils/naming'
+import { renderTemplate } from '../utils/template'
+import { validateIdentifier } from '../utils/validation'
 
 export class SeederGenerator implements IPreGenerator, IFileSystemGenerator {
   private seederName: string
 
+  constructor(private readonly ctx: Context) {}
+
   async pre(): Promise<void> {
-    this.seederName = await input({
-      message: 'Name of seeder:',
-    })
-    if (!this.seederName) {
-      process.exit(0)
-    }
+    this.seederName = validateIdentifier(
+      await this.ctx.prompter.input({
+        message: 'Name of seeder:',
+        name: 'name',
+      }),
+      'Seeder name'
+    )
   }
 
   async createDirectories(): Promise<void> {
-    fs.mkdirSync('./src/database/seeds', { recursive: true })
+    this.ctx.project.ensureDir('src/database/seeds')
   }
 
   async copyFiles(): Promise<void> {
-    const filename = `${this.seederName[0].toLowerCase()}${this.seederName.substring(1)}.seeder.ts`
-    const seederName = `${this.seederName[0].toUpperCase()}${this.seederName.substring(1)}Seeder`
+    const filename = `${camelCase(this.seederName)}.seeder.ts`
+    const seederName = `${pascalCase(this.seederName)}Seeder`
 
-    const seeder = fs
-      .readFileSync(path.resolve(__dirname, '../../templates/generator/common/seed/seed.template.ts'))
-      .toString()
-      .replace(/__ClassName__/g, seederName)
+    const seeder = renderTemplate(this.ctx.project.template('generator/common/seed/seed.template.ts'), {
+      ClassName: seederName,
+    })
 
-    fs.writeFileSync(`./src/database/seeds/${filename}`, seeder)
+    this.ctx.project.write(`src/database/seeds/${filename}`, seeder, 'create')
   }
 }

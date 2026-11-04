@@ -19,6 +19,7 @@ export class users1677294697210 implements MigrationInterface {
           {
             name: 'name',
             type: 'varchar(50)',
+            isUnique: true,
           },
         ],
       })
@@ -67,11 +68,6 @@ export class users1677294697210 implements MigrationInterface {
           {
             name: 'email_verified_at',
             type: 'datetime',
-            isNullable: true,
-          },
-          {
-            name: 'deleted_at',
-            type: 'datetime(6)',
             isNullable: true,
           },
         ],
