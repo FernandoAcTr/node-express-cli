@@ -15,7 +15,9 @@ export interface FileRoute {
 
 export function buildURLPath(segments: string[]): string {
   const final = segments.map((val) => (val.startsWith('[') && val.endsWith(']') ? `:${val.slice(1, val.length - 1)}` : val))
-  return ('/' + final.join('/').replace('//', '')).replace('//', '/')
+  const url = `/${final.join('/')}`.replace(/\/+/g, '/').replace(/\/+$/, '')
+
+  return url === '' ? '/' : url
 }
 
 export function routeResourceName(fileName: string): string {
@@ -101,7 +103,7 @@ export function discoverFileRoutes(baseDir: string): FileRoute[] {
       return
     }
 
-    const entries = fs.readdirSync(currentDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))
+    const entries = fs.readdirSync(currentDir, { withFileTypes: true }).sort(compareEntries)
 
     for (const entry of entries) {
       if (entry.isDirectory()) {
@@ -148,4 +150,12 @@ function propertyKey(key: any): string | undefined {
   if (key.type === 'StringLiteral') return key.value
 
   return undefined
+}
+
+/** Las rutas estáticas deben registrarse antes que las dinámicas ([id], [slug]). */
+function compareEntries(a: { name: string; isDirectory(): boolean }, b: { name: string; isDirectory(): boolean }): number {
+  const aDynamic = a.isDirectory() && a.name.startsWith('[')
+  const bDynamic = b.isDirectory() && b.name.startsWith('[')
+
+  return Number(aDynamic) - Number(bDynamic) || a.name.localeCompare(b.name)
 }

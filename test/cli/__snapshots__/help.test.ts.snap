@@ -4,21 +4,22 @@ exports[`--help > matches the documented snapshot 1`] = `
 "Usage: node-express-cli <command> [options]
 
 Commands:
-  node-express-cli init              Init a new Express project  [aliases: i]
-  node-express-cli make:module       Generate a new resource module
-  node-express-cli install:prettier  Add prettier to the project
-  node-express-cli install:eslint    Add ESLint (flat config) to the project
-  node-express-cli install:socket    Add Socket.io to the project
-  node-express-cli install:mailer    Add support for send mails via nodemailer library
-  node-express-cli install:orm       Add Database support using an orm
-  node-express-cli install:auth      Add basic scaffolding to auth with jwt and passport (requires mailer)
-  node-express-cli install:push      Add web push notifications support via web-push
-  node-express-cli make:seeder       Generate a new seeder class
-  node-express-cli make:entity       Generate a new entity class
-  node-express-cli make:migration    Generate a new database migration
-  node-express-cli make:factory      Generate a new Factory class for a Model
-  node-express-cli install:tests     Add a library to do testing and some examples
-  node-express-cli route:list        List all routes in the project. Use --omit to remove a prefix from the routes and --prefix to change the API prefix.
+  node-express-cli init                   Init a new Express project  [aliases: i]
+  node-express-cli make:module            Generate a new resource module
+  node-express-cli install:prettier       Add prettier to the project
+  node-express-cli install:eslint         Add ESLint (flat config) to the project
+  node-express-cli install:socket         Add Socket.io to the project
+  node-express-cli install:mailer         Add class-based emails and notifications via nodemailer
+  node-express-cli install:orm            Add Database support using an orm
+  node-express-cli install:auth           Add basic scaffolding to auth with jwt and passport (requires mailer)
+  node-express-cli install:push           Add web push notifications support via web-push
+  node-express-cli install:notifications  Add persistent notifications with HTTP endpoints (requires auth)
+  node-express-cli make:seeder            Generate a new seeder class
+  node-express-cli make:entity            Generate a new entity class
+  node-express-cli make:migration         Generate a new database migration
+  node-express-cli make:factory           Generate a new Factory class for a Model
+  node-express-cli install:tests          Add a library to do testing and some examples
+  node-express-cli route:list             List all routes in the project. Use --omit to remove a prefix from the routes and --prefix to change the API prefix.
 
 Options:
   --no-interaction  Disable prompts and read answers from flags or positional arguments  [boolean]

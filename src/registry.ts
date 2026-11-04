@@ -8,6 +8,7 @@ import { FactoryGenerator } from './generators/factory.generator'
 import { MigrationGenerator } from './generators/migration.generator'
 import { ModuleGenerator } from './generators/module.generator'
 import { OrmGenerator } from './generators/orm.generator'
+import { NotificationsGenerator } from './generators/notifications.generator'
 import { SeederGenerator } from './generators/seeder.generator'
 import { RouteListCommand } from './commands/route_list.command'
 import { InstallerSpec, SpecGenerator } from './installers'
@@ -55,6 +56,12 @@ const REQUIRE_ORM: RequiredFeature = {
 const REQUIRE_MAILER: RequiredFeature = {
   feature: 'mailer',
   hint: 'Run "node-express-cli install:mailer" first.',
+}
+
+/** `install:notifications` expone endpoints autenticados y usa el usuario de passport. */
+const REQUIRE_AUTH: RequiredFeature = {
+  feature: 'auth',
+  hint: 'Run "node-express-cli install:auth" first.',
 }
 
 /**
@@ -128,6 +135,14 @@ export const commands: CommandDefinition[] = [
     create: (ctx) => new AuthGenerator(ctx),
   },
   installer(pushSpec),
+  {
+    name: 'install:notifications',
+    description: 'Add persistent notifications with HTTP endpoints (requires auth)',
+    requiresProject: true,
+    requires: [REQUIRE_AUTH],
+    feature: 'notifications',
+    create: (ctx) => new NotificationsGenerator(ctx),
+  },
   {
     name: 'make:seeder',
     description: 'Generate a new seeder class',

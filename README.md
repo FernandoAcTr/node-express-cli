@@ -28,8 +28,8 @@ El proyecto incluye y debe incluir un archivo llamado cli.config.json con las op
     "orm": "mongoose", -> opciones disponibles: mongoose | typeorm | sequelize | prisma
     "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
     "fileBasedRouting": false, -> opciones disponibles: true | false
-    "version": "3.3.0", -> versión del CLI que generó el proyecto
-    "features": ["orm", "auth"] -> features instaladas; las escribe el CLI automáticamente
+    "version": "4.1.0", -> versión del CLI que generó el proyecto
+    "features": ["orm", "auth", "mailer", "notifications"] -> features instaladas; las escribe el CLI automáticamente
 }
 ```
 
@@ -296,6 +296,8 @@ GET  /auth/me                  requiere Bearer token
 
 El access token dura 1 hora y el refresh token 7 días. Hay un refresh activo por usuario: `logout` lo invalida y `reset-password` invalida además los refresh tokens.
 
+Los correos de verificación y reset se modelan como clases (`PasswordResetEmail` y `VerifyEmailEmail` en `src/notifications/emails`) y se envían con `Mailable`; `auth.mailer.ts` solo construye el enlace y elige la clase.
+
 ### Estructura
 
 La lógica de negocio es común a todos los ORMs (`auth.service.ts`, `auth.controller.ts`, `auth.validator.ts`, `auth.tokens.ts`, `auth.mailer.ts`, `passport.ts`). Solo cambia `auth.repository.ts`, que traduce las entidades de cada motor al contrato normalizado de `auth.types.ts`. Añadir un ORM nuevo requiere sus entidades y un repositorio.
@@ -319,23 +321,62 @@ npm run m:run
 Para TypeORM se inicializa `AppDataSource`; para Mongoose se importa la conexión. Solo debes crear/ejecutar las migraciones del motor elegido.
 
 ## Envío de Emails
-Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  
-Esta acción instalará una clase Mailer, dentro del directorio utils, la cual tiene la lógica necesaria para envío de emails y notificaciones.  
-Se instala además un template básico html para las notificaciones, el cuál es compilado mediante handlebars. Un ejemplo de envío de una notificación es: 
+Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.
 
-```TS
-Mailer.sendNotification({
-    to: 'joe@gmail.com',
-    subject: 'Asunto del mensaje',
-    atte: 'Foo Bar',
-    content: 'Contenido de la notificación',
-    greeting: 'Hola!',
-    action: {
-      title: 'Visita nuestro sitio',
-      url: 'http://www.my-site.com',
-    },
-})
+El comando instala:
+
+- `src/utils/mailer.ts`: transporte SMTP y renderizado de plantillas Handlebars.
+- `src/notifications/emails/mailable.ts` y un email de ejemplo (`welcome.email.ts`).
+- `src/notifications/notifications/notifiable.ts` y una notificación de ejemplo (`welcome.notification.ts`).
+- `src/notifications/registry.ts`: registro de canales y del almacén de notificaciones.
+- Plantillas en `src/templates/notification` y `src/templates/emails`.
+
+Los emails se modelan como clases que implementan `IMail`:
+
+```ts
+import { Mailable } from '@/notifications/emails/mailable'
+import { WelcomeEmail } from '@/notifications/emails/welcome.email'
+
+await Mailable.from('joe@gmail.com').send(
+  new WelcomeEmail('Joe', 'https://my-site.com/login')
+)
 ```
+
+Las notificaciones se modelan con `INotification` y se envían por todos los canales instalados:
+
+```ts
+import { Notifiable } from '@/notifications/notifications/notifiable'
+import { WelcomeNotification } from '@/notifications/notifications/welcome.notification'
+
+await Notifiable.from({ id: user.id, email: user.email }).notify(
+  new WelcomeNotification(user.name, 'https://my-site.com/login')
+)
+```
+
+`Notifiable` siempre puede enviar email. Los canales `toDb` y `toPush` solo se ejecutan si `install:notifications` o `install:push` están instalados. Si necesitas el método antiguo, `Mailer.sendNotification(...)` sigue disponible.
+
+## Notificaciones persistidas
+El comando `node-express-cli install:notifications` añade persistencia y endpoints HTTP. Requiere `install:auth` (y por tanto `orm` y `mailer`):
+
+```bash
+node-express-cli install:orm
+node-express-cli install:mailer
+node-express-cli install:auth
+node-express-cli install:notifications
+```
+
+Crea la entidad/migración `notifications` para el ORM activo (o `src/database/prisma/schemas/notifications.prisma` en Prisma), un repositorio por motor, el store que consume `Notifiable` y el canal `database`. Los endpoints quedan autenticados con `authenticate`:
+
+```
+GET    /api/notifications
+GET    /api/notifications/count
+GET    /api/notifications/:id
+POST   /api/notifications/read
+POST   /api/notifications/:id/read
+DELETE /api/notifications/:id
+```
+
+Con routing file-based las rutas equivalentes viven en `src/routes/notifications`. Si instalas `install:push` **antes** de `install:notifications`, también se generan `push_subscriptions`, los endpoints `/api/notifications/push/*` y el canal push. Si instalas `install:socket` antes, se emite `notification:changed` al room `user-<id>` (el handshake debe autenticarse en producción; el scaffold acepta `auth.userId`).
 
 ## Notificaciones Push
 Es posible agregar soporte para notificaciones push mediante la librería [web-push](https://github.com/web-push-libs/web-push) con el comando:

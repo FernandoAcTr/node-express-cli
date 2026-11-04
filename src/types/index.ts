@@ -13,7 +13,7 @@ export enum PackageManager {
 }
 
 /** Features que se registran en `cli.config.json` después de instalarse. */
-export const FEATURES = ['orm', 'auth', 'push', 'socket', 'mailer', 'tests', 'prettier', 'eslint'] as const
+export const FEATURES = ['orm', 'auth', 'push', 'socket', 'mailer', 'notifications', 'tests', 'prettier', 'eslint'] as const
 
 export type Feature = (typeof FEATURES)[number]
 

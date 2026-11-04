@@ -23,6 +23,14 @@ describe('command registry', () => {
     expect(auth?.requires?.every((requirement) => requirement.hint.length > 0)).toBe(true)
   })
 
+  it('declares install:notifications as requiring auth with a hint', () => {
+    const notifications = commands.find((command) => command.name === 'install:notifications')
+    const requirements = notifications?.requires?.map((requirement) => requirement.feature) ?? []
+
+    expect(requirements).toContain('auth')
+    expect(notifications?.requires?.every((requirement) => requirement.hint.length > 0)).toBe(true)
+  })
+
   it('declares an ORM requirement for the commands that generate ORM code', () => {
     for (const name of ['make:entity', 'make:migration', 'make:seeder', 'make:factory']) {
       const command = commands.find((candidate) => candidate.name === name)
@@ -62,6 +70,7 @@ describe('command registry', () => {
       'install:socket': 'socket',
       'install:push': 'push',
       'install:mailer': 'mailer',
+      'install:notifications': 'notifications',
       'install:tests': 'tests',
       'install:prettier': 'prettier',
       'install:eslint': 'eslint',

@@ -12,7 +12,7 @@ const sourceRoots = [path.join(src, 'generators'), path.join(src, 'installers')]
 const DIRECT_FS_ALLOWLIST = new Set(['generators/base.generator.ts'])
 
 /** Instaladores con lógica propia que no pasan por `installer(spec)`. */
-const CUSTOM_INSTALLERS = new Set(['orm', 'auth'])
+const CUSTOM_INSTALLERS = new Set(['orm', 'auth', 'notifications'])
 
 const PACKAGE_MANAGER_PATTERN = /\b(?:npm|npx|pnpm|yarn|bunx)\b/
 const DIRECT_FS_PATTERN = /from\s+['"](?:fs|fs-extra)['"]/

@@ -41,6 +41,7 @@ describe.skipIf(!enabled)('generated project compiles', () => {
         packageManager,
         fileBasedRouting,
         orm,
+        installNotifications: true,
         installDependencies: true,
         onProjectCreated: (dir) => {
           if (packageManager === PackageManager.PNPM) {

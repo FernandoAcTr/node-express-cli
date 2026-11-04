@@ -38,6 +38,14 @@ exports[`generated project (init + orm + auth) > also produces the expected tree
   "src/modules/auth/auth.tokens.ts",
   "src/modules/auth/auth.types.ts",
   "src/modules/auth/auth.validator.ts",
+  "src/notifications/emails/mailable.ts",
+  "src/notifications/emails/password_reset.email.ts",
+  "src/notifications/emails/verify_email.email.ts",
+  "src/notifications/emails/welcome.email.ts",
+  "src/notifications/index.ts",
+  "src/notifications/notifications/notifiable.ts",
+  "src/notifications/notifications/welcome.notification.ts",
+  "src/notifications/registry.ts",
   "src/routes/auth/forgot-password.ts",
   "src/routes/auth/login.ts",
   "src/routes/auth/logout.ts",
@@ -51,6 +59,9 @@ exports[`generated project (init + orm + auth) > also produces the expected tree
   "src/routes/auth/verify-email/[id]/[token].ts",
   "src/routes/healthcheck.ts",
   "src/routing/index.ts",
+  "src/templates/auth/password-reset.hbs",
+  "src/templates/auth/verify-email.hbs",
+  "src/templates/emails/welcome.hbs",
   "src/templates/notification/logo.png",
   "src/templates/notification/notification.hbs",
   "src/utils/colorize.ts",
@@ -78,7 +89,7 @@ async function initFileBasedRoutes(router: Router, segments: string[]) {
   const BASE_FILE_PATH = path.resolve(__dirname, '../routes')
   const currentDir = path.join(BASE_FILE_PATH, ...segments)
 
-  for await (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+  for await (const entry of fs.readdirSync(currentDir, { withFileTypes: true }).sort(compareEntries)) {
     if (entry.isDirectory()) {
       initFileBasedRoutes(router, [...segments, entry.name])
     } else if (entry.name.endsWith('.js')) {
@@ -121,6 +132,14 @@ async function initFileBasedRoutes(router: Router, segments: string[]) {
     }
   }
 }
+
+/** Las rutas estáticas deben registrarse antes que las dinámicas ([id], [slug]). */
+function compareEntries(a: { name: string; isDirectory(): boolean }, b: { name: string; isDirectory(): boolean }): number {
+  const aDynamic = a.isDirectory() && a.name.startsWith('[')
+  const bDynamic = b.isDirectory() && b.name.startsWith('[')
+
+  return Number(aDynamic) - Number(bDynamic) || a.name.localeCompare(b.name)
+}
 "
 `;
 
@@ -134,7 +153,7 @@ exports[`generated project (init + orm + auth) > produces a stable file tree, ma
   "fileBasedRouting": false,
   "orm": "typeorm",
   "package_manger": "npm",
-  "version": "4.0.0",
+  "version": "4.1.0",
 }
 `;
 
@@ -177,7 +196,18 @@ exports[`generated project (init + orm + auth) > produces a stable file tree, ma
   "src/modules/auth/auth.types.ts",
   "src/modules/auth/auth.validator.ts",
   "src/modules/healthcheck/routes.ts",
+  "src/notifications/emails/mailable.ts",
+  "src/notifications/emails/password_reset.email.ts",
+  "src/notifications/emails/verify_email.email.ts",
+  "src/notifications/emails/welcome.email.ts",
+  "src/notifications/index.ts",
+  "src/notifications/notifications/notifiable.ts",
+  "src/notifications/notifications/welcome.notification.ts",
+  "src/notifications/registry.ts",
   "src/routing/index.ts",
+  "src/templates/auth/password-reset.hbs",
+  "src/templates/auth/verify-email.hbs",
+  "src/templates/emails/welcome.hbs",
   "src/templates/notification/logo.png",
   "src/templates/notification/notification.hbs",
   "src/utils/colorize.ts",

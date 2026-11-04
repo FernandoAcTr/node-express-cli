@@ -5,6 +5,7 @@ import { OperationResult, createResult } from '../report'
 import { WritePolicy } from '../services/project.service'
 import { PRISMA_ANCHOR, AUTH_PRISMA_BLOCK_MARKERS } from '../patch/anchors'
 import { CliError } from '../errors'
+import { generatePrismaClient } from './prisma'
 
 interface AuthOrmTemplates {
   /** Directorio de entidades dentro de `templates/generator/auth`. */
@@ -84,6 +85,8 @@ export class AuthGenerator implements IPreGenerator, IFileSystemGenerator, IPost
 
     this.ctx.project.ensureDir('src/entities')
     this.ctx.project.ensureDir('src/modules/auth')
+    this.ctx.project.ensureDir('src/notifications/emails')
+    this.ctx.project.ensureDir('src/templates/auth')
     this.ctx.project.ensureDir('src/utils')
     this.ctx.project.ensureDir('src/middlewares')
 
@@ -109,6 +112,9 @@ export class AuthGenerator implements IPreGenerator, IFileSystemGenerator, IPost
     project.copy('src/modules/auth/auth.types.ts', 'generator/auth/common/auth.types.ts', policy)
     project.copy('src/modules/auth/auth.validator.ts', 'generator/auth/common/auth.validator.ts', policy)
     project.copy('src/modules/auth/auth.mailer.ts', 'generator/auth/common/auth.mailer.ts', policy)
+    project.copy('src/notifications/emails/password_reset.email.ts', 'generator/auth/common/emails/password_reset.email.ts', policy)
+    project.copy('src/notifications/emails/verify_email.email.ts', 'generator/auth/common/emails/verify_email.email.ts', policy)
+    project.copyDir('src/templates/auth', 'generator/auth/common/templates/auth', policy)
     project.copy('src/utils/hash.ts', 'generator/auth/common/hash.ts', policy)
     project.copy('src/middlewares/passport.ts', 'generator/auth/common/passport.ts', policy)
 
@@ -188,7 +194,7 @@ export class AuthGenerator implements IPreGenerator, IFileSystemGenerator, IPost
 
     const shouldGenerate = this.prismaFilesChanged || !this.ctx.has('auth')
 
-    await this.generatePrismaClient(shouldGenerate)
+    await generatePrismaClient(this.ctx, shouldGenerate)
 
     return createResult()
   }
@@ -227,35 +233,9 @@ export class AuthGenerator implements IPreGenerator, IFileSystemGenerator, IPost
     })
 
     const shouldGenerate = result.warnings.length === 0 && (result.changed.length > 0 || !this.ctx.has('auth'))
-    await this.generatePrismaClient(shouldGenerate)
+    await generatePrismaClient(this.ctx, shouldGenerate)
 
     return result
-  }
-
-  private async generatePrismaClient(shouldGenerate: boolean): Promise<void> {
-    if (!shouldGenerate) {
-      return
-    }
-
-    if (!this.hasDatabaseUrl()) {
-      this.ctx.logger.warn('Skipped "prisma generate" because DB_URL is not set. Create .env with DB_URL and run the "m:generate" script.')
-      return
-    }
-
-    // `m:generate` usa el runner del package manager y lee prisma.config.ts.
-    await this.ctx.shell.execAsync(`${this.ctx.config.getRunCommand()} m:generate`, this.ctx.cwd)
-  }
-
-  private hasDatabaseUrl(): boolean {
-    if (process.env.DB_URL) {
-      return true
-    }
-
-    if (!this.ctx.project.exists('.env')) {
-      return false
-    }
-
-    return /^DB_URL=\S+/m.test(this.ctx.project.read('.env'))
   }
 
   private merge(target: OperationResult, next: OperationResult): void {

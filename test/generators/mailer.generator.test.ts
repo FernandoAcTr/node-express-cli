@@ -35,6 +35,38 @@ afterEach(() => {
 })
 
 describe('mailer installer', () => {
+  it('installs the class-based email and notification system', async () => {
+    const cwd = project()
+
+    await generator(cwd).copyFiles()
+
+    for (const file of [
+      'src/utils/mailer.ts',
+      'src/notifications/registry.ts',
+      'src/notifications/index.ts',
+      'src/notifications/emails/mailable.ts',
+      'src/notifications/emails/welcome.email.ts',
+      'src/notifications/notifications/notifiable.ts',
+      'src/notifications/notifications/welcome.notification.ts',
+      'src/templates/notification/notification.hbs',
+      'src/templates/emails/welcome.hbs',
+    ]) {
+      expect(fs.existsSync(path.join(cwd, file)), file).toBe(true)
+    }
+
+    const mailer = fs.readFileSync(path.join(cwd, 'src/utils/mailer.ts'), 'utf-8')
+    expect(mailer).toContain('export interface MailOptions')
+    expect(mailer).toContain('template?: string')
+
+    const mailable = fs.readFileSync(path.join(cwd, 'src/notifications/emails/mailable.ts'), 'utf-8')
+    expect(mailable).toContain('export class Mailable')
+    expect(mailable).toContain("import { Mailer, MailOptions } from '@/utils/mailer'")
+
+    const notifiable = fs.readFileSync(path.join(cwd, 'src/notifications/notifications/notifiable.ts'), 'utf-8')
+    expect(notifiable).toContain('export class Notifiable')
+    expect(notifiable).not.toMatch(/from '@\/(entities|database|modules)/)
+  })
+
   it('is idempotent, including binary templates', async () => {
     const cwd = project()
     const warnings: string[] = []

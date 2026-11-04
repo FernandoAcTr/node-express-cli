@@ -23,6 +23,20 @@ describe('file routes', () => {
     expect(buildURLPath(['users', '[id]'])).toBe('/users/:id')
     expect(buildURLPath(['users', 'index'])).toBe('/users/index')
     expect(buildURLPath(['index'])).toBe('/index')
+    expect(buildURLPath(['notifications', '/'])).toBe('/notifications')
+  })
+
+  it('orders static routes before dynamic directories', () => {
+    const root = tmpDir()
+    const routes = path.join(root, 'src', 'routes')
+    fs.mkdirSync(path.join(routes, 'notifications', '[id]'), { recursive: true })
+    fs.writeFileSync(path.join(routes, 'notifications', 'count.ts'), 'export default { GET: () => undefined } satisfies RestController\n')
+    fs.writeFileSync(
+      path.join(routes, 'notifications', '[id]', 'index.ts'),
+      'export default { GET: () => undefined } satisfies RestController\n'
+    )
+
+    expect(discoverFileRoutes(routes).map((route) => route.url)).toEqual(['/notifications/count', '/notifications/:id'])
   })
 
   it('detects methods from the exported object and ignores comments and strings', () => {

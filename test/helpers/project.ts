@@ -6,8 +6,11 @@ import { Logger } from '../../src/logger'
 import { BaseGenerator } from '../../src/generators/base.generator'
 import { OrmGenerator } from '../../src/generators/orm.generator'
 import { AuthGenerator } from '../../src/generators/auth.generator'
+import { NotificationsGenerator } from '../../src/generators/notifications.generator'
 import { SpecGenerator } from '../../src/installers'
 import { mailerSpec } from '../../src/installers/specs/mailer.spec'
+import { pushSpec } from '../../src/installers/specs/push.spec'
+import { socketSpec } from '../../src/installers/specs/socket.spec'
 import { NonInteractivePrompter } from '../../src/prompts'
 import { commands } from '../../src/registry'
 import { run } from '../../src/run'
@@ -42,9 +45,13 @@ export interface ScaffoldOptions {
   packageManager?: PackageManager
   fileBasedRouting?: boolean
   orm?: DbType
+  installOrm?: boolean
   installAuth?: boolean
   /** Instala mailer aunque auth no se instale (auth lo requiere). */
   installMailer?: boolean
+  installNotifications?: boolean
+  installPush?: boolean
+  installSocket?: boolean
   logger?: Logger
   shell?: Pick<ShellService, 'execAsync' | 'exec'>
   installDependencies?: boolean
@@ -53,8 +60,9 @@ export interface ScaffoldOptions {
 }
 
 /**
- * Ejecuta el flujo real `init` + `install:orm` (+ `install:auth`) dentro de un
- * directorio temporal. Devuelve la ruta del proyecto generado.
+ * Ejecuta el flujo real `init` + `install:orm` (+ `mailer`, `auth`, `socket`,
+ * `push` y `notifications` según las opciones) dentro de un directorio
+ * temporal. Devuelve la ruta del proyecto generado.
  *
  * Con `installDependencies: false` usa un shell falso (tests rápidos). Con
  * `installDependencies: true` ejecuta los comandos reales del package manager.
@@ -65,12 +73,19 @@ export async function scaffoldProject(options: ScaffoldOptions): Promise<string>
     packageManager = PackageManager.NPM,
     fileBasedRouting = false,
     orm = DbType.TYPEORM,
+    installOrm = true,
     installAuth = true,
-    installMailer = installAuth,
+    installNotifications = false,
+    installPush = false,
+    installSocket = false,
+    installMailer = installAuth || installNotifications,
     logger = silentLogger,
     installDependencies = false,
     onProjectCreated,
   } = options
+
+  const shouldInstallAuth = installOrm && (installAuth || installNotifications)
+  const shouldInstallMailer = installMailer || shouldInstallAuth
 
   const shell = options.shell ?? (installDependencies ? new ShellService() : new FakeShell())
 
@@ -123,17 +138,30 @@ export async function scaffoldProject(options: ScaffoldOptions): Promise<string>
     },
   })
 
-  await run(new OrmGenerator(ctx), { ctx, feature: 'orm' })
+  if (installOrm) {
+    await run(new OrmGenerator(ctx), { ctx, feature: 'orm' })
+  }
 
-  if (installMailer) {
+  if (shouldInstallMailer) {
     await run(new SpecGenerator(ctx, mailerSpec), { ctx, feature: 'mailer' })
   }
 
-  if (installAuth) {
+  if (shouldInstallAuth) {
     // `install:auth` depende de `install:mailer` para verificación y reset.
     await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
   }
 
+  if (installSocket) {
+    await run(new SpecGenerator(ctx, socketSpec), { ctx, feature: 'socket' })
+  }
+
+  if (installPush) {
+    await run(new SpecGenerator(ctx, pushSpec), { ctx, feature: 'push' })
+  }
+
+  if (installNotifications && shouldInstallAuth) {
+    await run(new NotificationsGenerator(ctx), { ctx, feature: 'notifications' })
+  }
   return project
 }
 

@@ -12,7 +12,7 @@ async function initFileBasedRoutes(router: Router, segments: string[]) {
   const BASE_FILE_PATH = path.resolve(__dirname, '../routes')
   const currentDir = path.join(BASE_FILE_PATH, ...segments)
 
-  for await (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+  for await (const entry of fs.readdirSync(currentDir, { withFileTypes: true }).sort(compareEntries)) {
     if (entry.isDirectory()) {
       initFileBasedRoutes(router, [...segments, entry.name])
     } else if (entry.name.endsWith('.js')) {
@@ -54,4 +54,12 @@ async function initFileBasedRoutes(router: Router, segments: string[]) {
       }
     }
   }
+}
+
+/** Las rutas estáticas deben registrarse antes que las dinámicas ([id], [slug]). */
+function compareEntries(a: { name: string; isDirectory(): boolean }, b: { name: string; isDirectory(): boolean }): number {
+  const aDynamic = a.isDirectory() && a.name.startsWith('[')
+  const bDynamic = b.isDirectory() && b.name.startsWith('[')
+
+  return Number(aDynamic) - Number(bDynamic) || a.name.localeCompare(b.name)
 }

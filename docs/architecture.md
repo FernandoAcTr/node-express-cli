@@ -247,11 +247,14 @@ Un `install:*` simple no necesita un generador propio. Se define con un
 // src/installers/specs/mailer.spec.ts
 export const mailerSpec: InstallerSpec = {
   feature: 'mailer',
-  description: 'Add support for send mails via nodemailer library',
+  description: 'Add class-based emails and notifications via nodemailer',
   deps: ['handlebars', 'nodemailer'],
   devDeps: ['@types/nodemailer'],
   files: [{ from: 'generator/common/mailer/mailer.ts', to: 'src/utils/mailer.ts' }],
-  copyDir: [{ from: 'generator/common/mailer/templates', to: 'src/templates' }],
+  copyDir: [
+    { from: 'generator/common/mailer/notifications', to: 'src/notifications' },
+    { from: 'generator/common/mailer/templates', to: 'src/templates' },
+  ],
   wire: [
     { kind: 'config', code: MAILER_CONFIG, key: 'MAILER:' },
     { kind: 'envBlock', marker: 'mailer', code: MAILER_ENV, key: 'MAIL_HOST=' },
@@ -283,18 +286,33 @@ features ejecuta `eslint src` además de `tsc --noEmit`.
 
 Los instaladores con lógica propia siguen siendo custom: `orm` (elige el ORM,
 copia templates por motor y calcula scripts), `auth` (dominio compartido +
-repositorio por ORM) y `migration` (shell). `orm` reutiliza `ormWireSteps()` para
-la configuración `DB` y las variables `DB_*`, que ya no viven en
-`templates/base`. Cambiar de ORM en un proyecto existente se rechaza en `pre()`
-antes de copiar archivos: no hay limpieza automática y el proyecto quedaría
-mezclado.
+repositorio por ORM), `notifications` (persistencia, canales y endpoints) y
+`migration` (shell). `orm` reutiliza `ormWireSteps()` para la configuración `DB`
+y las variables `DB_*`, que ya no viven en `templates/base`. Cambiar de ORM en un
+proyecto existente se rechaza en `pre()` antes de copiar archivos: no hay
+limpieza automática y el proyecto quedaría mezclado.
 
 `install:auth` declara `requires: [{ feature: 'orm' }, { feature: 'mailer' }]`.
 El dominio (`auth.service.ts`, `auth.controller.ts`, `auth.tokens.ts`,
 `auth.validator.ts`, `auth.mailer.ts`, `passport.ts`) es común; solo
 `auth.repository.ts` cambia por ORM y traduce las entidades al contrato
 `auth.types.ts`. Añadir un motor nuevo requiere sus entidades y un repositorio,
-no tocar el servicio.
+no tocar el servicio. Los correos de auth (`PasswordResetEmail`,
+`VerifyEmailEmail`) implementan `IMail` y se envían con `Mailable`.
+
+`install:notifications` declara `requires: [{ feature: 'auth' }]` (auth ya exige
+`orm` y `mailer`) y separa dos capas:
+
+- `src/notifications/registry.ts` (lo instala mailer) contiene los contratos
+  `INotification`, `NotificationChannel` y `NotificationStore`, y las funciones
+  de registro. Mailer no importa entidades ni repositorios.
+- `install:notifications` aporta la entidad/migración por ORM, el repositorio,
+  `notificationStore`, el canal `database` y los endpoints. `src/main.ts` recibe
+  un `import './notifications/channels'` para registrar canales y store.
+- Si `push` está instalado antes, se añaden `push_subscriptions`, los endpoints
+  `/api/notifications/push/*` y el canal push. Si `socket` está instalado y su
+  `Socket.emitToUser` existe, se añade el canal socket y `notification:changed`;
+  si el template es antiguo, se avisa y se usa el emisor no-op.
 
 `templates/base` solo contiene lo común a todos los proyectos. `MAILER`,
 `MAIL_*`, `VAPID`, `DB_*`, `prettier:fix` y `vapid:generate` pertenecen a los
@@ -331,9 +349,11 @@ solo se modifican en los puntos marcados:
 | `templates/base/.env.example`                   | `# @nec:<marker>:start/end` | `envBlock(marker, …)`     | bloques reemplazables (mailer, webpush, DB) |
 
 Prisma 7 usa un **multi-file schema**: `templates/generator/orm/prisma/schema.prisma`
-solo contiene `generator` y `datasource`, y `install:auth` copia
-`src/database/prisma/schemas/auth.prisma` con sus modelos. No hay merge ni
-anchor en proyectos nuevos, por lo que no se toca el schema del usuario.
+solo contiene `generator` y `datasource`, `install:auth` copia
+`src/database/prisma/schemas/auth.prisma` e `install:notifications` copia
+`src/database/prisma/schemas/notifications.prisma` (y
+`push_subscriptions.prisma` si push está instalado). No hay merge ni anchor en
+proyectos nuevos, por lo que no se toca el schema del usuario.
 
 Por compatibilidad, si un proyecto antiguo conserva el bloque
 `// @nec:auth:start` / `// @nec:auth:end` (o el anchor `// @nec:prisma`), el
@@ -539,7 +559,10 @@ comando necesita una feature instalada, declara
 `requires: [{ feature: 'orm', hint: 'Run "node-express-cli install:orm" first.' }]`.
 El hint se muestra tal cual en `src/cli.ts`; no añadas switches de requisitos
 en el entrypoint. `install:auth` exige además `mailer` con
-`hint: 'Run "node-express-cli install:mailer" first.'`.
+`hint: 'Run "node-express-cli install:mailer" first.'`. `install:notifications`
+exige `auth` con `hint: 'Run "node-express-cli install:auth" first.'`; su
+generador además verifica `orm` y `mailer` en `pre()` para proteger el uso
+directo.
 
 Declara los flags propios en `options` del registry. Llegan en `ctx.args.flags`
 y solo aparecen en el help de ese comando. Usa `booleanFlag`/`stringFlag` de
@@ -570,7 +593,7 @@ npm run test:smoke:all # todas las features sobre un mismo proyecto (más lento)
 | CLI          | `test/cli`                                                 | dispatch, `requiresProject`/`requires`, `ctx.args`, `--dry-run` y snapshot de `--help`                                              |
 | Instaladores | `test/installers`                                          | specs, `SpecGenerator`, base sin features opcionales, `installer(spec)`                                                             |
 | Contratos    | `test/contracts`                                           | todos los `install:*`: idempotencia, líneas custom, placeholders, estado, scripts y el conjunto completo de features en un proyecto |
-| Generadores  | `test/generators`, `test/commands`                         | routing, módulos, auth, mailer, push, migraciones, sockets, `route:list`                                                            |
+| Generadores  | `test/generators`, `test/commands`                         | routing, módulos, auth, mailer, notifications, push, migraciones, sockets, `route:list`                                             |
 | Golden       | `test/golden`                                              | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json`                                            |
 | Smoke        | `test/smoke`                                               | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                                                              |
 
@@ -580,10 +603,11 @@ intencional, actualízalos con `npm test -- -u` y revísalos en el diff.
 El smoke test usa `SMOKE_PROFILE` (`core` por defecto o `all`),
 `SMOKE_PACKAGE_MANAGER` (`npm`/`pnpm`), `SMOKE_FILE_BASED` (`true`/`false`) y
 `SMOKE_ORM` (`typeorm` por defecto, o `mongoose`/`sequelize`/`prisma`).
-`core` genera el proyecto con `init + orm + mailer + auth`; `all` instala además
-todas las features declarativas y comprueba que `features` las contiene todas.
-Para Prisma el smoke crea un `.env` con `DB_URL` ficticio para que
-`prisma generate` se ejecute de verdad antes de `tsc`.
+`core` genera el proyecto con `init + orm + mailer + auth + notifications`; `all`
+instala además todas las features declarativas (push y socket incluidos) y
+comprueba que `features` las contiene todas. Para Prisma el smoke crea un `.env`
+con `DB_URL` ficticio para que `prisma generate` se ejecute de verdad antes de
+`tsc`.
 
 ## CI
 
@@ -592,7 +616,7 @@ Para Prisma el smoke crea un `.env` con `DB_URL` ficticio para que
   `SMOKE_PROFILE=core`; instala un proyecto generado con TypeORM y corre
   `tsc --noEmit`.
 - Job `smoke-orms`: matriz `{mongoose, sequelize, prisma} × {fileBasedRouting true,false}`
-  con npm; valida que auth compila con cada repositorio.
+  con npm; valida que auth + notifications compilan con cada repositorio.
 - Job `smoke-all`: un proyecto con todas las features (`SMOKE_PROFILE=all`) que
   debe compilar. Es el criterio de que cada feature instalable se compila al
   menos una vez.

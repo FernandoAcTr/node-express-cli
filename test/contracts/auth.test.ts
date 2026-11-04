@@ -67,10 +67,16 @@ describe.each(Object.values(DbType))('auth contract (%s)', (orm) => {
       'src/modules/auth/auth.repository.ts',
       'src/middlewares/passport.ts',
       'src/utils/hash.ts',
+      'src/notifications/emails/password_reset.email.ts',
+      'src/notifications/emails/verify_email.email.ts',
+      'src/templates/auth/password-reset.hbs',
+      'src/templates/auth/verify-email.hbs',
     ]) {
       expect(fs.existsSync(path.join(project, file)), file).toBe(true)
     }
 
+    expect(read(project, 'src/modules/auth/auth.mailer.ts')).toContain('Mailable.from')
+    expect(read(project, 'src/modules/auth/auth.mailer.ts')).not.toContain('sendNotification')
     expect(read(project, 'src/modules/auth/auth.service.ts')).not.toMatch(/from '(mongoose|typeorm|sequelize|@prisma)/)
     expect(read(project, 'src/modules/auth/auth.repository.ts')).not.toContain('@prisma/client')
 
