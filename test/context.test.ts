@@ -48,6 +48,14 @@ describe('createContext', () => {
     expect(ctx.project.cwd).toBe(config.cwd)
   })
 
+  it('exposes a wiring service scoped to the project', () => {
+    const cwd = tmpDir()
+    const ctx = createContext({ cwd })
+
+    expect(ctx.wiring).toBeDefined()
+    expect(ctx.wiring.missing('src/main.ts', ['imports']).map((patch) => patch.status)).toEqual(['file-missing'])
+  })
+
   it('exposes --force through the context and the project service', () => {
     const cwd = tmpDir()
     const ctx = createContext({ cwd, force: true })

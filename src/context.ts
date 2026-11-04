@@ -5,6 +5,7 @@ import { ShellService } from './services/shell.service'
 import { Logger, consoleLogger } from './logger'
 import { InquirerPrompter, Prompter } from './prompts'
 import { Feature } from './types'
+import { WiringService } from './wiring'
 
 export type ContextFeature = Feature | 'fileBasedRouting'
 
@@ -12,6 +13,7 @@ export interface Context {
   cwd: string
   config: ConfigService
   project: ProjectService
+  wiring: WiringService
   shell: ShellService
   fs: typeof fs
   logger: Logger
@@ -28,6 +30,7 @@ export interface CreateContextOptions {
   cwd?: string
   config?: ConfigService
   project?: ProjectService
+  wiring?: WiringService
   shell?: ShellService
   fs?: typeof fs
   logger?: Logger
@@ -47,11 +50,19 @@ export function createContext(options: CreateContextOptions = {}): Context {
   const prompter = options.prompter ?? new InquirerPrompter()
   const force = options.force ?? false
   const project = options.project ?? new ProjectService(cwd, { force, logger, fs: options.fs })
+  const wiring =
+    options.wiring ??
+    new WiringService({
+      cwd,
+      config,
+      project,
+    })
 
   return {
     cwd,
     config,
     project,
+    wiring,
     shell,
     fs: options.fs ?? fs,
     logger,

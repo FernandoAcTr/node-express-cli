@@ -1,8 +1,6 @@
-import path from 'path'
 import { IFileSystemGenerator, IInstallerGenerator, IPostGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { DbType } from '../types'
-import { PatchResult, patchAtAnchor } from '../patch/anchor'
 import { Reporter } from '../report'
 import { WritePolicy } from '../services/project.service'
 
@@ -63,9 +61,7 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
       const schema = project.copy('src/database/prisma/schema.prisma', 'generator/auth/prisma/schema.prisma', 'skip')
 
       if (schema.status === 'skipped' && schema.reason === 'exists') {
-        this.ctx.logger.warn(
-          'src/database/prisma/schema.prisma already exists; merge the auth models manually. Use --force to replace it.'
-        )
+        this.ctx.logger.warn('src/database/prisma/schema.prisma already exists; merge the auth models manually. Use --force to replace it.')
       }
     }
   }
@@ -87,7 +83,6 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
   }
 
   private wireAuth(): void {
-    const mainFile = path.join(this.ctx.cwd, 'src/main.ts')
     const reporter = new Reporter(this.ctx.logger)
     const imports: string[] = []
 
@@ -100,36 +95,26 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
     imports.push("import passport from 'passport'")
     imports.push("import { JWTStrategy } from './middlewares/passport'")
 
-    const patches: PatchResult[] = imports.map((line) => patchAtAnchor(mainFile, 'imports', line, { sort: true }))
+    // Todo el wiring de `main.ts` se aplica de forma atómica: si falta un
+    // anchor, no se escribe ninguno de los imports ni del runtime.
+    const result = this.ctx.wiring.transaction((wiring) => {
+      for (const statement of imports) {
+        wiring.import(statement)
+      }
 
-    if (patches.some((patch) => patch.status === 'file-missing')) {
-      reporter.patches(mainFile, patches)
-      return
-    }
-
-    if (this.dbType == DbType.TYPEORM) {
-      patches.push(
-        patchAtAnchor(
-          mainFile,
+      if (this.dbType == DbType.TYPEORM) {
+        wiring.main(
           'beforeApp',
           "AppDataSource.initialize()\n  .then(() => logger.info('🚀 Database connection is online...'))\n  .catch((error) => logger.error(error))",
-          { dedupeKey: 'AppDataSource.initialize()' }
+          { key: 'AppDataSource.initialize()' }
         )
-      )
-    }
+      }
 
-    patches.push(
-      patchAtAnchor(mainFile, 'beforeApp', "passport.use('jwt', JWTStrategy)", {
-        dedupeKey: "passport.use('jwt'",
-      })
-    )
-    patches.push(
-      patchAtAnchor(mainFile, 'beforeJson', 'app.use(passport.initialize())', {
-        dedupeKey: 'passport.initialize()',
-      })
-    )
+      wiring.main('beforeApp', "passport.use('jwt', JWTStrategy)", { key: "passport.use('jwt'" })
+      wiring.main('beforeJson', 'app.use(passport.initialize())', { key: 'passport.initialize()' })
+    })
 
-    reporter.patches(mainFile, patches)
+    reporter.add(result)
   }
 
   async installDependencies(): Promise<void> {
@@ -139,10 +124,7 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
     }
 
     this.ctx.logger.info('================= Installing auth dependencies =================')
-    await this.ctx.shell.execAsync(
-      `${this.ctx.config.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`,
-      this.ctx.cwd
-    )
+    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`, this.ctx.cwd)
     await this.ctx.shell.execAsync(
       `${this.ctx.config.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`,
       this.ctx.cwd

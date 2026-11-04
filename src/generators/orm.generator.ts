@@ -1,9 +1,7 @@
-import path from 'path'
 import { IGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { DbType } from '../types'
 import { renderTemplate } from '../utils/template'
-import { patchAtAnchor } from '../patch/anchor'
 import { ormScripts } from '../utils/scripts'
 import { Reporter } from '../report'
 import { WritePolicy } from '../services/project.service'
@@ -73,9 +71,8 @@ export class OrmGenerator implements IGenerator {
 
   async post(): Promise<void> {
     if (this.orm == DbType.TYPEORM) {
-      const mainFile = path.join(this.ctx.cwd, 'src/main.ts')
       const reporter = new Reporter(this.ctx.logger)
-      reporter.patches(mainFile, [patchAtAnchor(mainFile, 'imports', "import 'reflect-metadata'", { sort: true })])
+      reporter.add(this.ctx.wiring.transaction((wiring) => wiring.import("import 'reflect-metadata'")))
 
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
       this.ctx.logger.warn('You must install specific database driver like mysql or pg')

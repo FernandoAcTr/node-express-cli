@@ -47,7 +47,7 @@ describe('SocketsGenerator', () => {
     const ctx = createContext({ cwd, logger: silentLogger })
     const generator = new SocketsGenerator(ctx)
 
-    await generator.copyFiles()
+    await generator.post()
 
     const main = fs.readFileSync(path.join(cwd, 'src/main.ts'), 'utf-8')
 
@@ -63,8 +63,8 @@ describe('SocketsGenerator', () => {
     const ctx = createContext({ cwd, logger: silentLogger })
     const generator = new SocketsGenerator(ctx)
 
-    await generator.copyFiles()
-    await generator.copyFiles()
+    await generator.post()
+    await generator.post()
 
     const main = fs.readFileSync(path.join(cwd, 'src/main.ts'), 'utf-8')
 
@@ -85,7 +85,7 @@ describe('SocketsGenerator', () => {
     })
     const generator = new SocketsGenerator(ctx)
 
-    await generator.copyFiles()
+    await generator.post()
 
     expect(fs.readFileSync(mainFile, 'utf-8')).toBe(original)
     expect(warnings.join('\n')).toContain('@nec:imports')
@@ -113,7 +113,7 @@ describe('SocketsGenerator', () => {
     })
     const generator = new SocketsGenerator(ctx)
 
-    await generator.copyFiles()
+    await generator.post()
 
     expect(fs.readFileSync(mainFile, 'utf-8')).toBe(original)
     expect(warnings.join('\n')).toContain('@nec:after-listen')

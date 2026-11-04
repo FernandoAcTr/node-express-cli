@@ -29,4 +29,5 @@ export const config = Object.freeze({
     PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
     SUBJECT: process.env.VAPID_SUBJECT || 'mailto:support@example.com',
   },
+  // @nec:config
 })

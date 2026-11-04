@@ -1,35 +1,35 @@
-import { IFileSystemGenerator, IInstallerGenerator } from '../interfaces/generator.interface'
+import { IFileSystemGenerator, IInstallerGenerator, IPostGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import { findMissingAnchors, patchAtAnchor } from '../patch/anchor'
 import { Reporter } from '../report'
 
-export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerator {
+export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerator, IPostGenerator {
   constructor(private readonly ctx: Context) {}
 
   async createDirectories(): Promise<void> {}
 
   async copyFiles(): Promise<void> {
-    const mainFile = this.ctx.project.path('src/main.ts')
-    const reporter = new Reporter(this.ctx.logger, 'already has the socket configuration')
-    const missing = findMissingAnchors(mainFile, ['imports', 'afterListen'])
+    // Las copias se hacen en `post()` junto al wiring: si `main.ts` no tiene
+    // los anchors, no interesa dejar archivos de socket sin conectar.
+  }
 
-    if (missing.length > 0) {
-      reporter.patches(mainFile, missing)
+  async post(): Promise<void> {
+    const reporter = new Reporter(this.ctx.logger, 'already has the socket configuration')
+    const result = this.ctx.wiring.transaction((wiring) => {
+      wiring.import("import SocketIO from './socket'")
+      wiring.main('afterListen', 'const socket = new SocketIO(server)', {
+        key: 'new SocketIO(server)',
+      })
+    })
+
+    reporter.add(result)
+
+    if (result.warnings.length > 0) {
       return
     }
 
     const policy = 'overwrite-if-unmodified' as const
     this.ctx.project.copy('src/socket.ts', 'generator/common/socketio/socket.ts', policy)
     this.ctx.project.copy('src/socket.controller.ts', 'generator/common/socketio/socket.controller.ts', policy)
-
-    const importPatch = patchAtAnchor(mainFile, 'imports', "import SocketIO from './socket'", {
-      sort: true,
-    })
-    const listenPatch = patchAtAnchor(mainFile, 'afterListen', 'const socket = new SocketIO(server)', {
-      dedupeKey: 'new SocketIO(server)',
-    })
-
-    reporter.patches(mainFile, [importPatch, listenPatch])
   }
 
   async installDependencies(): Promise<void> {

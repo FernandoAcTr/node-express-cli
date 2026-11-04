@@ -10,10 +10,11 @@ para añadir comandos sin volver a duplicar plantillas ni parches frágiles.
 | Entrada       | `src/index.ts`                          | Resuelve el comando desde el registry y ejecuta el lifecycle.                                    |
 | Registro      | `src/registry.ts`                       | Única fuente de verdad: nombre, descripción, aliases, `requires`, `requiresProject`, `feature`, opciones y factory. |
 | Lifecycle     | `src/run.ts`                            | Orden fijo de fases; marca la feature al terminar.                                               |
-| Contexto      | `src/context.ts`                        | Inyecta `config`, `project`, `shell`, `fs`, `logger`, `prompter`, `cwd`, `force`, `has` y `markInstalled`. |
+| Contexto      | `src/context.ts`                        | Inyecta `config`, `project`, `wiring`, `shell`, `fs`, `logger`, `prompter`, `cwd`, `force`, `has` y `markInstalled`. |
 | Escritura     | `src/services/project.service.ts`       | Política de propiedad, manifest y rutas absolutas dentro del proyecto.                           |
 | Generadores   | `src/generators/`                       | Implementan solo las fases que necesitan.                                                        |
-| Parches       | `src/patch/` + `src/patches/`           | Modifican archivos existentes de forma idempotente.                                              |
+| Wiring        | `src/wiring/`                           | Modifica archivos existentes (`main.ts`, config, env, scripts) sin parches ad-hoc.               |
+| Parches       | `src/patch/`                            | Motor de markers: inserción atómica, dedupe y bloques.                                           |
 | Plantillas    | `templates/base`, `templates/generator` | Archivos que se copian al proyecto generado.                                                     |
 | Configuración | `src/services/config.service.ts`        | Lee/escribe `cli.config.json` y `package.json`; comandos por package manager.                    |
 
@@ -49,6 +50,7 @@ export interface Context {
   cwd: string
   config: ConfigService
   project: ProjectService
+  wiring: WiringService
   shell: ShellService
   fs: typeof fs
   logger: Logger
@@ -66,6 +68,9 @@ inspeccionar `package.json`.
 Los tests pueden construir el contexto con `createContext({ cwd, logger, prompter, shell, force })`
 y sustituir solo lo necesario. `ctx.cwd` es la raíz del proyecto; ningún
 generador debe usar rutas relativas a `process.cwd()`.
+
+`ctx.wiring` es el único punto que modifica archivos existentes. Los generadores
+no conocen los markers `@nec:` ni llaman a `patchAtAnchor` directamente.
 
 ## Escritura de archivos y `--force`
 
@@ -157,7 +162,7 @@ __ServiceName__  __servicefile__  __modulename__
 __ClassName__    __EntityName__   __PRISMA_SEED_COMMAND__
 ```
 
-## Parches idempotentes y anchors
+## Wiring idempotente y anchors
 
 `templates/base/src/main.ts` es **el único** `main.ts`. Contiene marcas estables:
 
@@ -169,19 +174,48 @@ __ClassName__    __EntityName__   __PRISMA_SEED_COMMAND__
 // @nec:after-listen
 ```
 
-Los instaladores insertan código con `patchAtAnchor(file, anchor, snippet, options)`:
+`templates/base/src/config/index.ts` y `.env.example` tienen sus propios anchors
+(`// @nec:config` y `# @nec:env`).
+
+Los instaladores no tocan archivos existentes directamente. Usan
+`ctx.wiring` y un `Reporter`:
 
 ```ts
-patchAtAnchor(mainFile, 'imports', "import passport from 'passport'", { sort: true })
-patchAtAnchor(mainFile, 'beforeApp', "passport.use('jwt', JWTStrategy)", {
-  dedupeKey: "passport.use('jwt'",
+const reporter = new Reporter(this.ctx.logger)
+const result = this.ctx.wiring.transaction((wiring) => {
+  wiring.import("import passport from 'passport'")
+  wiring.main('beforeApp', "passport.use('jwt', JWTStrategy)", { key: "passport.use('jwt'" })
 })
+
+reporter.add(result)
 ```
 
-- `dedupeKey` evita duplicados (por defecto se usa el snippet).
-- `sort: true` ordena el bloque contiguo de imports.
-- En proyectos viejos sin anchors devuelve `anchor-missing`; los generadores
-  avisan con `Reporter` y **no** fallan.
+API de `WiringService`:
+
+| Método                          | Archivo                | Uso                                      |
+| ------------------------------- | ---------------------- | ---------------------------------------- |
+| `import(statement, opts)`       | `src/main.ts`          | Añade al bloque `@nec:imports`.          |
+| `main(anchor, code, opts)`      | `src/main.ts`          | Añade runtime junto a un anchor.         |
+| `config(code, opts)`            | `src/config/index.ts`  | Añade una entrada a `config`.            |
+| `env(code, opts)`               | `.env.example`         | Añade variables al final del anchor.     |
+| `envBlock(marker, code, opts)`  | `.env.example`         | Bloque reemplazable (`@nec:…:start/end`).|
+| `script(name, command)`         | `package.json`         | Escribe un script sin duplicarlo.        |
+| `block(file, marker, code, opts)`| cualquiera            | Bloque delimitado y reemplazable.        |
+
+Detalles del motor (`src/patch/`):
+
+- `patchAtMarker(file, marker, snippet, options)` acepta un marker literal o un
+  nombre de anchor; `patchAtAnchor` sigue existiendo como atajo.
+- Los parches de un mismo archivo se aplican en **una sola escritura**. Si falta
+  cualquier marker del grupo, no se escribe nada (`anchor-missing`) y el
+  generador recibe un warning: nunca queda runtime sin import.
+- Los imports se deduplican por módulo, aceptando comillas simples/dobles y
+  espacios distintos. `sort: true` solo ordena bloques de imports de una línea;
+  si hay imports multilínea o comentarios, el bloque se deja intacto.
+- `patchBlock` mantiene bloques `@nec:<marker>:start` / `@nec:<marker>:end`.
+- El filesystem del motor es inyectable (`PatchFileSystem`) para tests.
+- La feature se escribe en `cli.config.json` solo si el lifecycle termina bien;
+  un wiring con warnings no lanza, pero deja constancia en consola.
 
 Nunca reemplaces `main.ts` completo desde un comando nuevo.
 
@@ -192,11 +226,10 @@ Nunca reemplaces `main.ts` completo desde un comando nuevo.
 
 ```ts
 const reporter = new Reporter(this.ctx.logger)
-reporter.patches(mainFile, patches)
-reporter.add(operationResult)
+reporter.add(this.ctx.wiring.transaction((wiring) => wiring.import('...')))
 ```
 
-Los warnings se deduplican para no repetir el mismo mensaje por cada anchor.
+Los warnings del reporter se deduplican para no repetir el mismo mensaje.
 
 ## Cómo añadir un comando
 
@@ -258,6 +291,7 @@ Reglas:
 
 - No importes `configService`/`shellService`: no existen.
 - Escribe siempre con `ctx.project` y sus políticas; no uses `fs.writeFileSync` para archivos del proyecto.
+- Modifica archivos existentes solo con `ctx.wiring`; no uses `@nec:` ni `patchAtAnchor` en generadores.
 - Usa `ctx.cwd` (o pasa `ctx.cwd` a `execAsync`) en vez de rutas relativas a `process.cwd()`.
 - El lifecycle debe poder ejecutarse dos veces sin duplicar archivos, imports ni scripts.
 - Los prompts deben llevar `name` para funcionar con `--no-interaction`.
@@ -271,8 +305,8 @@ npm run test:smoke # genera, instala y compila un proyecto real (lento)
 
 | Tipo        | Ubicación                                                   | Qué cubre                                                                                |
 | ----------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Unit        | `test/utils`, `test/services`, `test/patch`, `test/patches` | helpers, configuración, `ProjectService`/manifest, anchors, scripts, webpush                 |
-| Generadores | `test/generators`, `test/commands`                          | routing, módulos, auth, mailer, migraciones, sockets, `route:list`                          |
+| Unit        | `test/utils`, `test/services`, `test/patch`, `test/wiring`  | helpers, configuración, `ProjectService`/manifest, markers, bloques, `WiringService`        |
+| Generadores | `test/generators`, `test/commands`                          | routing, módulos, auth, mailer, push, migraciones, sockets, `route:list`                     |
 | Golden      | `test/golden`                                               | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json`      |
 | Smoke       | `test/smoke`                                                | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                      |
 

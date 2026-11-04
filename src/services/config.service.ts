@@ -138,6 +138,11 @@ export class ConfigService {
     return this.setScripts({ [name]: command }).changed.length > 0
   }
 
+  /** Devuelve el comando del script o `undefined` si no existe. */
+  public getScript(name: string): string | undefined {
+    return this.readPackageJson().scripts?.[name]
+  }
+
   /** Escribe el nombre del paquete en package.json. Devuelve true si cambió. */
   public setPackageName(name: string): boolean {
     const packageJson = this.readPackageJson()

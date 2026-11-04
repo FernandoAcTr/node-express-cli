@@ -13,7 +13,7 @@
 - Test: `npm test` (vitest, only `test/**/*.test.ts`). Unit + golden tests, no network.
 - Smoke test: `npm run test:smoke` (sets `NEC_SMOKE=1`). Generates a real project, installs dependencies and runs `tsc --noEmit`; slow, so it is skipped by default. CI runs it in a `{npm, pnpm} × {fileBasedRouting true,false}` matrix (`.github/workflows/ci.yml`).
 - Format: `npm run prettier:fix` — the only scripted formatting check.
-- There is **no** lint or separate typecheck script; `npm run build` is the typecheck. `npm test` covers helpers, config, context, registry, run, patches, key generators, golden project output and `route:list`; `templates/generator/common/tests` is scaffolding for _generated_ projects.
+- There is **no** lint or separate typecheck script; `npm run build` is the typecheck. `npm test` covers helpers, config, context, registry, run, `WiringService`, patch markers/blocks, key generators, golden project output and `route:list`; `templates/generator/common/tests` is scaffolding for _generated_ projects.
 
 ## Gotchas
 
@@ -32,14 +32,15 @@
 3. Lifecycle order is fixed by `src/run.ts`: `pre` -> `createDirectories` + `copyFiles` -> `installDependencies` -> `post` -> `run`. Only implemented phases run. If a phase throws, the optional `rollback()` hook runs before the error propagates (used by `init` to remove a half-created project).
 4. For non-interactive use, pass a `name` on each prompt option so `--no-interaction` can read it from a flag or positional argument.
 5. Write project files through `ctx.project`, never with `fs.writeFileSync`/`copyFileSync` and `./src` paths. `ProjectService` enforces `.nec/manifest.json` hashes and `WritePolicy` (`create`, `skip`, `overwrite`, `overwrite-if-unmodified`); `--force` is exposed as `ctx.force`. Pass `ctx.cwd` to `execAsync` instead of relying on `process.cwd()`.
-6. See `docs/architecture.md` for the full walkthrough, including tests and the patch/anchor contract.
+6. Modify existing files only through `ctx.wiring` (`import`, `main`, `config`, `env`, `envBlock`, `script`, `block`). Generators must not contain `@nec:` markers nor import `patchAtAnchor`. Use `ctx.wiring.transaction(...)` when several patches must be atomic, then print the result with one `Reporter`.
+7. See `docs/architecture.md` for the full walkthrough, including tests, the patch engine and the anchor/block contract.
 
 - Template paths resolve via `path.resolve(__dirname, '../../templates/...')`, so `templates/` must ship next to `dist/` (it does; `.npmignore` excludes only `src`, configs, `logs`, `docs`).
 
 ## Generated-project facts (relevant when editing templates/generators)
 
 - Entrypoint is `src/main.ts`; compiled output is `build/` (not `dist/`). Module alias `@/*` -> `src/*`, rewritten at runtime by `tsc-alias`.
-- `src/main.ts` is a single template with `// @nec:*` anchors. Installers must patch it through `src/patch/anchor.ts` (`patchAtAnchor`) and must never copy a whole `main.ts` over it.
+- `src/main.ts` is a single template with `// @nec:*` anchors. Installers must patch it through `ctx.wiring` and must never copy a whole `main.ts` over it. `WiringService` applies all patches for a file in one atomic write: if an anchor is missing, the file is left untouched and a warning is returned. `src/config/index.ts` (`// @nec:config`) and `.env.example` (`# @nec:env`) have their own anchors.
 - Routing lives in `src/routing/index.ts`, chosen by `init` from `templates/base/src/routing/{modules,filebased}.ts`. `fileBasedRouting: true` uses `src/routes/**` (folders like `[id]` become `:id`); otherwise `src/modules/**`.
 - `cli.config.json` records `orm` (`mongoose|typeorm|sequelize|prisma`), `package_manger`, `fileBasedRouting`, `version` and `features`. `features` is written after a successful install command and is what `ctx.has(...)` checks (with legacy fallbacks for `orm`/`fileBasedRouting`).
 - `.nec/manifest.json` records the SHA-256 of every generated file. Do not edit it by hand; delete it to make the next command regenerate it, and do not commit code that assumes every project has one (older projects do not).
