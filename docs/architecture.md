@@ -261,18 +261,29 @@ __ClassName__    __EntityName__   __PRISMA_SEED_COMMAND__
 
 ## Wiring idempotente y anchors
 
-`templates/base/src/main.ts` es **el único** `main.ts`. Contiene marcas estables:
+`templates/base/src/main.ts` es **el único** `main.ts`. Los archivos existentes
+solo se modifican en los puntos marcados:
 
-```
-// @nec:imports
-// @nec:before-app
-// @nec:before-json
-// @nec:before-listen
-// @nec:after-listen
-```
+| Archivo                                         | Anchor                      | Nombre en `WiringService` | Lo usan                                     |
+| ----------------------------------------------- | --------------------------- | ------------------------- | ------------------------------------------- |
+| `templates/base/src/main.ts`                    | `// @nec:imports`           | `import()`                | todas las features con imports              |
+| `templates/base/src/main.ts`                    | `// @nec:before-app`        | `main('beforeApp')`       | middleware y setup previo a `express()`     |
+| `templates/base/src/main.ts`                    | `// @nec:before-json`       | `main('beforeJson')`      | body parsers                                |
+| `templates/base/src/main.ts`                    | `// @nec:before-listen`     | `main('beforeListen')`    | web-push (`setVapidDetails`)                |
+| `templates/base/src/main.ts`                    | `// @nec:after-listen`      | `main('afterListen')`     | socket.io                                   |
+| `templates/base/src/config/index.ts`            | `// @nec:config`            | `config()`                | `DB`, `MAILER`, `VAPID` y cualquier config  |
+| `templates/base/.env.example`                   | `# @nec:env`                | `env()`                   | variables sueltas                           |
+| `templates/base/.env.example`                   | `# @nec:<marker>:start/end` | `envBlock(marker, …)`     | bloques reemplazables (mailer, webpush, DB) |
+| `templates/generator/auth/prisma/schema.prisma` | ninguno                     | —                         | no se parchea: se copia con política `skip` |
 
-`templates/base/src/config/index.ts` y `.env.example` tienen sus propios anchors
-(`// @nec:config` y `# @nec:env`).
+`schema.prisma` es la excepción conocida: mergear modelos con anchors todavía no
+está implementado y el CLI prefiere no tocar un schema que puede tener modelos
+del usuario. `install:auth` con Prisma copia el archivo solo si no existe y
+avisa de que hay que fusionar los modelos a mano (o usar `--force`).
+
+Los anchors son un contrato público: si renombras uno, los proyectos generados
+con versiones anteriores dejan de recibir parches. En ese caso el wiring devuelve
+`anchor-missing`, no escribe nada y muestra un warning; nunca corrompe el archivo.
 
 Los instaladores no tocan archivos existentes directamente. Usan
 `ctx.wiring` y un `Reporter`:
@@ -330,6 +341,10 @@ Los warnings del reporter se deduplican para no repetir el mismo mensaje.
 
 ## Cómo añadir un comando
 
+Todo comando se declara una vez en `commands` (`src/registry.ts`); de ahí salen el
+dispatch, el `--help`, las opciones y la validación de requisitos. No hay que
+tocar `src/index.ts` ni `src/cli.ts`.
+
 ### `install:*` simple (spec)
 
 Ejemplo: `install:cache`.
@@ -359,16 +374,77 @@ installer(cacheSpec),
 3. Añade `'cache'` a `FEATURES` en `src/types/index.ts`. El tipo `Feature` se
    deriva automáticamente y `installer()` crea el comando `install:cache`.
 
+4. Escribe tests: el contrato de `test/contracts/installers.test.ts` recorre
+   todos los `install:*` automáticamente (idempotencia, estado y placeholders).
+   Si la feature tiene wiring o scripts propios, añade una aserción específica.
+
 El instalador en sí son dos archivos: el spec y la línea del registry. `FEATURES`
 solo declara el nombre de la feature para que el tipo y `cli.config.json` la
 conozcan.
 
+### `make:*` (generador de archivos)
+
+Ejemplo: `make:cache`. No es una feature instalable: no toques `FEATURES` ni
+`markInstalled`.
+
+1. Crea `src/generators/cache.generator.ts` implementando `IPreGenerator` e
+   `IFileSystemGenerator`:
+
+```ts
+export class CacheGenerator implements IPreGenerator, IFileSystemGenerator {
+  private name: string
+
+  constructor(private readonly ctx: Context) {}
+
+  async pre(): Promise<void> {
+    this.name = await this.ctx.prompter.input({ message: 'Name of cache:', name: 'name' })
+
+    if (!this.name) {
+      throw new CliError('Cache name is required', { hint: 'Pass --name <value>.' })
+    }
+  }
+
+  async createDirectories(): Promise<void> {
+    this.ctx.project.ensureDir('src/cache')
+  }
+
+  async copyFiles(): Promise<void> {
+    const code = renderTemplate(this.ctx.project.template('generator/cache/store.template.ts'), {
+      ServiceName: pascalCase(this.name),
+    })
+
+    this.ctx.project.write(`src/cache/${kebabCase(this.name)}.ts`, code, 'create')
+  }
+}
+```
+
+2. Usa `ctx.prompter.input({ name: 'name' })` para que `--no-interaction` pueda
+   leer `--name` o el primer posicional. Valida el nombre antes de escribir.
+
+3. Escribe con política `create`: el comando falla si el archivo existe y
+   `--force` es la salida explícita. No sobrescribas archivos del usuario.
+
+4. Registra el comando:
+
+```ts
+{
+  name: 'make:cache',
+  description: 'Generate a new cache class',
+  requiresProject: true,
+  options: { name: NAME_OPTION },
+  create: (ctx) => new CacheGenerator(ctx),
+}
+```
+
+5. Añade un test en `test/generators/` con un `cwd` temporal y un prompter falso.
+   Si modifica `main.ts`, añade también un golden test.
+
 ### Comando custom
 
-Si necesita prompts, elegir entre varios ORMs o ejecutar shell propio, crea un
-generador en `src/generators/` y regístralo con `create: (ctx) => new XGenerator(ctx)`.
-Sigue el lifecycle de `src/run.ts` y usa `ctx.project`/`ctx.wiring` como el resto.
-Ejemplos actuales: `auth`, `orm`, `migration`, `make:*`.
+Si necesita prompts, elegir entre varios ORMs o ejecutar shell propio (como
+`auth`, `orm` o `make:migration`), crea un generador en `src/generators/` y
+regístralo con `create: (ctx) => new XGenerator(ctx)`. Sigue el lifecycle de
+`src/run.ts` y usa `ctx.project`/`ctx.wiring` como el resto.
 
 Todos los comandos declaran `requiresProject`; solo `init` usa `false`. Si un
 comando necesita una feature instalada, declara
@@ -380,13 +456,7 @@ Declara los flags propios en `options` del registry. Llegan en `ctx.args.flags`
 y solo aparecen en el help de ese comando. Usa `booleanFlag`/`stringFlag` de
 `src/utils/args.ts` para leerlos con tipos.
 
-4. Escribe tests:
-   - unitario del spec/generador con `FakeShell` y un `cwd` temporal;
-   - si toca `main.ts`, un golden test (ver abajo).
-
-5. Actualiza `README.md` y este documento si cambia el contrato.
-
-Reglas:
+### Reglas comunes
 
 - No importes `configService`/`shellService`: no existen.
 - Escribe siempre con `ctx.project` y sus políticas; no uses `fs.writeFileSync` para archivos del proyecto.
@@ -395,35 +465,43 @@ Reglas:
 - Usa `ctx.cwd` (o pasa `ctx.cwd` a `execAsync`) en vez de rutas relativas a `process.cwd()`.
 - El lifecycle debe poder ejecutarse dos veces sin duplicar archivos, imports ni scripts.
 - Los prompts deben llevar `name` para funcionar con `--no-interaction`.
+- Actualiza `README.md` y este documento si cambia el contrato visible para el usuario.
 
 ## Tests
 
 ```bash
-npm test          # unit + golden, rápido y sin red
-npm run test:smoke # genera, instala y compila un proyecto real (lento)
+npm test            # unit + golden, rápido y sin red
+npm run test:smoke  # init + orm + auth: proyecto real + tsc --noEmit (lento)
+npm run test:smoke:all # todas las features sobre un mismo proyecto (más lento)
 ```
 
-| Tipo         | Ubicación                                                  | Qué cubre                                                                                |
-| ------------ | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Unit         | `test/utils`, `test/services`, `test/patch`, `test/wiring` | helpers, configuración, `ProjectService`/manifest, markers, bloques, `WiringService`     |
-| CLI          | `test/cli`                                                 | dispatch, `requiresProject`/`requires`, `ctx.args`, `--dry-run` y snapshot de `--help`   |
-| Instaladores | `test/installers`                                          | specs, `SpecGenerator`, base sin features opcionales, `installer(spec)`                  |
-| Contratos    | `test/contracts`                                           | todos los `install:*`: idempotencia, líneas custom, placeholders, estado y scripts       |
-| Generadores  | `test/generators`, `test/commands`                         | routing, módulos, auth, mailer, push, migraciones, sockets, `route:list`                 |
-| Golden       | `test/golden`                                              | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json` |
-| Smoke        | `test/smoke`                                               | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                   |
+| Tipo         | Ubicación                                                  | Qué cubre                                                                                                                           |
+| ------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Unit         | `test/utils`, `test/services`, `test/patch`, `test/wiring` | helpers, configuración, `ProjectService`/manifest, markers, bloques, `WiringService`                                                |
+| CLI          | `test/cli`                                                 | dispatch, `requiresProject`/`requires`, `ctx.args`, `--dry-run` y snapshot de `--help`                                              |
+| Instaladores | `test/installers`                                          | specs, `SpecGenerator`, base sin features opcionales, `installer(spec)`                                                             |
+| Contratos    | `test/contracts`                                           | todos los `install:*`: idempotencia, líneas custom, placeholders, estado, scripts y el conjunto completo de features en un proyecto |
+| Generadores  | `test/generators`, `test/commands`                         | routing, módulos, auth, mailer, push, migraciones, sockets, `route:list`                                                            |
+| Golden       | `test/golden`                                              | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json`                                            |
+| Smoke        | `test/smoke`                                               | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                                                              |
 
 Los snapshots están en `test/golden/__snapshots__/` y `test/cli/__snapshots__/`. Si el cambio es
 intencional, actualízalos con `npm test -- -u` y revísalos en el diff.
 
-El smoke test usa `SMOKE_PACKAGE_MANAGER` (`npm`/`pnpm`) y `SMOKE_FILE_BASED`
-(`true`/`false`). `.github/workflows/ci.yml` corre la matriz completa.
+El smoke test usa `SMOKE_PROFILE` (`core` por defecto o `all`),
+`SMOKE_PACKAGE_MANAGER` (`npm`/`pnpm`) y `SMOKE_FILE_BASED` (`true`/`false`).
+`core` genera el proyecto con `init + orm + auth`; `all` instala además todas las
+features declarativas y comprueba que `features` las contiene todas.
 
 ## CI
 
 - Job `test`: `npm ci`, `npm run build`, `npm test`.
-- Job `smoke`: matriz `{npm, pnpm} × {fileBasedRouting true,false}`; instala un
-  proyecto generado con TypeORM y corre `tsc --noEmit`.
+- Job `smoke`: matriz `{npm, pnpm} × {fileBasedRouting true,false}` con
+  `SMOKE_PROFILE=core`; instala un proyecto generado con TypeORM y corre
+  `tsc --noEmit`.
+- Job `smoke-all`: un proyecto con todas las features (`SMOKE_PROFILE=all`) que
+  debe compilar. Es el criterio de que cada feature instalable se compila al
+  menos una vez.
 
 Cualquier cambio que rompa un template debe fallar en CI, no en la máquina del
 usuario.

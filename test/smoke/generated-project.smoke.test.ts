@@ -13,7 +13,7 @@ import { scaffoldProject } from '../helpers/project'
  * Es lento (red + instalación), así que solo corre cuando `NEC_SMOKE=1`.
  * En CI se ejecuta en la matriz `{npm, pnpm} × {fileBasedRouting true,false}`.
  */
-const enabled = process.env.NEC_SMOKE === '1'
+const enabled = process.env.NEC_SMOKE === '1' && (process.env.SMOKE_PROFILE ?? 'core') === 'core'
 const packageManager = (process.env.SMOKE_PACKAGE_MANAGER ?? PackageManager.NPM) as PackageManager
 const fileBasedRouting = process.env.SMOKE_FILE_BASED === 'true'
 

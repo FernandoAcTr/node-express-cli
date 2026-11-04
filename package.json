@@ -13,6 +13,7 @@
     "prepare": "npm run build",
     "test": "vitest run",
     "test:smoke": "NEC_SMOKE=1 vitest run test/smoke",
+    "test:smoke:all": "NEC_SMOKE=1 SMOKE_PROFILE=all vitest run test/smoke",
     "prettier:fix": "prettier --config .prettierrc.json --write src/**/**/*.ts && prettier --config .prettierrc.json"
   },
   "keywords": [

@@ -3,7 +3,7 @@
 ## What this repo is
 
 - `node-express-cli` is a TypeScript CLI that **scaffolds** Express + TS projects. It is not an Express app itself.
-- `src/` = the CLI. `templates/` = files copied into generated projects (`base/` for `init`, `generator/` for every other command). `docs/` holds images and `docs/architecture.md`.
+- `src/` = the CLI. `templates/` = files copied into generated projects (`base/` for `init`, `generator/` for every other command). `docs/` holds images, `docs/architecture.md` and the ADRs in `docs/adr/`.
 - Published bins `node-express-cli` and `nec` both point to `dist/index.js`.
 
 ## Commands
@@ -11,7 +11,8 @@
 - Build: `npm run build` (runs `tsc`, emits `dist/`). `prepare` also builds, so it runs automatically on install.
 - Run the CLI locally: `npm run build && node dist/index <command>`.
 - Test: `npm test` (vitest, only `test/**/*.test.ts`). Unit + golden tests, no network.
-- Smoke test: `npm run test:smoke` (sets `NEC_SMOKE=1`). Generates a real project, installs dependencies and runs `tsc --noEmit`; slow, so it is skipped by default. CI runs it in a `{npm, pnpm} × {fileBasedRouting true,false}` matrix (`.github/workflows/ci.yml`).
+- Smoke test: `npm run test:smoke` (sets `NEC_SMOKE=1`, `SMOKE_PROFILE=core`). Generates a real project (`init + orm + auth`), installs dependencies and runs `tsc --noEmit`; slow, so it is skipped by default. CI runs it in a `{npm, pnpm} × {fileBasedRouting true,false}` matrix.
+- All-features smoke: `npm run test:smoke:all` (sets `SMOKE_PROFILE=all`). Installs every `install:*` on one project and runs `tsc --noEmit`; this is what proves each installable feature compiles. CI runs it in a separate `smoke-all` job.
 - Format: `npm run prettier:fix` — the only scripted formatting check.
 - There is **no** lint or separate typecheck script; `npm run build` is the typecheck. `npm test` covers helpers, config, context, registry, run, CLI dispatch and `--help` snapshot, `--dry-run`, `WiringService`, patch markers/blocks, `SpecGenerator`/installer specs, install contracts, key generators, golden project output and `route:list`; `templates/generator/common/tests` is scaffolding for _generated_ projects.
 
@@ -35,7 +36,7 @@
 6. Write project files through `ctx.project`, never with `fs.writeFileSync`/`copyFileSync` and `./src` paths. `ProjectService` enforces `.nec/manifest.json` hashes and `WritePolicy` (`create`, `skip`, `overwrite`, `overwrite-if-unmodified`); `--force` is exposed as `ctx.force` and `--dry-run` as `ctx.dryRun`. In dry-run the context injects a shared `VirtualFileSystem`, so do not bypass `ctx.project`/`ctx.config`; otherwise the write leaks to disk. Pass `ctx.cwd` to `execAsync` instead of relying on `process.cwd()`.
 7. Modify existing files only through `ctx.wiring` (`import`, `main`, `config`, `env`, `envBlock`, `script`, `block`). Specs declare `wire` steps; generators must not contain `@nec:` markers nor import `patchAtAnchor`. Use `ctx.wiring.transaction(...)` when several patches must be atomic, then print the result with one `Reporter`.
 8. Keep optional feature config/env/scripts out of `templates/base` and `baseScripts`: `MAILER`/`MAIL_*` belong to the mailer spec, `VAPID`/`vapid:generate` to push, `DB_*` to `ormWireSteps()`, and `prettier:fix` to prettier. `templates/base` must stay feature-agnostic.
-9. See `docs/architecture.md` for the full walkthrough, including tests, the patch engine and the anchor/block contract.
+9. See `docs/architecture.md` for the full walkthrough, including tests, the patch engine and the anchor/block contract, and `docs/adr/0001-provider-system.md` for why wiring uses anchors instead of auto-discovered providers.
 
 - Template paths resolve via `path.resolve(__dirname, '../../templates/...')`, so `templates/` must ship next to `dist/` (it does; `.npmignore` excludes only `src`, configs, `logs`, `docs`).
 

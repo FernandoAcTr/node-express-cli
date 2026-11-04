@@ -1,12 +1,15 @@
 import fs from 'fs'
 import path from 'path'
-import { createContext } from '../../src/context'
+import { executeCommand } from '../../src/cli'
+import { Context, createContext } from '../../src/context'
 import { Logger } from '../../src/logger'
 import { BaseGenerator } from '../../src/generators/base.generator'
 import { OrmGenerator } from '../../src/generators/orm.generator'
 import { AuthGenerator } from '../../src/generators/auth.generator'
+import { NonInteractivePrompter } from '../../src/prompts'
+import { commands } from '../../src/registry'
 import { run } from '../../src/run'
-import { DbType, PackageManager } from '../../src/types'
+import { CommandArgs, DbType, PackageManager } from '../../src/types'
 import { ShellService } from '../../src/services/shell.service'
 
 export const silentLogger: Logger = {
@@ -122,6 +125,42 @@ export async function scaffoldProject(options: ScaffoldOptions): Promise<string>
   }
 
   return project
+}
+
+export interface InstallAllFeaturesOptions {
+  shell?: Pick<ShellService, 'execAsync' | 'exec'>
+  logger?: Logger
+  /** Vuelve a ejecutar también las features ya marcadas, para probar idempotencia. */
+  force?: boolean
+}
+
+/**
+ * Instala todas las features declarativas que falten. `scaffoldProject` normalmente
+ * ya instala `orm` y `auth`, así que se omiten las que `ctx.has()` reporte como
+ * presentes. Con el `FakeShell` por defecto no toca la red.
+ */
+export async function installAllFeatures(project: string, options: InstallAllFeaturesOptions = {}): Promise<Context> {
+  const ctx = createContext({
+    cwd: project,
+    logger: options.logger ?? silentLogger,
+    shell: (options.shell ?? new FakeShell()) as ShellService,
+    prompter: new NonInteractivePrompter({ orm: DbType.TYPEORM }),
+  })
+  const args: CommandArgs = { positionals: [], flags: {} }
+
+  for (const command of commands) {
+    if (!command.name.startsWith('install:') || !command.feature) {
+      continue
+    }
+
+    if (!options.force && ctx.has(command.feature)) {
+      continue
+    }
+
+    await executeCommand(command, ctx, args)
+  }
+
+  return ctx
 }
 
 /** Lista recursiva y ordenada de archivos, relativa a `dir`. */

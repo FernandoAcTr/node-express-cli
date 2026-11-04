@@ -69,7 +69,9 @@ async function runInstall(project: string, command: CommandDefinition, flags: Re
 
 /** Instala las dependencias de las que depende el comando, si las declara. */
 async function prepare(project: string, command: CommandDefinition): Promise<void> {
-  if (!command.requires?.includes('orm')) {
+  const requiresOrm = command.requires?.some((requirement) => requirement.feature === 'orm') ?? false
+
+  if (!requiresOrm) {
     return
   }
 
