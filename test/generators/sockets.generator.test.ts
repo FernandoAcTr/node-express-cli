@@ -3,7 +3,8 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../../src/context'
-import { SocketsGenerator } from '../../src/generators/sockets.generator'
+import { SpecGenerator } from '../../src/installers'
+import { socketSpec } from '../../src/installers/specs/socket.spec'
 
 const dirs: string[] = []
 
@@ -41,11 +42,11 @@ afterEach(() => {
   }
 })
 
-describe('SocketsGenerator', () => {
+describe('socket installer', () => {
   it('patches main.ts instead of replacing it', async () => {
     const cwd = project()
     const ctx = createContext({ cwd, logger: silentLogger })
-    const generator = new SocketsGenerator(ctx)
+    const generator = new SpecGenerator(ctx, socketSpec)
 
     await generator.post()
 
@@ -61,7 +62,7 @@ describe('SocketsGenerator', () => {
   it('is idempotent', async () => {
     const cwd = project()
     const ctx = createContext({ cwd, logger: silentLogger })
-    const generator = new SocketsGenerator(ctx)
+    const generator = new SpecGenerator(ctx, socketSpec)
 
     await generator.post()
     await generator.post()
@@ -83,7 +84,7 @@ describe('SocketsGenerator', () => {
       cwd,
       logger: { ...silentLogger, warn: (message: string) => warnings.push(message) },
     })
-    const generator = new SocketsGenerator(ctx)
+    const generator = new SpecGenerator(ctx, socketSpec)
 
     await generator.post()
 
@@ -111,7 +112,7 @@ describe('SocketsGenerator', () => {
       cwd,
       logger: { ...silentLogger, warn: (message: string) => warnings.push(message) },
     })
-    const generator = new SocketsGenerator(ctx)
+    const generator = new SpecGenerator(ctx, socketSpec)
 
     await generator.post()
 

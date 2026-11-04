@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { Config, DbType, PackageManager } from '../types'
+import { Config, DbType, FEATURES, Feature, PackageManager } from '../types'
 import { version } from '../version'
 import { CliError } from '../errors'
 
@@ -89,7 +89,7 @@ export class ConfigService {
   }
 
   /** Marca una feature como instalada. Devuelve true si cambió el archivo. */
-  public markFeature(feature: string): boolean {
+  public markFeature(feature: Feature): boolean {
     const config = this.getConfig()
 
     if (config.features.includes(feature)) {
@@ -101,7 +101,7 @@ export class ConfigService {
   }
 
   /** True si la feature está registrada en `cli.config.json`. */
-  public hasFeature(feature: string): boolean {
+  public hasFeature(feature: Feature): boolean {
     return this.getConfig().features.includes(feature)
   }
 
@@ -279,10 +279,14 @@ function isPackageManager(value: unknown): value is PackageManager {
   return typeof value === 'string' && Object.values(PackageManager).includes(value as PackageManager)
 }
 
-function normalizeFeatures(value: unknown): string[] {
+function normalizeFeatures(value: unknown): Feature[] {
   if (!Array.isArray(value)) {
     return []
   }
 
-  return [...new Set(value.filter((feature): feature is string => typeof feature === 'string' && feature.length > 0))]
+  return [
+    ...new Set(
+      value.filter((feature): feature is Feature => typeof feature === 'string' && (FEATURES as readonly string[]).includes(feature))
+    ),
+  ]
 }

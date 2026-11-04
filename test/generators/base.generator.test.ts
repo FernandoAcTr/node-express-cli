@@ -148,7 +148,8 @@ describe('BaseGenerator routing selection', () => {
 
     expect(pkg.scripts.dev).toContain('npm run start:compile')
     expect(pkg.scripts.build).toBe('rimraf build && tsc && tsc-alias')
-    expect(pkg.scripts['vapid:generate']).toBe('npx web-push generate-vapid-keys')
+    expect(pkg.scripts['prettier:fix']).toBeUndefined()
+    expect(pkg.scripts['vapid:generate']).toBeUndefined()
   })
 
   it('uses the selected package manager in package.json scripts', async () => {
@@ -158,6 +159,5 @@ describe('BaseGenerator routing selection', () => {
 
     expect(serialized).not.toMatch(/\bnpm\b|\bnpx\b/)
     expect(pkg.scripts.dev).toContain('bun run start:compile')
-    expect(pkg.scripts['vapid:generate']).toBe('bunx web-push generate-vapid-keys')
   })
 })

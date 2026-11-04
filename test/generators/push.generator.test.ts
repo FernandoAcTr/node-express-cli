@@ -3,8 +3,9 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { Context, createContext } from '../../src/context'
-import { PushGenerator } from '../../src/generators/push.generator'
-import { SocketsGenerator } from '../../src/generators/sockets.generator'
+import { SpecGenerator } from '../../src/installers'
+import { pushSpec } from '../../src/installers/specs/push.spec'
+import { socketSpec } from '../../src/installers/specs/socket.spec'
 import { Logger } from '../../src/logger'
 
 const dirs: string[] = []
@@ -58,11 +59,11 @@ afterEach(() => {
   }
 })
 
-describe('PushGenerator', () => {
+describe('push installer', () => {
   it('wires main.ts, config, env and package.json', async () => {
     const cwd = project()
 
-    await new PushGenerator(context(cwd)).post()
+    await new SpecGenerator(context(cwd), pushSpec).post()
 
     const main = fs.readFileSync(path.join(cwd, 'src/main.ts'), 'utf-8')
     const config = fs.readFileSync(path.join(cwd, 'src/config/index.ts'), 'utf-8')
@@ -81,8 +82,8 @@ describe('PushGenerator', () => {
   it('is idempotent', async () => {
     const cwd = project()
 
-    await new PushGenerator(context(cwd)).post()
-    await new PushGenerator(context(cwd)).post()
+    await new SpecGenerator(context(cwd), pushSpec).post()
+    await new SpecGenerator(context(cwd), pushSpec).post()
 
     const main = fs.readFileSync(path.join(cwd, 'src/main.ts'), 'utf-8')
     const config = fs.readFileSync(path.join(cwd, 'src/config/index.ts'), 'utf-8')
@@ -108,7 +109,7 @@ describe('PushGenerator', () => {
     const warnings: string[] = []
     fs.writeFileSync(mainFile, originalMain)
 
-    await new PushGenerator(context(cwd, { ...silentLogger, warn: (message: string) => warnings.push(message) })).post()
+    await new SpecGenerator(context(cwd, { ...silentLogger, warn: (message: string) => warnings.push(message) }), pushSpec).post()
 
     expect(warnings.join('\n')).toContain('@nec:imports')
     expect(fs.readFileSync(mainFile, 'utf-8')).toBe(originalMain)
@@ -120,7 +121,7 @@ describe('PushGenerator', () => {
   it('uses the package runner of the selected package manager', async () => {
     const cwd = project('bun')
 
-    await new PushGenerator(context(cwd)).post()
+    await new SpecGenerator(context(cwd), pushSpec).post()
 
     const pkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8'))
     const env = fs.readFileSync(path.join(cwd, '.env.example'), 'utf-8')
@@ -134,11 +135,11 @@ describe('PushGenerator', () => {
     const pushFirst = project()
     const socketFirst = project()
 
-    await new PushGenerator(context(pushFirst)).post()
-    await new SocketsGenerator(context(pushFirst)).copyFiles()
+    await new SpecGenerator(context(pushFirst), pushSpec).post()
+    await new SpecGenerator(context(pushFirst), socketSpec).post()
 
-    await new SocketsGenerator(context(socketFirst)).copyFiles()
-    await new PushGenerator(context(socketFirst)).post()
+    await new SpecGenerator(context(socketFirst), socketSpec).post()
+    await new SpecGenerator(context(socketFirst), pushSpec).post()
 
     expect(fs.readFileSync(path.join(pushFirst, 'src/main.ts'), 'utf-8')).toBe(
       fs.readFileSync(path.join(socketFirst, 'src/main.ts'), 'utf-8')

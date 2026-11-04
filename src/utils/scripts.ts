@@ -7,7 +7,6 @@ import { DbType } from '../types'
  */
 export function baseScripts(config: ConfigService): Record<string, string> {
   const run = config.getRunCommand()
-  const runner = config.getPackageRunnerCommand()
 
   return {
     dev: `rimraf build && tsc-watch --noClear --onCompilationComplete tsc-alias --onFirstSuccess tsc-alias --onSuccess "${run} start:compile"`,
@@ -15,8 +14,6 @@ export function baseScripts(config: ConfigService): Record<string, string> {
     'start:compile': 'tsc-alias && node build/main.js',
     clean: 'rimraf build && rimraf logs',
     build: 'rimraf build && tsc && tsc-alias',
-    'prettier:fix': 'prettier --config .prettierrc.json --write src/**/**/*.ts',
-    'vapid:generate': `${runner} web-push generate-vapid-keys`,
   }
 }
 

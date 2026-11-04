@@ -5,6 +5,8 @@ import { renderTemplate } from '../utils/template'
 import { ormScripts } from '../utils/scripts'
 import { Reporter } from '../report'
 import { WritePolicy } from '../services/project.service'
+import { WireStep, applyWireSteps } from '../installers'
+import { ormWireSteps } from '../installers/specs/orm.spec'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
@@ -70,10 +72,21 @@ export class OrmGenerator implements IGenerator {
   }
 
   async post(): Promise<void> {
-    if (this.orm == DbType.TYPEORM) {
-      const reporter = new Reporter(this.ctx.logger)
-      reporter.add(this.ctx.wiring.transaction((wiring) => wiring.import("import 'reflect-metadata'")))
+    const reporter = new Reporter(this.ctx.logger)
+    const steps: WireStep[] = []
 
+    if (this.orm == DbType.TYPEORM) {
+      steps.push({ kind: 'import', statement: "import 'reflect-metadata'" })
+    }
+
+    // La configuración y el `.env.example` de la base de datos pertenecen al
+    // ORM, no al template base. Se escriben en el mismo wiring que el resto.
+    steps.push(...ormWireSteps())
+
+    const result = this.ctx.wiring.transaction((wiring) => applyWireSteps(wiring, steps, this.ctx.config))
+    reporter.add(result)
+
+    if (this.orm == DbType.TYPEORM) {
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
       this.ctx.logger.warn('You must install specific database driver like mysql or pg')
       this.ctx.logger.success('You need to initialize the AppDataSource manually.')

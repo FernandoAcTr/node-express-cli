@@ -13,7 +13,9 @@ export enum PackageManager {
 }
 
 /** Features que se registran en `cli.config.json` después de instalarse. */
-export type Feature = 'orm' | 'auth' | 'push' | 'socket' | 'mailer' | 'tests' | 'prettier' | 'eslint'
+export const FEATURES = ['orm', 'auth', 'push', 'socket', 'mailer', 'tests', 'prettier', 'eslint'] as const
+
+export type Feature = (typeof FEATURES)[number]
 
 export type Config = {
   orm?: DbType
@@ -22,5 +24,5 @@ export type Config = {
   /** Versión del CLI que escribió el archivo. */
   version?: string
   /** Features ya instaladas; permite repetir comandos sin duplicar trabajo. */
-  features: string[]
+  features: Feature[]
 }

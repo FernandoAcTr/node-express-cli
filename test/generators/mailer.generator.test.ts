@@ -3,7 +3,8 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../../src/context'
-import { MailerGenerator } from '../../src/generators/mailer.generator'
+import { SpecGenerator } from '../../src/installers'
+import { mailerSpec } from '../../src/installers/specs/mailer.spec'
 import { Logger } from '../../src/logger'
 
 const dirs: string[] = []
@@ -23,8 +24,8 @@ function project(): string {
   return dir
 }
 
-function generator(cwd: string, logger: Logger = silentLogger): MailerGenerator {
-  return new MailerGenerator(createContext({ cwd, logger }))
+function generator(cwd: string, logger: Logger = silentLogger): SpecGenerator {
+  return new SpecGenerator(createContext({ cwd, logger }), mailerSpec)
 }
 
 afterEach(() => {
@@ -33,7 +34,7 @@ afterEach(() => {
   }
 })
 
-describe('MailerGenerator', () => {
+describe('mailer installer', () => {
   it('is idempotent, including binary templates', async () => {
     const cwd = project()
     const warnings: string[] = []

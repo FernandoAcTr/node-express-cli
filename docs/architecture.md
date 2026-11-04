@@ -13,6 +13,7 @@ para añadir comandos sin volver a duplicar plantillas ni parches frágiles.
 | Contexto      | `src/context.ts`                        | Inyecta `config`, `project`, `wiring`, `shell`, `fs`, `logger`, `prompter`, `cwd`, `force`, `has` y `markInstalled`. |
 | Escritura     | `src/services/project.service.ts`       | Política de propiedad, manifest y rutas absolutas dentro del proyecto.                           |
 | Generadores   | `src/generators/`                       | Implementan solo las fases que necesitan.                                                        |
+| Instaladores  | `src/installers/`                       | `InstallerSpec` declarativo, `SpecGenerator` y specs de features simples.                        |
 | Wiring        | `src/wiring/`                           | Modifica archivos existentes (`main.ts`, config, env, scripts) sin parches ad-hoc.               |
 | Parches       | `src/patch/`                            | Motor de markers: inserción atómica, dedupe y bloques.                                           |
 | Plantillas    | `templates/base`, `templates/generator` | Archivos que se copian al proyecto generado.                                                     |
@@ -130,7 +131,8 @@ antes de crear nada.
 - `writeConfig()` hace **merge**: conserva claves existentes y desconocidas.
 - `getConfig()` valida el JSON y normaliza valores inválidos; un archivo corrupto
   lanza `CliError` con un hint.
-- `features` es la fuente de verdad de la idempotencia.
+- `features` es la fuente de verdad de la idempotencia. Las features válidas se
+  declaran en `FEATURES` (`src/types/index.ts`); `Feature` se deriva de esa lista.
 
 ## Package manager
 
@@ -146,7 +148,53 @@ Usa los helpers de `ConfigService`:
 
 Para scripts de `package.json` usa `setScript(name, command)` o
 `setScripts({ ... })`; nunca `npm pkg set`. Los scripts base viven en
-`src/utils/scripts.ts` (`baseScripts`, `ormScripts`).
+`src/utils/scripts.ts` (`baseScripts`, `ormScripts`). Los scripts de una feature
+opcional se declaran en su `InstallerSpec` (`scripts`), no en `baseScripts`.
+
+## Instaladores declarativos
+
+Un `install:*` simple no necesita un generador propio. Se define con un
+`InstallerSpec` y se registra con `installer(spec)`:
+
+```ts
+// src/installers/specs/mailer.spec.ts
+export const mailerSpec: InstallerSpec = {
+  feature: 'mailer',
+  description: 'Add support for send mails via nodemailer library',
+  deps: ['handlebars', 'nodemailer'],
+  devDeps: ['@types/nodemailer'],
+  files: [{ from: 'generator/common/mailer/mailer.ts', to: 'src/utils/mailer.ts' }],
+  copyDir: [{ from: 'generator/common/mailer/templates', to: 'src/templates' }],
+  wire: [
+    { kind: 'config', code: MAILER_CONFIG, key: 'MAILER:' },
+    { kind: 'envBlock', marker: 'mailer', code: MAILER_ENV, key: 'MAIL_HOST=' },
+  ],
+}
+
+// src/registry.ts
+installer(mailerSpec),
+```
+
+`SpecGenerator` ejecuta el lifecycle genérico:
+
+- `deps`/`devDeps` usan los comandos del package manager del proyecto.
+- `dirs` se crean en `createDirectories`.
+- `files`/`copyDir` se copian en `copyFiles`; con `stage: 'post'` se copian solo
+  después de que el wiring de `main.ts` termine sin warnings (así socket no
+  deja archivos desconectados).
+- `wire` se aplica en `post`: primero los pasos de `main.ts` de forma atómica y,
+  si no hay warnings, el resto (config, env, bloques).
+- `scripts` se escriben con `WiringService.script` después del wiring.
+- `success` imprime el cierre de la feature.
+
+Los instaladores con lógica propia siguen siendo custom: `orm` (elige el ORM,
+copia templates por motor y calcula scripts), `auth` (templates por ORM) y
+`migration` (shell). `orm` reutiliza `ormWireSteps()` para la configuración
+`DB` y las variables `DB_*`, que ya no viven en `templates/base`.
+
+`templates/base` solo contiene lo común a todos los proyectos. `MAILER`,
+`MAIL_*`, `VAPID`, `DB_*`, `prettier:fix` y `vapid:generate` pertenecen a los
+specs de sus features.
 
 ## Plantillas
 
@@ -233,56 +281,51 @@ Los warnings del reporter se deduplican para no repetir el mismo mensaje.
 
 ## Cómo añadir un comando
 
+### `install:*` simple (spec)
+
 Ejemplo: `install:cache`.
 
-1. Crea `src/generators/cache.generator.ts`:
+1. Crea `src/installers/specs/cache.spec.ts`:
 
 ```ts
-import { IFileSystemGenerator, IInstallerGenerator } from '../interfaces/generator.interface'
-import { Context } from '../context'
+import { InstallerSpec } from '../spec'
 
-export class CacheGenerator implements IFileSystemGenerator, IInstallerGenerator {
-  constructor(private readonly ctx: Context) {}
-
-  async createDirectories(): Promise<void> {
-    this.ctx.project.ensureDir('src/cache')
-  }
-
-  async copyFiles(): Promise<void> {
-    this.ctx.project.copy('src/cache/store.ts', 'generator/cache/store.ts')
-  }
-
-  async installDependencies(): Promise<void> {
-    if (this.ctx.has('cache')) {
-      this.ctx.logger.info('Cache is already installed; skipping dependency installation')
-      return
-    }
-
-    this.ctx.logger.info('================= Installing cache =================')
-    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} lru-cache`, this.ctx.cwd)
-    this.ctx.config.setScript('cache:clear', 'node build/cache/clear.js')
-  }
-}
-```
-
-2. Regístralo **una sola vez** en `src/registry.ts`:
-
-```ts
-{
-  name: 'install:cache',
-  description: 'Add an in-memory cache layer',
+export const cacheSpec: InstallerSpec = {
   feature: 'cache',
-  create: (ctx) => new CacheGenerator(ctx),
+  description: 'Add an in-memory cache layer',
+  deps: ['lru-cache'],
+  dirs: ['src/cache'],
+  files: [{ from: 'generator/cache/store.ts', to: 'src/cache/store.ts' }],
+  scripts: { 'cache:clear': 'node build/cache/clear.js' },
+  success: ['Cache support is ready'],
 }
 ```
+
+2. Añade una línea en `src/registry.ts`:
+
+```ts
+installer(cacheSpec),
+```
+
+3. Añade `'cache'` a `FEATURES` en `src/types/index.ts`. El tipo `Feature` se
+   deriva automáticamente y `installer()` crea el comando `install:cache`.
+
+El instalador en sí son dos archivos: el spec y la línea del registry. `FEATURES`
+solo declara el nombre de la feature para que el tipo y `cli.config.json` la
+conozcan.
+
+### Comando custom
+
+Si necesita prompts, elegir entre varios ORMs o ejecutar shell propio, crea un
+generador en `src/generators/` y regístralo con `create: (ctx) => new XGenerator(ctx)`.
+Sigue el lifecycle de `src/run.ts` y usa `ctx.project`/`ctx.wiring` como el resto.
+Ejemplos actuales: `auth`, `orm`, `migration`, `make:*`.
 
 Todos los comandos nuevos exigen un proyecto generado salvo que declares
 `requiresProject: false` (solo lo hace `init`).
 
-3. Añade `'cache'` al tipo `Feature` en `src/types/index.ts`.
-
 4. Escribe tests:
-   - unitario del generador con `FakeShell` y un `cwd` temporal;
+   - unitario del spec/generador con `FakeShell` y un `cwd` temporal;
    - si toca `main.ts`, un golden test (ver abajo).
 
 5. Actualiza `README.md` y este documento si cambia el contrato.
@@ -292,6 +335,7 @@ Reglas:
 - No importes `configService`/`shellService`: no existen.
 - Escribe siempre con `ctx.project` y sus políticas; no uses `fs.writeFileSync` para archivos del proyecto.
 - Modifica archivos existentes solo con `ctx.wiring`; no uses `@nec:` ni `patchAtAnchor` en generadores.
+- Los specs declaran `wire`/`scripts`; no meten `@nec:` ni llaman a `patchAtAnchor`.
 - Usa `ctx.cwd` (o pasa `ctx.cwd` a `execAsync`) en vez de rutas relativas a `process.cwd()`.
 - El lifecycle debe poder ejecutarse dos veces sin duplicar archivos, imports ni scripts.
 - Los prompts deben llevar `name` para funcionar con `--no-interaction`.
@@ -306,6 +350,7 @@ npm run test:smoke # genera, instala y compila un proyecto real (lento)
 | Tipo        | Ubicación                                                   | Qué cubre                                                                                |
 | ----------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Unit        | `test/utils`, `test/services`, `test/patch`, `test/wiring`  | helpers, configuración, `ProjectService`/manifest, markers, bloques, `WiringService`        |
+| Instaladores| `test/installers`                                           | specs, `SpecGenerator`, base sin features opcionales, `installer(spec)`                     |
 | Generadores | `test/generators`, `test/commands`                          | routing, módulos, auth, mailer, push, migraciones, sockets, `route:list`                     |
 | Golden      | `test/golden`                                               | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json`      |
 | Smoke       | `test/smoke`                                                | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                      |

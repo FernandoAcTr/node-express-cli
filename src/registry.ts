@@ -3,19 +3,20 @@ import { Context, ContextFeature } from './context'
 import { Feature } from './types'
 import { AuthGenerator } from './generators/auth.generator'
 import { BaseGenerator } from './generators/base.generator'
-import { EslintGenerator } from './generators/eslint.generator'
 import { EntityGenerator } from './generators/entity.generator'
 import { FactoryGenerator } from './generators/factory.generator'
-import { MailerGenerator } from './generators/mailer.generator'
 import { MigrationGenerator } from './generators/migration.generator'
 import { ModuleGenerator } from './generators/module.generator'
 import { OrmGenerator } from './generators/orm.generator'
-import { PrettierGenerator } from './generators/prettier.generator'
-import { PushGenerator } from './generators/push.generator'
 import { SeederGenerator } from './generators/seeder.generator'
-import { SocketsGenerator } from './generators/sockets.generator'
-import { TestGenerator } from './generators/tests.generator'
 import { RouteListCommand } from './commands/route_list.command'
+import { InstallerSpec, SpecGenerator } from './installers'
+import { eslintSpec } from './installers/specs/eslint.spec'
+import { mailerSpec } from './installers/specs/mailer.spec'
+import { prettierSpec } from './installers/specs/prettier.spec'
+import { pushSpec } from './installers/specs/push.spec'
+import { socketSpec } from './installers/specs/socket.spec'
+import { testsSpec } from './installers/specs/tests.spec'
 
 export interface CommandArgs {
   positionals: string[]
@@ -48,6 +49,20 @@ const NAME_OPTION: CommandOptionDefinition = {
 }
 
 /**
+ * Convierte un `InstallerSpec` en un comando `install:*`. Añadir un instalador
+ * simple es crear el spec y agregar una línea aquí.
+ */
+export function installer(spec: InstallerSpec): CommandDefinition {
+  return {
+    name: `install:${spec.feature}`,
+    description: spec.description,
+    requires: spec.requires,
+    feature: spec.feature,
+    create: (ctx) => new SpecGenerator(ctx, spec),
+  }
+}
+
+/**
  * Única fuente de verdad de los comandos. `src/utils/yargs.ts` genera el --help
  * a partir de esta lista y `src/index.ts` resuelve el comando por nombre.
  */
@@ -76,24 +91,9 @@ export const commands: CommandDefinition[] = [
     options: { name: NAME_OPTION },
     create: (ctx) => new ModuleGenerator(ctx),
   },
-  {
-    name: 'install:prettier',
-    description: 'Add prettier to the project',
-    feature: 'prettier',
-    create: (ctx) => new PrettierGenerator(ctx),
-  },
-  {
-    name: 'install:eslint',
-    description: 'Add eslint to the project',
-    feature: 'eslint',
-    create: (ctx) => new EslintGenerator(ctx),
-  },
-  {
-    name: 'install:socket',
-    description: 'Add Socket.io to the project',
-    feature: 'socket',
-    create: (ctx) => new SocketsGenerator(ctx),
-  },
+  installer(prettierSpec),
+  installer(eslintSpec),
+  installer(socketSpec),
   {
     name: 'install:orm',
     description: 'Add Database support using an orm',
@@ -113,18 +113,8 @@ export const commands: CommandDefinition[] = [
     feature: 'auth',
     create: (ctx) => new AuthGenerator(ctx),
   },
-  {
-    name: 'install:mailer',
-    description: 'Add support for send mails via nodemailer library',
-    feature: 'mailer',
-    create: (ctx) => new MailerGenerator(ctx),
-  },
-  {
-    name: 'install:push',
-    description: 'Add web push notifications support via web-push',
-    feature: 'push',
-    create: (ctx) => new PushGenerator(ctx),
-  },
+  installer(mailerSpec),
+  installer(pushSpec),
   {
     name: 'make:seeder',
     description: 'Generate a new seeder class',
@@ -149,12 +139,7 @@ export const commands: CommandDefinition[] = [
     options: { name: NAME_OPTION },
     create: (ctx) => new FactoryGenerator(ctx),
   },
-  {
-    name: 'install:tests',
-    description: 'Add a library to do testing and some examples',
-    feature: 'tests',
-    create: (ctx) => new TestGenerator(ctx),
-  },
+  installer(testsSpec),
   {
     name: 'route:list',
     description: 'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',

@@ -71,7 +71,7 @@ export function createContext(options: CreateContextOptions = {}): Context {
     has(feature: ContextFeature): boolean {
       const current = config.getConfig()
 
-      if (current.features.includes(feature)) {
+      if (feature !== 'fileBasedRouting' && current.features.includes(feature)) {
         return true
       }
 

@@ -49,4 +49,17 @@ describe('generated project (init + orm + auth)', () => {
 
     expect(JSON.stringify(scripts)).not.toMatch(/\bnpm\b|\bnpx\b/)
   })
+
+  it('wires database config and env from install:orm only', async () => {
+    const project = await scaffoldProject({ root: tmpRoot() })
+    const config = fs.readFileSync(path.join(project, 'src/config/index.ts'), 'utf-8')
+    const env = fs.readFileSync(path.join(project, '.env.example'), 'utf-8')
+
+    expect(config).toContain('DB:')
+    expect(env).toContain('DB_USER=')
+    expect(config).not.toContain('MAILER:')
+    expect(config).not.toContain('VAPID:')
+    expect(env).not.toContain('MAIL_HOST=')
+    expect(env).not.toContain('VAPID_PUBLIC_KEY=')
+  })
 })

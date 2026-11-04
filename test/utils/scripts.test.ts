@@ -32,7 +32,8 @@ describe('scripts', () => {
 
     expect(serialized).not.toMatch(/\bnpm\b|\bnpx\b/)
     expect(scripts.dev).toContain('bun run start:compile')
-    expect(scripts['vapid:generate']).toBe('bunx web-push generate-vapid-keys')
+    expect(scripts['vapid:generate']).toBeUndefined()
+    expect(scripts['prettier:fix']).toBeUndefined()
     expect(scripts['m:run']).toContain('bun run build')
   })
 
@@ -41,7 +42,7 @@ describe('scripts', () => {
     const scripts = { ...baseScripts(config), ...ormScripts(DbType.TYPEORM, config) }
 
     expect(scripts.dev).toContain('npm run start:compile')
-    expect(scripts['vapid:generate']).toBe('npx web-push generate-vapid-keys')
+    expect(scripts['vapid:generate']).toBeUndefined()
     expect(scripts['m:create']).toContain('npx typeorm migration:create')
   })
 
