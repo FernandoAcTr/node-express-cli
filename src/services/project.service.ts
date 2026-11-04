@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs-extra'
 import { CliError } from '../errors'
 import { Logger, consoleLogger } from '../logger'
+import { FileSystem } from './file-system'
 
 /**
  * Política de escritura de un archivo del proyecto.
@@ -30,7 +31,7 @@ export interface WriteResult {
 export interface ProjectServiceOptions {
   /** Si es true, las políticas que lo requieren sobrescriben sin preguntar. */
   force?: boolean
-  fs?: typeof fs
+  fs?: FileSystem
   logger?: Logger
 }
 
@@ -52,7 +53,7 @@ const DEFAULT_POLICY: WritePolicy = 'overwrite-if-unmodified'
 export class ProjectService {
   readonly cwd: string
   private readonly force: boolean
-  private readonly fsImpl: typeof fs
+  private readonly fsImpl: FileSystem
   private readonly logger: Logger
   private manifest?: Manifest
 
@@ -240,13 +241,7 @@ export class ProjectService {
     return results
   }
 
-  private overwrite(
-    absolute: string,
-    relative: string,
-    content: Buffer,
-    hash: string,
-    manifest: Manifest
-  ): WriteResult {
+  private overwrite(absolute: string, relative: string, content: Buffer, hash: string, manifest: Manifest): WriteResult {
     this.fsImpl.mkdirSync(path.dirname(absolute), { recursive: true })
     this.fsImpl.writeFileSync(absolute, content)
     this.setManifestEntry(manifest, relative, hash)

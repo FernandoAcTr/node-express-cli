@@ -6,6 +6,8 @@ import { createContext } from '../../src/context'
 import { CliError } from '../../src/errors'
 import { BaseGenerator } from '../../src/generators/base.generator'
 import { NonInteractivePrompter } from '../../src/prompts'
+import { run } from '../../src/run'
+import { ShellService } from '../../src/services/shell.service'
 
 const dirs: string[] = []
 
@@ -140,6 +142,28 @@ describe('BaseGenerator routing selection', () => {
     await generator.rollback()
 
     expect(fs.existsSync(project)).toBe(false)
+  })
+
+  it('removes the project when a later phase fails', async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-base-'))
+    dirs.push(cwd)
+    const prompter = new NonInteractivePrompter({
+      name: 'app',
+      'package-manager': 'npm',
+      'file-based-routing': false,
+    })
+    const shell = {
+      execAsync: async () => {
+        throw new Error('dependency installation failed')
+      },
+      exec: () => ({ code: 0, stdout: '', stderr: '' }),
+    } as unknown as ShellService
+    const ctx = createContext({ cwd, prompter, logger: silentLogger, shell })
+
+    await expect(run(new BaseGenerator(ctx))).rejects.toThrow('dependency installation failed')
+
+    expect(fs.existsSync(path.join(cwd, 'app'))).toBe(false)
+    expect(fs.readdirSync(cwd)).toEqual([])
   })
 
   it('writes the base scripts for the selected package manager', async () => {

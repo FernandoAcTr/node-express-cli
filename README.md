@@ -35,6 +35,8 @@ El proyecto incluye y debe incluir un archivo llamado cli.config.json con las op
 
 El CLI guarda en `.nec/manifest.json` el hash de cada archivo que generó. Si modificas un archivo generado, los comandos `install:*` no lo sobrescriben: muestran un aviso y continúan. Usa `--force` para forzar la sobrescritura explícita. Todos los comandos excepto `init` deben ejecutarse dentro de un proyecto generado (con `cli.config.json` y `package.json`).
 
+Usa `--dry-run` para ver qué archivos y comandos cambiaría una operación sin escribir nada. Las lecturas van al proyecto real y las escrituras quedan en memoria; los comandos de instalación solo se imprimen.
+
 ## Estructura de directorios
 
 ![Estructura](./docs/img/estructura.png)

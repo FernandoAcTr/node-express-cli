@@ -77,9 +77,8 @@ export class BaseGenerator implements IGenerator {
       })
     }
 
-    fs.mkdirSync(this.projectDir)
+    this.projectService.ensureDir('')
     this.createdProjectDir = true
-
     this.projectConfig.writeConfig({
       package_manger: this.packageManager,
       fileBasedRouting: this.fileBasedRouting,

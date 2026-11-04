@@ -1,8 +1,7 @@
-import { ContextFeature } from '../context'
 import { AnchorName } from '../patch/anchors'
 import { ConfigService } from '../services/config.service'
 import { WritePolicy } from '../services/project.service'
-import { Feature } from '../types'
+import { Feature, RequiredFeature } from '../types'
 
 /** Valor que puede depender del package manager/configuración del proyecto. */
 export type SpecValue = string | ((config: ConfigService) => string)
@@ -37,7 +36,7 @@ export type WireStep =
 export interface InstallerSpec {
   feature: Feature
   description: string
-  requires?: ContextFeature[]
+  requires?: RequiredFeature[]
   deps?: string[]
   devDeps?: string[]
   dirs?: string[]

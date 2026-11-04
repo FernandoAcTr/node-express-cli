@@ -1,6 +1,6 @@
 import { Command, Generator } from './interfaces/generator.interface'
-import { Context, ContextFeature } from './context'
-import { Feature } from './types'
+import { Context } from './context'
+import { CommandArgs, Feature, RequiredFeature } from './types'
 import { AuthGenerator } from './generators/auth.generator'
 import { BaseGenerator } from './generators/base.generator'
 import { EntityGenerator } from './generators/entity.generator'
@@ -18,10 +18,7 @@ import { pushSpec } from './installers/specs/push.spec'
 import { socketSpec } from './installers/specs/socket.spec'
 import { testsSpec } from './installers/specs/tests.spec'
 
-export interface CommandArgs {
-  positionals: string[]
-  flags: Record<string, unknown>
-}
+export type { CommandArgs } from './types'
 
 export interface CommandOptionDefinition {
   type?: 'string' | 'boolean' | 'number'
@@ -34,9 +31,9 @@ export interface CommandDefinition {
   name: string
   description: string
   aliases?: string[]
-  requires?: ContextFeature[]
-  /** Si es false, el comando puede ejecutarse fuera de un proyecto generado. */
-  requiresProject?: boolean
+  requires?: RequiredFeature[]
+  /** Todo comando debe declararlo; solo `init` puede ejecutarse fuera de un proyecto. */
+  requiresProject: boolean
   /** Feature que se marca en cli.config.json cuando el comando termina bien. */
   feature?: Feature
   options?: Record<string, CommandOptionDefinition>
@@ -57,6 +54,7 @@ export function installer(spec: InstallerSpec): CommandDefinition {
     name: `install:${spec.feature}`,
     description: spec.description,
     requires: spec.requires,
+    requiresProject: true,
     feature: spec.feature,
     create: (ctx) => new SpecGenerator(ctx, spec),
   }
@@ -88,6 +86,7 @@ export const commands: CommandDefinition[] = [
   {
     name: 'make:module',
     description: 'Generate a new resource module',
+    requiresProject: true,
     options: { name: NAME_OPTION },
     create: (ctx) => new ModuleGenerator(ctx),
   },
@@ -97,6 +96,7 @@ export const commands: CommandDefinition[] = [
   {
     name: 'install:orm',
     description: 'Add Database support using an orm',
+    requiresProject: true,
     feature: 'orm',
     options: {
       orm: {
@@ -109,7 +109,8 @@ export const commands: CommandDefinition[] = [
   {
     name: 'install:auth',
     description: 'Add basic scaffolding to auth with jwt and passport',
-    requires: ['orm'],
+    requiresProject: true,
+    requires: [{ feature: 'orm', hint: 'Run "node-express-cli install:orm" first.' }],
     feature: 'auth',
     create: (ctx) => new AuthGenerator(ctx),
   },
@@ -118,24 +119,28 @@ export const commands: CommandDefinition[] = [
   {
     name: 'make:seeder',
     description: 'Generate a new seeder class',
+    requiresProject: true,
     options: { name: NAME_OPTION },
     create: (ctx) => new SeederGenerator(ctx),
   },
   {
     name: 'make:entity',
     description: 'Generate a new entity class',
+    requiresProject: true,
     options: { name: NAME_OPTION },
     create: (ctx) => new EntityGenerator(ctx),
   },
   {
     name: 'make:migration',
     description: 'Generate a new database migration',
+    requiresProject: true,
     options: { name: NAME_OPTION },
     create: (ctx) => new MigrationGenerator(ctx),
   },
   {
     name: 'make:factory',
     description: 'Generate a new Factory class for a Model',
+    requiresProject: true,
     options: { name: NAME_OPTION },
     create: (ctx) => new FactoryGenerator(ctx),
   },
@@ -143,12 +148,13 @@ export const commands: CommandDefinition[] = [
   {
     name: 'route:list',
     description: 'List all routes in the project. Use --omit to remove a prefix from the routes. Example: --omit /api',
+    requiresProject: true,
     options: {
       omit: {
         type: 'string',
         description: 'Prefix to remove from the listed routes, e.g. /api',
       },
     },
-    create: (ctx, args) => new RouteListCommand(ctx, args.flags['omit'] as string | undefined),
+    create: (ctx) => new RouteListCommand(ctx),
   },
 ]

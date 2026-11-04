@@ -71,4 +71,36 @@ describe('route:list', () => {
     expect(printed).toContain('GET')
     expect(printed).toContain('/api/users')
   })
+
+  it('reads --omit from ctx.args and keeps groups sorted', async () => {
+    const cwd = project(false)
+
+    for (const name of ['zebra', 'alpha']) {
+      const modules = path.join(cwd, 'src', 'modules', name)
+      fs.mkdirSync(modules, { recursive: true })
+      fs.writeFileSync(
+        path.join(modules, 'routes.ts'),
+        [
+          "import { Router } from 'express'",
+          'const router = Router()',
+          `export const PREFIX = '/${name}'`,
+          'router.get("/", () => undefined)',
+          'export default router',
+          '',
+        ].join('\n')
+      )
+    }
+
+    const output = captureConsole()
+    const ctx = createContext({ cwd, args: { positionals: ['route:list'], flags: { omit: '/api' } } })
+
+    await new RouteListCommand(ctx).run()
+
+    const printed = output.join('\n').replace(/\u001b\[[0-9;]*m/g, '')
+
+    expect(printed).toContain('/alpha')
+    expect(printed).toContain('/zebra')
+    expect(printed).not.toContain('/api/alpha')
+    expect(printed.indexOf('ALPHA')).toBeLessThan(printed.indexOf('ZEBRA'))
+  })
 })

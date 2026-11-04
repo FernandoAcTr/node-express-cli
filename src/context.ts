@@ -1,13 +1,16 @@
 import fs from 'fs-extra'
 import { ConfigService } from './services/config.service'
+import { FileSystem, VirtualFileSystem } from './services/file-system'
 import { ProjectService } from './services/project.service'
 import { ShellService } from './services/shell.service'
 import { Logger, consoleLogger } from './logger'
 import { InquirerPrompter, Prompter } from './prompts'
-import { Feature, FeatureMetadata } from './types'
+import { CommandArgs, ContextFeature, Feature, FeatureMetadata } from './types'
+import { booleanFlag } from './utils/args'
 import { WiringService } from './wiring'
+import { PatchFileSystem } from './patch/anchor'
 
-export type ContextFeature = Feature | 'fileBasedRouting'
+export type { ContextFeature } from './types'
 
 export interface Context {
   cwd: string
@@ -15,11 +18,15 @@ export interface Context {
   project: ProjectService
   wiring: WiringService
   shell: ShellService
-  fs: typeof fs
+  fs: FileSystem
   logger: Logger
   prompter: Prompter
+  /** Argumentos parseados del comando; los flags llegan como `args.flags`. */
+  args: CommandArgs
   /** True si el usuario pasó `--force`. */
   force: boolean
+  /** True si el usuario pasó `--dry-run`; no se escribe nada en el proyecto. */
+  dryRun: boolean
   /** True si la feature está instalada o si el estado del proyecto la implica. */
   has(feature: ContextFeature): boolean
   /** Registra una feature (y su metadata) en `cli.config.json` al terminar. */
@@ -32,10 +39,12 @@ export interface CreateContextOptions {
   project?: ProjectService
   wiring?: WiringService
   shell?: ShellService
-  fs?: typeof fs
+  fs?: FileSystem
   logger?: Logger
   prompter?: Prompter
+  args?: CommandArgs
   force?: boolean
+  dryRun?: boolean
 }
 
 /**
@@ -43,19 +52,24 @@ export interface CreateContextOptions {
  * pasar un Context completo o sustituir solo las piezas necesarias.
  */
 export function createContext(options: CreateContextOptions = {}): Context {
-  const config = options.config ?? new ConfigService(options.cwd ?? process.cwd())
-  const cwd = options.cwd ?? config.cwd
-  const shell = options.shell ?? new ShellService()
   const logger = options.logger ?? consoleLogger
+  const args = options.args ?? { positionals: [], flags: {} }
+  const force = options.force ?? booleanFlag(args, 'force')
+  const dryRun = options.dryRun ?? booleanFlag(args, 'dry-run')
+  const baseCwd = options.cwd ?? options.config?.cwd ?? process.cwd()
+  const fileSystem: FileSystem = options.fs ?? (dryRun ? new VirtualFileSystem(fs, logger, baseCwd) : fs)
+  const config = options.config ?? new ConfigService(baseCwd, { fs: fileSystem })
+  const cwd = options.cwd ?? config.cwd
+  const shell = options.shell ?? new ShellService({ dryRun, logger })
   const prompter = options.prompter ?? new InquirerPrompter()
-  const force = options.force ?? false
-  const project = options.project ?? new ProjectService(cwd, { force, logger, fs: options.fs })
+  const project = options.project ?? new ProjectService(cwd, { force, logger, fs: fileSystem })
   const wiring =
     options.wiring ??
     new WiringService({
       cwd,
       config,
       project,
+      fs: patchFileSystem(fileSystem),
     })
 
   const legacyWarnings = new Set<ContextFeature>()
@@ -66,10 +80,12 @@ export function createContext(options: CreateContextOptions = {}): Context {
     project,
     wiring,
     shell,
-    fs: options.fs ?? fs,
+    fs: fileSystem,
     logger,
     prompter,
+    args,
     force,
+    dryRun,
     has(feature: ContextFeature): boolean {
       const current = config.getConfig()
 
@@ -100,5 +116,14 @@ export function createContext(options: CreateContextOptions = {}): Context {
     markInstalled(feature: Feature, metadata?: FeatureMetadata): void {
       config.markFeature(feature, metadata)
     },
+  }
+}
+
+/** Adapta el FS del proyecto a la superficie que usa el motor de patches. */
+function patchFileSystem(fileSystem: FileSystem): PatchFileSystem {
+  return {
+    existsSync: (file) => fileSystem.existsSync(file),
+    readFileSync: (file) => fileSystem.readFileSync(file, 'utf-8'),
+    writeFileSync: (file, content) => fileSystem.writeFileSync(file, content),
   }
 }

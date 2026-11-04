@@ -1,10 +1,9 @@
-import yargs from 'yargs'
+import yargs, { Argv } from 'yargs'
 import { CommandDefinition, CommandOptionDefinition, commands } from '../registry'
+import { ParsedArgv } from '../types'
 
-export type ParsedArgv = Record<string, unknown> & { _: (string | number)[] }
-
-function buildOptions(commandList: CommandDefinition[]): Record<string, any> {
-  const options: Record<string, any> = {
+function globalOptions(): Record<string, CommandOptionDefinition> {
+  return {
     'no-interaction': {
       type: 'boolean',
       description: 'Disable prompts and read answers from flags or positional arguments',
@@ -17,28 +16,55 @@ function buildOptions(commandList: CommandDefinition[]): Record<string, any> {
       type: 'boolean',
       description: 'Overwrite files that the CLI did not generate or that you modified',
     },
+    'dry-run': {
+      type: 'boolean',
+      description: 'Show the files and commands that would change without writing anything',
+    },
   }
-
-  for (const command of commandList) {
-    options[command.name] = {
-      description: command.description,
-      ...(command.aliases?.length ? { alias: command.aliases } : {}),
-    }
-
-    for (const [name, definition] of Object.entries(command.options ?? {})) {
-      const option: CommandOptionDefinition = definition
-
-      options[name] = {
-        type: option.type ?? 'string',
-        description: option.description,
-        ...(option.default !== undefined ? { default: option.default } : {}),
-        ...(option.alias ? { alias: option.alias } : {}),
-      }
-    }
-  }
-
-  return options
 }
 
-/** El --help se genera desde `src/registry.ts`; este archivo no conoce comandos concretos. */
-export const argv = yargs.options(buildOptions(commands)).argv as ParsedArgv
+/** Opciones propias de un comando; el --help de cada comando solo muestra las suyas. */
+export function commandOptions(command: CommandDefinition): Record<string, CommandOptionDefinition> {
+  return command.options ?? {}
+}
+
+function registerCommand(cli: Argv, command: CommandDefinition): void {
+  cli.command({
+    command: command.name,
+    aliases: command.aliases,
+    describe: command.description,
+    builder: (instance) => instance.options(commandOptions(command)),
+    handler: () => undefined,
+  })
+}
+
+/**
+ * Construye el parser. Las opciones globales son solo las documentadas
+ * (`--force`, `--dry-run`, `--no-interaction`, `--ci`); las de cada comando se
+ * registran en su propio `command()` para que no colisionen ni ensucien el help.
+ */
+export function buildCli(rawArgv: string[] = process.argv.slice(2), commandList: CommandDefinition[] = commands): Argv {
+  const cli = yargs(rawArgv)
+    .scriptName('node-express-cli')
+    .usage('Usage: $0 <command> [options]')
+    .options(globalOptions())
+    .wrap(null)
+    .help()
+    .version()
+
+  for (const command of commandList) {
+    registerCommand(cli, command)
+  }
+
+  return cli
+}
+
+/** Parsea los argumentos reales del proceso. */
+export function parseArgv(rawArgv: string[] = process.argv.slice(2)): ParsedArgv {
+  return buildCli(rawArgv).parse() as ParsedArgv
+}
+
+/** Texto estable para el snapshot de `--help`. */
+export function helpText(): Promise<string> {
+  return buildCli([]).getHelp()
+}

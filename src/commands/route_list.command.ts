@@ -6,6 +6,7 @@ import traverse from '@babel/traverse'
 import { Command } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { discoverFileRoutes, HTTP_METHODS } from '../utils/file_routes'
+import { stringFlag } from '../utils/args'
 
 interface Route {
   method: string
@@ -32,16 +33,18 @@ function formatMethod(method: string): string {
 }
 
 function printGroups(groups: Record<string, string[]>): void {
-  Object.keys(groups).forEach((prefix) => {
-    console.log('')
-    console.log(`-----------------------`.green)
-    console.log(`     ${prefix.toUpperCase()}    `.green)
-    console.log(`-----------------------`.green)
-    console.log('')
-    groups[prefix].forEach((route) => {
-      console.log(route)
+  Object.keys(groups)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((prefix) => {
+      console.log('')
+      console.log(`-----------------------`.green)
+      console.log(`     ${prefix.toUpperCase()}    `.green)
+      console.log(`-----------------------`.green)
+      console.log('')
+      groups[prefix].forEach((route) => {
+        console.log(route)
+      })
     })
-  })
 }
 
 /**
@@ -53,14 +56,14 @@ async function listFilebasedRoutes(baseDir: string, omit?: string): Promise<void
   const groups: Record<string, string[]> = {}
 
   for (const route of routes) {
-    let prefix = route.url
-    if (omit) prefix = prefix.replace(omit, '')
+    const printedUrl = omit ? route.url.replace(omit, '') || '/' : route.url
+    let prefix = printedUrl
     prefix = prefix.split('/').filter((value) => !!value)[0] ?? ''
 
     groups[prefix] ??= []
 
     for (const method of route.methods) {
-      groups[prefix].push(`${formatMethod(method)} ${route.url}`)
+      groups[prefix].push(`${formatMethod(method)} ${printedUrl}`)
     }
   }
 
@@ -127,18 +130,23 @@ function extractRoutesFromFile(filePath: string): Route[] {
   return routes.map((route) => ({ ...route, path: joinRoutePath(prefix, route.path) }))
 }
 
-async function listRoutes(baseDir: string, nestedPath: string[] = [], routeGroups: Record<string, Route[]> = {}): Promise<void> {
+async function listRoutes(
+  baseDir: string,
+  omit?: string,
+  nestedPath: string[] = [],
+  routeGroups: Record<string, Route[]> = {}
+): Promise<void> {
   const currentDir = path.join(baseDir, ...nestedPath)
 
   if (!fs.existsSync(currentDir)) {
     return
   }
 
-  const entries = fs.readdirSync(currentDir, { withFileTypes: true })
+  const entries = fs.readdirSync(currentDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      await listRoutes(baseDir, [...nestedPath, entry.name], routeGroups)
+      await listRoutes(baseDir, omit, [...nestedPath, entry.name], routeGroups)
     } else if (entry.name.includes('routes')) {
       const filePath = path.join(currentDir, entry.name)
       routeGroups[filePath] = extractRoutesFromFile(filePath)
@@ -151,27 +159,36 @@ async function listRoutes(baseDir: string, nestedPath: string[] = [], routeGroup
 
     Object.keys(routeGroups).forEach((prefix) => {
       const p = prefix.replace(modulesDir, '')
-      groups[p] = routeGroups[prefix].map(({ method, path: routePath }) => `${formatMethod(method)} ${routePath}`)
+      groups[p] = routeGroups[prefix].map(({ method, path: routePath }) => {
+        const printedPath = omit ? routePath.replace(omit, '') || '/' : routePath
+        return `${formatMethod(method)} ${printedPath}`
+      })
     })
 
     printGroups(groups)
   }
 }
 
+export interface RouteListOptions {
+  /** Prefijo a quitar de las rutas mostradas, p. ej. `/api`. */
+  omit?: string
+}
+
 export class RouteListCommand implements Command {
   constructor(
     private readonly ctx: Context,
-    private readonly omit?: string
+    private readonly options: RouteListOptions = {}
   ) {}
 
   async run(): Promise<void> {
     const config = this.ctx.config.getConfig()
     const srcDir = path.join(this.ctx.cwd, 'src')
+    const omit = this.options.omit ?? stringFlag(this.ctx.args, 'omit')
 
     if (config.fileBasedRouting) {
-      await listFilebasedRoutes(path.join(srcDir, 'routes'), this.omit)
+      await listFilebasedRoutes(path.join(srcDir, 'routes'), omit)
     } else {
-      await listRoutes(path.join(srcDir, 'modules'))
+      await listRoutes(path.join(srcDir, 'modules'), omit)
     }
   }
 }

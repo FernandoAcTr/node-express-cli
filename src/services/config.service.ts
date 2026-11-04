@@ -3,10 +3,16 @@ import path from 'path'
 import { Config, DbType, FEATURES, Feature, FeatureMetadata, PackageManager } from '../types'
 import { version } from '../version'
 import { CliError } from '../errors'
+import { FileSystem } from './file-system'
 
 interface PackageJson {
   scripts?: Record<string, string>
   [key: string]: unknown
+}
+
+export interface ConfigServiceOptions {
+  /** FS inyectable; en `--dry-run` es un `VirtualFileSystem`. */
+  fs?: FileSystem
 }
 
 export interface SetScriptsResult {
@@ -18,20 +24,22 @@ export class ConfigService {
   readonly cwd: string
   private readonly configFilePath: string
   private readonly packageFilePath: string
+  private readonly fsImpl: FileSystem
 
-  constructor(cwd: string = process.cwd()) {
+  constructor(cwd: string = process.cwd(), options: ConfigServiceOptions = {}) {
     this.cwd = path.resolve(cwd)
     this.configFilePath = path.join(this.cwd, 'cli.config.json')
     this.packageFilePath = path.join(this.cwd, 'package.json')
+    this.fsImpl = options.fs ?? fs
   }
 
   /** Devuelve un servicio apuntando a otro directorio (p. ej. el proyecto recién creado). */
   public forDirectory(directory: string): ConfigService {
-    return new ConfigService(path.resolve(this.cwd, directory))
+    return new ConfigService(path.resolve(this.cwd, directory), { fs: this.fsImpl })
   }
 
   public getConfig(): Config {
-    if (!fs.existsSync(this.configFilePath)) {
+    if (!this.fsImpl.existsSync(this.configFilePath)) {
       return {
         orm: undefined,
         package_manger: PackageManager.NPM,
@@ -43,7 +51,7 @@ export class ConfigService {
 
     let parsed: unknown
     try {
-      parsed = JSON.parse(fs.readFileSync(this.configFilePath, 'utf-8'))
+      parsed = JSON.parse(this.fsImpl.readFileSync(this.configFilePath, 'utf-8'))
     } catch {
       throw new CliError(`Could not parse ${this.configFilePath}`, {
         hint: `Fix the JSON in ${this.configFilePath} and try again.`,
@@ -70,9 +78,9 @@ export class ConfigService {
    * `features`, `orm` ni claves que no se pasen explícitamente.
    */
   public writeConfig(config: Partial<Config>): Config {
-    const exists = fs.existsSync(this.configFilePath)
+    const exists = this.fsImpl.existsSync(this.configFilePath)
     const current = exists ? this.getConfig() : undefined
-    const raw = exists ? (JSON.parse(fs.readFileSync(this.configFilePath, 'utf-8')) as Record<string, unknown>) : {}
+    const raw = exists ? (JSON.parse(this.fsImpl.readFileSync(this.configFilePath, 'utf-8')) as Record<string, unknown>) : {}
     const next: Config = {
       ...raw,
       orm: config.orm ?? current?.orm,
@@ -82,8 +90,8 @@ export class ConfigService {
       features: normalizeFeatures(config.features ?? current?.features ?? []),
     }
 
-    fs.mkdirSync(path.dirname(this.configFilePath), { recursive: true })
-    fs.writeFileSync(this.configFilePath, `${JSON.stringify(next, null, 2)}\n`)
+    this.fsImpl.mkdirSync(path.dirname(this.configFilePath), { recursive: true })
+    this.fsImpl.writeFileSync(this.configFilePath, `${JSON.stringify(next, null, 2)}\n`)
 
     return next
   }
@@ -246,14 +254,14 @@ export class ConfigService {
   }
 
   private readPackageJson(): PackageJson {
-    if (!fs.existsSync(this.packageFilePath)) {
+    if (!this.fsImpl.existsSync(this.packageFilePath)) {
       throw new CliError(`Could not find ${this.packageFilePath}`, {
         hint: 'Run this command from the root of a generated project.',
       })
     }
 
     try {
-      const parsed = JSON.parse(fs.readFileSync(this.packageFilePath, 'utf-8'))
+      const parsed = JSON.parse(this.fsImpl.readFileSync(this.packageFilePath, 'utf-8'))
 
       if (!isRecord(parsed)) {
         throw new CliError(`Invalid ${this.packageFilePath}`, {
@@ -274,7 +282,7 @@ export class ConfigService {
   }
 
   private writePackageJson(packageJson: PackageJson): void {
-    fs.writeFileSync(this.packageFilePath, `${JSON.stringify(packageJson, null, 2)}\n`)
+    this.fsImpl.writeFileSync(this.packageFilePath, `${JSON.stringify(packageJson, null, 2)}\n`)
   }
 }
 

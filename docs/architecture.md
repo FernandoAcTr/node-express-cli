@@ -5,19 +5,19 @@ para añadir comandos sin volver a duplicar plantillas ni parches frágiles.
 
 ## Mapa de capas
 
-| Capa          | Ubicación                               | Responsabilidad                                                                                  |
-| ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Entrada       | `src/index.ts`                          | Resuelve el comando desde el registry y ejecuta el lifecycle.                                    |
-| Registro      | `src/registry.ts`                       | Única fuente de verdad: nombre, descripción, aliases, `requires`, `requiresProject`, `feature`, opciones y factory. |
-| Lifecycle     | `src/run.ts`                            | Orden fijo de fases; marca la feature y su metadata al terminar.                                |
-| Contexto      | `src/context.ts`                        | Inyecta `config`, `project`, `wiring`, `shell`, `fs`, `logger`, `prompter`, `cwd`, `force`, `has` y `markInstalled`. |
-| Escritura     | `src/services/project.service.ts`       | Política de propiedad, manifest y rutas absolutas dentro del proyecto.                           |
-| Generadores   | `src/generators/`                       | Implementan solo las fases que necesitan.                                                        |
-| Instaladores  | `src/installers/`                       | `InstallerSpec` declarativo, `SpecGenerator` y specs de features simples.                        |
-| Wiring        | `src/wiring/`                           | Modifica archivos existentes (`main.ts`, config, env, scripts) sin parches ad-hoc.               |
-| Parches       | `src/patch/`                            | Motor de markers: inserción atómica, dedupe y bloques.                                           |
-| Plantillas    | `templates/base`, `templates/generator` | Archivos que se copian al proyecto generado.                                                     |
-| Configuración | `src/services/config.service.ts`        | Lee/escribe `cli.config.json` y `package.json`; comandos por package manager.                    |
+| Capa          | Ubicación                               | Responsabilidad                                                                                                                        |
+| ------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Entrada       | `src/index.ts` + `src/cli.ts`           | `index` parsea; `cli` resuelve el comando, valida `requiresProject`/`requires` y ejecuta el lifecycle.                                 |
+| Registro      | `src/registry.ts`                       | Única fuente de verdad: nombre, descripción, aliases, `requires`, `requiresProject`, `feature`, opciones y factory.                    |
+| Lifecycle     | `src/run.ts`                            | Orden fijo de fases; marca la feature y su metadata al terminar.                                                                       |
+| Contexto      | `src/context.ts`                        | Inyecta `config`, `project`, `wiring`, `shell`, `fs`, `logger`, `prompter`, `cwd`, `args`, `force`, `dryRun`, `has` y `markInstalled`. |
+| Escritura     | `src/services/project.service.ts`       | Política de propiedad, manifest y rutas absolutas dentro del proyecto.                                                                 |
+| Generadores   | `src/generators/`                       | Implementan solo las fases que necesitan.                                                                                              |
+| Instaladores  | `src/installers/`                       | `InstallerSpec` declarativo, `SpecGenerator` y specs de features simples.                                                              |
+| Wiring        | `src/wiring/`                           | Modifica archivos existentes (`main.ts`, config, env, scripts) sin parches ad-hoc.                                                     |
+| Parches       | `src/patch/`                            | Motor de markers: inserción atómica, dedupe y bloques.                                                                                 |
+| Plantillas    | `templates/base`, `templates/generator` | Archivos que se copian al proyecto generado.                                                                                           |
+| Configuración | `src/services/config.service.ts`        | Lee/escribe `cli.config.json` y `package.json`; comandos por package manager.                                                          |
 
 ## Ciclo de vida
 
@@ -46,6 +46,31 @@ lanza, no se escribe nada y `src/index.ts` muestra el error con `handleError`.
 Por eso `install:orm` ya no escribe `config.orm` en `pre()`: un fallo de
 instalación deja el proyecto sin ORM persistido.
 
+## Comandos, flags y `--help`
+
+`src/index.ts` solo parsea y arranca. La resolución vive en `src/cli.ts`:
+
+- `resolveCommandName` acepta el comando como posicional (`nec make:module`) o
+  como flag (`nec --init`, `nec -i`).
+- `findCommand` resuelve aliases desde el registry.
+- `assertCommandCanRun` valida `requiresProject` y `requires` **antes** de que
+  el generador cree nada.
+- `executeCommand` ejecuta el lifecycle común.
+
+`CommandDefinition.requiresProject` es obligatorio: cada comando declara si
+necesita un proyecto generado. Solo `init` usa `false`. `requires` son objetos
+`{ feature, hint }`, de modo que añadir un requisito no obliga a tocar el
+entrypoint.
+
+Las opciones globales son solo `--no-interaction`, `--ci`, `--force` y
+`--dry-run`. Las opciones propias (`--name`, `--omit`, `--orm`, etc.) se
+registran con `yargs.command()` y solo aparecen en el help de su comando. El
+snapshot vive en `test/cli/__snapshots__/help.test.ts.snap`.
+
+Los flags ya parseados están en `ctx.args` (`positionals` y `flags`).
+`ctx.force` y `ctx.dryRun` son atajos derivados de `ctx.args`; usa
+`ctx.args.flags` para flags nuevos de un comando.
+
 ## Contexto
 
 Los generadores reciben un `Context` por constructor. No existen singletons de
@@ -58,10 +83,12 @@ export interface Context {
   project: ProjectService
   wiring: WiringService
   shell: ShellService
-  fs: typeof fs
+  fs: FileSystem
   logger: Logger
   prompter: Prompter
+  args: CommandArgs
   force: boolean
+  dryRun: boolean
   has(feature: ContextFeature): boolean
   markInstalled(feature: Feature, metadata?: FeatureMetadata): void
 }
@@ -78,14 +105,14 @@ de la configuración. Úsalo para saltar trabajo ya hecho sin inspeccionar
 operación. El único metadata actual es `{ orm }`, que se registra al terminar
 `install:orm`.
 
-Los tests pueden construir el contexto con `createContext({ cwd, logger, prompter, shell, force })`
+Los tests pueden construir el contexto con `createContext({ cwd, logger, prompter, shell, args, force })`
 y sustituir solo lo necesario. `ctx.cwd` es la raíz del proyecto; ningún
 generador debe usar rutas relativas a `process.cwd()`.
 
 `ctx.wiring` es el único punto que modifica archivos existentes. Los generadores
 no conocen los markers `@nec:` ni llaman a `patchAtAnchor` directamente.
 
-## Escritura de archivos y `--force`
+## Escritura de archivos, `--force` y `--dry-run`
 
 Todo archivo generado se escribe con `ctx.project`:
 
@@ -109,12 +136,12 @@ archivo que creó el CLI:
 
 Políticas disponibles:
 
-| Política                 | Cuándo usarla                | Comportamiento                                                        |
-| ------------------------ | ---------------------------- | --------------------------------------------------------------------- |
-| `create`                 | `make:*`                     | Falla si el archivo existe; `--force` lo sobrescribe.                 |
-| `skip`                   | merges imposibles (Prisma)   | No toca el archivo si existe.                                         |
-| `overwrite`              | reemplazo explícito          | Solo sobrescribe con `--force`.                                       |
-| `overwrite-if-unmodified`| `install:*`                  | Sobrescribe solo si el hash coincide con el manifest.                 |
+| Política                  | Cuándo usarla              | Comportamiento                                        |
+| ------------------------- | -------------------------- | ----------------------------------------------------- |
+| `create`                  | `make:*`                   | Falla si el archivo existe; `--force` lo sobrescribe. |
+| `skip`                    | merges imposibles (Prisma) | No toca el archivo si existe.                         |
+| `overwrite`               | reemplazo explícito        | Solo sobrescribe con `--force`.                       |
+| `overwrite-if-unmodified` | `install:*`                | Sobrescribe solo si el hash coincide con el manifest. |
 
 Si el archivo existe y el usuario lo modificó, se omite con un warning que
 menciona `--force`. Si no está en el manifest, también se omite: el CLI no
@@ -123,9 +150,15 @@ el CLI generaría, se adopta en el manifest sin warning (compatibilidad con
 proyectos anteriores a `.nec/manifest.json`). Los archivos binarios se copian
 como `Buffer`, sin pasar por UTF-8.
 
-Un comando con `requiresProject !== false` (todos menos `init`) exige
-`cli.config.json` y `package.json` en `ctx.cwd`. Si faltan, `src/index.ts` falla
-antes de crear nada.
+Un comando con `requiresProject` (todos menos `init`) exige `cli.config.json` y
+`package.json` en `ctx.cwd`. Si faltan, `src/cli.ts` falla antes de crear nada;
+por eso `nec make:module` fuera de un proyecto no crea `./src`.
+
+Con `--dry-run`, `createContext` inyecta un `VirtualFileSystem`: las lecturas
+van al disco real y las escrituras (incluido `.nec/manifest.json`) quedan en
+memoria. `ConfigService`, `ProjectService` y `WiringService` comparten ese FS,
+y `ShellService` solo imprime `[dry-run] would run: …`. Así el lifecycle
+completo se valida sin tocar el proyecto.
 
 ## Estado del proyecto: `cli.config.json`
 
@@ -256,15 +289,15 @@ reporter.add(result)
 
 API de `WiringService`:
 
-| Método                          | Archivo                | Uso                                      |
-| ------------------------------- | ---------------------- | ---------------------------------------- |
-| `import(statement, opts)`       | `src/main.ts`          | Añade al bloque `@nec:imports`.          |
-| `main(anchor, code, opts)`      | `src/main.ts`          | Añade runtime junto a un anchor.         |
-| `config(code, opts)`            | `src/config/index.ts`  | Añade una entrada a `config`.            |
-| `env(code, opts)`               | `.env.example`         | Añade variables al final del anchor.     |
-| `envBlock(marker, code, opts)`  | `.env.example`         | Bloque reemplazable (`@nec:…:start/end`).|
-| `script(name, command)`         | `package.json`         | Escribe un script sin duplicarlo.        |
-| `block(file, marker, code, opts)`| cualquiera            | Bloque delimitado y reemplazable.        |
+| Método                            | Archivo               | Uso                                       |
+| --------------------------------- | --------------------- | ----------------------------------------- |
+| `import(statement, opts)`         | `src/main.ts`         | Añade al bloque `@nec:imports`.           |
+| `main(anchor, code, opts)`        | `src/main.ts`         | Añade runtime junto a un anchor.          |
+| `config(code, opts)`              | `src/config/index.ts` | Añade una entrada a `config`.             |
+| `env(code, opts)`                 | `.env.example`        | Añade variables al final del anchor.      |
+| `envBlock(marker, code, opts)`    | `.env.example`        | Bloque reemplazable (`@nec:…:start/end`). |
+| `script(name, command)`           | `package.json`        | Escribe un script sin duplicarlo.         |
+| `block(file, marker, code, opts)` | cualquiera            | Bloque delimitado y reemplazable.         |
 
 Detalles del motor (`src/patch/`):
 
@@ -337,8 +370,15 @@ generador en `src/generators/` y regístralo con `create: (ctx) => new XGenerato
 Sigue el lifecycle de `src/run.ts` y usa `ctx.project`/`ctx.wiring` como el resto.
 Ejemplos actuales: `auth`, `orm`, `migration`, `make:*`.
 
-Todos los comandos nuevos exigen un proyecto generado salvo que declares
-`requiresProject: false` (solo lo hace `init`).
+Todos los comandos declaran `requiresProject`; solo `init` usa `false`. Si un
+comando necesita una feature instalada, declara
+`requires: [{ feature: 'orm', hint: 'Run "node-express-cli install:orm" first.' }]`.
+El hint se muestra tal cual en `src/cli.ts`; no añadas switches de requisitos
+en el entrypoint.
+
+Declara los flags propios en `options` del registry. Llegan en `ctx.args.flags`
+y solo aparecen en el help de ese comando. Usa `booleanFlag`/`stringFlag` de
+`src/utils/args.ts` para leerlos con tipos.
 
 4. Escribe tests:
    - unitario del spec/generador con `FakeShell` y un `cwd` temporal;
@@ -363,16 +403,17 @@ npm test          # unit + golden, rápido y sin red
 npm run test:smoke # genera, instala y compila un proyecto real (lento)
 ```
 
-| Tipo        | Ubicación                                                   | Qué cubre                                                                                |
-| ----------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Unit        | `test/utils`, `test/services`, `test/patch`, `test/wiring`  | helpers, configuración, `ProjectService`/manifest, markers, bloques, `WiringService`        |
-| Instaladores| `test/installers`                                           | specs, `SpecGenerator`, base sin features opcionales, `installer(spec)`                     |
-| Contratos   | `test/contracts`                                            | todos los `install:*`: idempotencia, líneas custom, placeholders, estado y scripts           |
-| Generadores | `test/generators`, `test/commands`                          | routing, módulos, auth, mailer, push, migraciones, sockets, `route:list`                     |
-| Golden      | `test/golden`                                               | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json`      |
-| Smoke       | `test/smoke`                                                | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                      |
+| Tipo         | Ubicación                                                  | Qué cubre                                                                                |
+| ------------ | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Unit         | `test/utils`, `test/services`, `test/patch`, `test/wiring` | helpers, configuración, `ProjectService`/manifest, markers, bloques, `WiringService`     |
+| CLI          | `test/cli`                                                 | dispatch, `requiresProject`/`requires`, `ctx.args`, `--dry-run` y snapshot de `--help`   |
+| Instaladores | `test/installers`                                          | specs, `SpecGenerator`, base sin features opcionales, `installer(spec)`                  |
+| Contratos    | `test/contracts`                                           | todos los `install:*`: idempotencia, líneas custom, placeholders, estado y scripts       |
+| Generadores  | `test/generators`, `test/commands`                         | routing, módulos, auth, mailer, push, migraciones, sockets, `route:list`                 |
+| Golden       | `test/golden`                                              | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json` |
+| Smoke        | `test/smoke`                                               | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                   |
 
-Los snapshots están en `test/golden/__snapshots__/`. Si el cambio es
+Los snapshots están en `test/golden/__snapshots__/` y `test/cli/__snapshots__/`. Si el cambio es
 intencional, actualízalos con `npm test -- -u` y revísalos en el diff.
 
 El smoke test usa `SMOKE_PACKAGE_MANAGER` (`npm`/`pnpm`) y `SMOKE_FILE_BASED`

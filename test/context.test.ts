@@ -106,6 +106,24 @@ describe('createContext', () => {
     expect(ctx.project.forDirectory('app').write('src/a.ts', 'a\n', 'create').status).toBe('created')
   })
 
+  it('exposes typed args and derives the global flags from them', () => {
+    const cwd = tmpDir()
+    const args = { positionals: ['route:list'], flags: { force: true, 'dry-run': true } }
+    const ctx = createContext({ cwd, args, logger: silentLogger })
+
+    expect(ctx.args).toBe(args)
+    expect(ctx.force).toBe(true)
+    expect(ctx.dryRun).toBe(true)
+  })
+
+  it('defaults args and dry-run to empty values', () => {
+    const ctx = createContext({ cwd: tmpDir() })
+
+    expect(ctx.args).toEqual({ positionals: [], flags: {} })
+    expect(ctx.force).toBe(false)
+    expect(ctx.dryRun).toBe(false)
+  })
+
   it('detects whether the cwd is a generated project', () => {
     const cwd = tmpDir()
     const ctx = createContext({ cwd })

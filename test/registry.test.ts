@@ -14,19 +14,18 @@ describe('command registry', () => {
     }
   })
 
-  it('declares install:auth as requiring an ORM', () => {
+  it('declares install:auth as requiring an ORM with a hint', () => {
     const auth = commands.find((command) => command.name === 'install:auth')
 
-    expect(auth?.requires).toContain('orm')
+    expect(auth?.requires?.map((requirement) => requirement.feature)).toContain('orm')
+    expect(auth?.requires?.every((requirement) => requirement.hint.length > 0)).toBe(true)
   })
 
-  it('requires a generated project for every command except init', () => {
+  it('requires an explicit project decision for every command', () => {
     const init = commands.find((command) => command.name === 'init')
 
     expect(init?.requiresProject).toBe(false)
-    expect(commands.filter((command) => command.name !== 'init').every((command) => command.requiresProject !== false)).toBe(
-      true
-    )
+    expect(commands.filter((command) => command.name !== 'init').every((command) => command.requiresProject === true)).toBe(true)
   })
 
   it('declares valid option types', () => {
