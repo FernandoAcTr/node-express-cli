@@ -1,10 +1,10 @@
 import path from 'path'
-import fs from 'fs'
 import { IFileSystemGenerator, IInstallerGenerator, IPostGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { DbType } from '../types'
 import { PatchResult, patchAtAnchor } from '../patch/anchor'
 import { Reporter } from '../report'
+import { WritePolicy } from '../services/project.service'
 
 export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IInstallerGenerator {
   constructor(private readonly ctx: Context) {}
@@ -16,81 +16,63 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
   async createDirectories(): Promise<void> {
     const config = this.ctx.config.getConfig()
 
-    fs.mkdirSync(`./src/entities`, { recursive: true })
-    fs.mkdirSync(`./src/modules/auth`, { recursive: true })
-    fs.mkdirSync(`./src/modules/auth/services`, { recursive: true })
-    fs.mkdirSync(`./src/utils`, { recursive: true })
-    fs.mkdirSync(`./src/middlewares`, { recursive: true })
+    this.ctx.project.ensureDir('src/entities')
+    this.ctx.project.ensureDir('src/modules/auth')
+    this.ctx.project.ensureDir('src/modules/auth/services')
+    this.ctx.project.ensureDir('src/utils')
+    this.ctx.project.ensureDir('src/middlewares')
 
     if (config.fileBasedRouting) {
-      fs.mkdirSync(`./src/routes/auth`, { recursive: true })
+      this.ctx.project.ensureDir('src/routes/auth')
     }
   }
 
   async copyFiles(): Promise<void> {
     const config = this.ctx.config.getConfig()
+    const policy: WritePolicy = 'overwrite-if-unmodified'
+    const project = this.ctx.project
 
-    fs.copyFileSync(
-      path.resolve(__dirname, '../../templates/generator/auth/common/auth.controller.ts'),
-      `./src/modules/auth/auth.controller.ts`
-    )
+    project.copy('src/modules/auth/auth.controller.ts', 'generator/auth/common/auth.controller.ts', policy)
+
     if (config.fileBasedRouting) {
-      const routes = path.resolve(__dirname, '../../templates/generator/auth/common/filerouting')
-      const files = fs.readdirSync(routes)
-      files.forEach((file) => fs.copyFileSync(path.resolve(routes, file), `./src/routes/auth/${file}`))
+      project.copyDir('src/routes/auth', 'generator/auth/common/filerouting', policy)
     } else {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/auth/common/auth.routes.ts'), `./src/modules/auth/routes.ts`)
+      project.copy('src/modules/auth/routes.ts', 'generator/auth/common/auth.routes.ts', policy)
     }
 
-    fs.copyFileSync(
-      path.resolve(__dirname, '../../templates/generator/auth/common/auth.validator.ts'),
-      `./src/modules/auth/auth.validator.ts`
-    )
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/auth/common/hash.ts'), `./src/utils/hash.ts`)
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/auth/common/passport.ts'), `./src/middlewares/passport.ts`)
+    project.copy('src/modules/auth/auth.validator.ts', 'generator/auth/common/auth.validator.ts', policy)
+    project.copy('src/utils/hash.ts', 'generator/auth/common/hash.ts', policy)
+    project.copy('src/middlewares/passport.ts', 'generator/auth/common/passport.ts', policy)
 
     if (this.dbType == DbType.TYPEORM) {
-      const entitiesDir = path.resolve(__dirname, '../../templates/generator/auth/typeorm/entities')
-      const migrationsDir = path.resolve(__dirname, '../../templates/generator/auth/typeorm/migrations')
-      const servicesDir = path.resolve(__dirname, '../../templates/generator/auth/typeorm/services')
-      const entities = fs.readdirSync(entitiesDir)
-      const migrations = fs.readdirSync(migrationsDir)
-      const services = fs.readdirSync(servicesDir)
-
-      entities.forEach((file) => fs.copyFileSync(path.resolve(entitiesDir, file), `./src/entities/${file}`))
-      migrations.forEach((file) => fs.copyFileSync(path.resolve(migrationsDir, file), `./src/database/migrations/${file}`))
-      services.forEach((file) => fs.copyFileSync(path.resolve(servicesDir, file), `./src/modules/auth/services/${file}`))
+      project.copyDir('src/entities', 'generator/auth/typeorm/entities', policy)
+      project.copyDir('src/database/migrations', 'generator/auth/typeorm/migrations', policy)
+      project.copyDir('src/modules/auth/services', 'generator/auth/typeorm/services', policy)
     } else if (this.dbType == DbType.SEQUELIZE) {
-      const entitiesDir = path.resolve(__dirname, '../../templates/generator/auth/sequelize/entities')
-      const migrationsDir = path.resolve(__dirname, '../../templates/generator/auth/sequelize/migrations')
-      const servicesDir = path.resolve(__dirname, '../../templates/generator/auth/sequelize/services')
-      const entities = fs.readdirSync(entitiesDir)
-      const migrations = fs.readdirSync(migrationsDir)
-      const services = fs.readdirSync(servicesDir)
-
-      entities.forEach((file) => fs.copyFileSync(path.resolve(entitiesDir, file), `./src/entities/${file}`))
-      migrations.forEach((file) => fs.copyFileSync(path.resolve(migrationsDir, file), `./src/database/migrations/${file}`))
-      services.forEach((file) => fs.copyFileSync(path.resolve(servicesDir, file), `./src/modules/auth/services/${file}`))
+      project.copyDir('src/entities', 'generator/auth/sequelize/entities', policy)
+      project.copyDir('src/database/migrations', 'generator/auth/sequelize/migrations', policy)
+      project.copyDir('src/modules/auth/services', 'generator/auth/sequelize/services', policy)
     } else if (this.dbType == DbType.MONGO) {
-      const entitiesDir = path.resolve(__dirname, '../../templates/generator/auth/mongo/entities')
-      const servicesDir = path.resolve(__dirname, '../../templates/generator/auth/mongo/services')
-      const entities = fs.readdirSync(entitiesDir)
-      const services = fs.readdirSync(servicesDir)
-
-      entities.forEach((file) => fs.copyFileSync(path.resolve(entitiesDir, file), `./src/entities/${file}`))
-      services.forEach((file) => fs.copyFileSync(path.resolve(servicesDir, file), `./src/modules/auth/services/${file}`))
+      project.copyDir('src/entities', 'generator/auth/mongo/entities', policy)
+      project.copyDir('src/modules/auth/services', 'generator/auth/mongo/services', policy)
     } else if (this.dbType == DbType.PRISMA) {
-      const servicesDir = path.resolve(__dirname, '../../templates/generator/auth/prisma/services')
-      const services = fs.readdirSync(servicesDir)
-      services.forEach((file) => fs.copyFileSync(path.resolve(servicesDir, file), `./src/modules/auth/services/${file}`))
+      project.copyDir('src/modules/auth/services', 'generator/auth/prisma/services', policy)
 
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/auth/prisma/schema.prisma'), `./src/database/prisma/schema.prisma`)
+      // El schema puede contener modelos propios: no se sobrescribe nunca sin
+      // `--force`. El merge por anchors queda para una fase posterior.
+      const schema = project.copy('src/database/prisma/schema.prisma', 'generator/auth/prisma/schema.prisma', 'skip')
+
+      if (schema.status === 'skipped' && schema.reason === 'exists') {
+        this.ctx.logger.warn(
+          'src/database/prisma/schema.prisma already exists; merge the auth models manually. Use --force to replace it.'
+        )
+      }
     }
   }
 
   async post(): Promise<void> {
     if (this.dbType == DbType.PRISMA) {
-      await this.ctx.shell.execAsync(`${this.ctx.config.getRunCommand()} m:generate`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getRunCommand()} m:generate`, this.ctx.cwd)
     }
 
     this.wireAuth()
@@ -157,9 +139,13 @@ export class AuthGenerator implements IFileSystemGenerator, IPostGenerator, IIns
     }
 
     this.ctx.logger.info('================= Installing auth dependencies =================')
-    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`)
     await this.ctx.shell.execAsync(
-      `${this.ctx.config.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`
+      `${this.ctx.config.getInstallCommand()} bcrypt passport passport-jwt jsonwebtoken`,
+      this.ctx.cwd
+    )
+    await this.ctx.shell.execAsync(
+      `${this.ctx.config.getDevInstallCommand()} @types/bcrypt @types/passport @types/passport-jwt @types/jsonwebtoken`,
+      this.ctx.cwd
     )
   }
 }

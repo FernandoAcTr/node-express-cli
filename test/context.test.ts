@@ -45,6 +45,27 @@ describe('createContext', () => {
     const ctx = createContext({ config })
 
     expect(ctx.config).toBe(config)
+    expect(ctx.project.cwd).toBe(config.cwd)
+  })
+
+  it('exposes --force through the context and the project service', () => {
+    const cwd = tmpDir()
+    const ctx = createContext({ cwd, force: true })
+
+    expect(ctx.force).toBe(true)
+    expect(ctx.project.forDirectory('app').write('src/a.ts', 'a\n', 'create').status).toBe('created')
+  })
+
+  it('detects whether the cwd is a generated project', () => {
+    const cwd = tmpDir()
+    const ctx = createContext({ cwd })
+
+    expect(ctx.project.isProject()).toBe(false)
+
+    fs.writeFileSync(path.join(cwd, 'cli.config.json'), '{}')
+    fs.writeFileSync(path.join(cwd, 'package.json'), '{}')
+
+    expect(ctx.project.isProject()).toBe(true)
   })
 
   it('marks a feature and persists it in cli.config.json', () => {

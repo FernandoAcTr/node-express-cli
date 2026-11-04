@@ -8,9 +8,10 @@ para añadir comandos sin volver a duplicar plantillas ni parches frágiles.
 | Capa          | Ubicación                               | Responsabilidad                                                                                  |
 | ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Entrada       | `src/index.ts`                          | Resuelve el comando desde el registry y ejecuta el lifecycle.                                    |
-| Registro      | `src/registry.ts`                       | Única fuente de verdad: nombre, descripción, aliases, `requires`, `feature`, opciones y factory. |
+| Registro      | `src/registry.ts`                       | Única fuente de verdad: nombre, descripción, aliases, `requires`, `requiresProject`, `feature`, opciones y factory. |
 | Lifecycle     | `src/run.ts`                            | Orden fijo de fases; marca la feature al terminar.                                               |
-| Contexto      | `src/context.ts`                        | Inyecta `config`, `shell`, `fs`, `logger`, `prompter`, `cwd`, `has` y `markInstalled`.           |
+| Contexto      | `src/context.ts`                        | Inyecta `config`, `project`, `shell`, `fs`, `logger`, `prompter`, `cwd`, `force`, `has` y `markInstalled`. |
+| Escritura     | `src/services/project.service.ts`       | Política de propiedad, manifest y rutas absolutas dentro del proyecto.                           |
 | Generadores   | `src/generators/`                       | Implementan solo las fases que necesitan.                                                        |
 | Parches       | `src/patch/` + `src/patches/`           | Modifican archivos existentes de forma idempotente.                                              |
 | Plantillas    | `templates/base`, `templates/generator` | Archivos que se copian al proyecto generado.                                                     |
@@ -47,10 +48,12 @@ configuración ni de shell.
 export interface Context {
   cwd: string
   config: ConfigService
+  project: ProjectService
   shell: ShellService
   fs: typeof fs
   logger: Logger
   prompter: Prompter
+  force: boolean
   has(feature: ContextFeature): boolean
   markInstalled(feature: Feature): void
 }
@@ -60,8 +63,51 @@ export interface Context {
 para `orm` y `fileBasedRouting`). Úsalo para saltar trabajo ya hecho sin
 inspeccionar `package.json`.
 
-Los tests pueden construir el contexto con `createContext({ cwd, logger, prompter, shell })`
-y sustituir solo lo necesario.
+Los tests pueden construir el contexto con `createContext({ cwd, logger, prompter, shell, force })`
+y sustituir solo lo necesario. `ctx.cwd` es la raíz del proyecto; ningún
+generador debe usar rutas relativas a `process.cwd()`.
+
+## Escritura de archivos y `--force`
+
+Todo archivo generado se escribe con `ctx.project`:
+
+```ts
+this.ctx.project.ensureDir('src/utils')
+this.ctx.project.copy('src/utils/mailer.ts', 'generator/common/mailer/mailer.ts')
+this.ctx.project.write('src/config/cache.ts', code, 'create')
+```
+
+`ProjectService` mantiene `.nec/manifest.json` con el hash SHA-256 de cada
+archivo que creó el CLI:
+
+```json
+{
+  "version": 1,
+  "generated": {
+    "src/utils/mailer.ts": "sha256:..."
+  }
+}
+```
+
+Políticas disponibles:
+
+| Política                 | Cuándo usarla                | Comportamiento                                                        |
+| ------------------------ | ---------------------------- | --------------------------------------------------------------------- |
+| `create`                 | `make:*`                     | Falla si el archivo existe; `--force` lo sobrescribe.                 |
+| `skip`                   | merges imposibles (Prisma)   | No toca el archivo si existe.                                         |
+| `overwrite`              | reemplazo explícito          | Solo sobrescribe con `--force`.                                       |
+| `overwrite-if-unmodified`| `install:*`                  | Sobrescribe solo si el hash coincide con el manifest.                 |
+
+Si el archivo existe y el usuario lo modificó, se omite con un warning que
+menciona `--force`. Si no está en el manifest, también se omite: el CLI no
+sobrescribe archivos que no creó. Si el contenido existente es idéntico al que
+el CLI generaría, se adopta en el manifest sin warning (compatibilidad con
+proyectos anteriores a `.nec/manifest.json`). Los archivos binarios se copian
+como `Buffer`, sin pasar por UTF-8.
+
+Un comando con `requiresProject !== false` (todos menos `init`) exige
+`cli.config.json` y `package.json` en `ctx.cwd`. Si faltan, `src/index.ts` falla
+antes de crear nada.
 
 ## Estado del proyecto: `cli.config.json`
 
@@ -166,11 +212,11 @@ export class CacheGenerator implements IFileSystemGenerator, IInstallerGenerator
   constructor(private readonly ctx: Context) {}
 
   async createDirectories(): Promise<void> {
-    this.ctx.fs.mkdirSync(`${this.ctx.cwd}/src/cache`, { recursive: true })
+    this.ctx.project.ensureDir('src/cache')
   }
 
   async copyFiles(): Promise<void> {
-    // copia templates/generator/cache/*
+    this.ctx.project.copy('src/cache/store.ts', 'generator/cache/store.ts')
   }
 
   async installDependencies(): Promise<void> {
@@ -180,7 +226,7 @@ export class CacheGenerator implements IFileSystemGenerator, IInstallerGenerator
     }
 
     this.ctx.logger.info('================= Installing cache =================')
-    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} lru-cache`)
+    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} lru-cache`, this.ctx.cwd)
     this.ctx.config.setScript('cache:clear', 'node build/cache/clear.js')
   }
 }
@@ -197,6 +243,9 @@ export class CacheGenerator implements IFileSystemGenerator, IInstallerGenerator
 }
 ```
 
+Todos los comandos nuevos exigen un proyecto generado salvo que declares
+`requiresProject: false` (solo lo hace `init`).
+
 3. Añade `'cache'` al tipo `Feature` en `src/types/index.ts`.
 
 4. Escribe tests:
@@ -208,6 +257,8 @@ export class CacheGenerator implements IFileSystemGenerator, IInstallerGenerator
 Reglas:
 
 - No importes `configService`/`shellService`: no existen.
+- Escribe siempre con `ctx.project` y sus políticas; no uses `fs.writeFileSync` para archivos del proyecto.
+- Usa `ctx.cwd` (o pasa `ctx.cwd` a `execAsync`) en vez de rutas relativas a `process.cwd()`.
 - El lifecycle debe poder ejecutarse dos veces sin duplicar archivos, imports ni scripts.
 - Los prompts deben llevar `name` para funcionar con `--no-interaction`.
 
@@ -220,10 +271,10 @@ npm run test:smoke # genera, instala y compila un proyecto real (lento)
 
 | Tipo        | Ubicación                                                   | Qué cubre                                                                                |
 | ----------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Unit        | `test/utils`, `test/services`, `test/patch`, `test/patches` | helpers, configuración, anchors, scripts, webpush                                        |
-| Generadores | `test/generators`, `test/commands`                          | routing, módulos, sockets, `route:list`                                                  |
-| Golden      | `test/golden`                                               | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json` |
-| Smoke       | `test/smoke`                                                | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                   |
+| Unit        | `test/utils`, `test/services`, `test/patch`, `test/patches` | helpers, configuración, `ProjectService`/manifest, anchors, scripts, webpush                 |
+| Generadores | `test/generators`, `test/commands`                          | routing, módulos, auth, mailer, migraciones, sockets, `route:list`                          |
+| Golden      | `test/golden`                                               | `init` + `install:orm` + `install:auth`: árbol de archivos, `main.ts`, `cli.config.json`      |
+| Smoke       | `test/smoke`                                                | proyecto real + `tsc --noEmit`; solo con `NEC_SMOKE=1`                                      |
 
 Los snapshots están en `test/golden/__snapshots__/`. Si el cambio es
 intencional, actualízalos con `npm test -- -u` y revísalos en el diff.

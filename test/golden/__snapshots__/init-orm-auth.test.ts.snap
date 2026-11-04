@@ -4,6 +4,7 @@ exports[`generated project (init + orm + auth) > also produces the expected tree
 [
   ".env.example",
   ".gitignore",
+  ".nec/manifest.json",
   "@types/express/index.d.ts",
   "CHANGELOG.md",
   "README.md",
@@ -124,6 +125,7 @@ exports[`generated project (init + orm + auth) > produces a stable file tree, ma
 [
   ".env.example",
   ".gitignore",
+  ".nec/manifest.json",
   "@types/express/index.d.ts",
   "CHANGELOG.md",
   "README.md",

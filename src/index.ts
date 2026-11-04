@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     ? new NonInteractivePrompter(args.flags, args.positionals.slice(1))
     : new InquirerPrompter()
 
-  const ctx = createContext({ prompter })
+  const ctx = createContext({ prompter, force: args.flags['force'] === true })
 
   const definition = commands.find(
     (command) => command.name === commandName || (commandName !== undefined && command.aliases?.includes(commandName))
@@ -74,6 +74,12 @@ async function main(): Promise<void> {
 
     throw new CliError(`Unknown command "${commandName}"`, {
       hint: 'Run "node-express-cli --help" to see the available commands.',
+    })
+  }
+
+  if (definition.requiresProject !== false && !ctx.project.isProject()) {
+    throw new CliError('This command must be run inside a generated project', {
+      hint: 'Run "node-express-cli init" first, or change to the project directory.',
     })
   }
 

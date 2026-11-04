@@ -13,6 +13,10 @@ function buildOptions(commandList: CommandDefinition[]): Record<string, any> {
       type: 'boolean',
       description: 'Alias of --no-interaction',
     },
+    force: {
+      type: 'boolean',
+      description: 'Overwrite files that the CLI did not generate or that you modified',
+    },
   }
 
   for (const command of commandList) {

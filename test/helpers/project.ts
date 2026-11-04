@@ -101,8 +101,6 @@ export async function scaffoldProject(options: ScaffoldOptions): Promise<string>
   await base.installDependencies()
   await base.post()
 
-  process.chdir(project)
-
   const ctx = createContext({
     cwd: project,
     logger,
@@ -140,11 +138,4 @@ export function listFiles(dir: string, base: string = dir): string[] {
 
 export function readJson<T = Record<string, unknown>>(file: string): T {
   return JSON.parse(fs.readFileSync(file, 'utf-8')) as T
-}
-
-/** Restaura el cwd global; los generadores `make:*` siguen usando rutas relativas. */
-export function restoreCwd(cwd: string): void {
-  if (process.cwd() !== cwd) {
-    process.chdir(cwd)
-  }
 }

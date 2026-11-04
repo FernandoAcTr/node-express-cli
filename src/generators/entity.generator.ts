@@ -1,8 +1,6 @@
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
 import { DbType } from '../types'
-import fs from 'fs-extra'
-import path from 'path'
 import { kebabCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
 import { CliError } from '../errors'
@@ -35,7 +33,7 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async createDirectories(): Promise<void> {
-    fs.mkdirSync(`./src/entities`, { recursive: true })
+    this.ctx.project.ensureDir('src/entities')
   }
 
   async copyFiles(): Promise<void> {
@@ -49,9 +47,9 @@ export class EntityGenerator implements IPreGenerator, IFileSystemGenerator {
     }
 
     const entity = renderTemplate(
-      path.resolve(__dirname, '../../templates/generator/orm', codeDirs[this.dbType], 'entity.template.ts'),
+      this.ctx.project.template('generator/orm', codeDirs[this.dbType], 'entity.template.ts'),
       { EntityName: entityName }
     )
-    fs.writeFileSync(`./src/entities/${fileName}.entity.ts`, entity)
+    this.ctx.project.write(`src/entities/${fileName}.entity.ts`, entity, 'create')
   }
 }

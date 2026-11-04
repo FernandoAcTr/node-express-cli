@@ -1,7 +1,5 @@
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import fs from 'fs-extra'
-import path from 'path'
 import { kebabCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
 import { CliError } from '../errors'
@@ -26,19 +24,16 @@ export class FactoryGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async createDirectories(): Promise<void> {
-    fs.mkdirSync('./src/database/factories', {
-      recursive: true,
-    })
+    this.ctx.project.ensureDir('src/database/factories')
   }
 
   async copyFiles(): Promise<void> {
     const factoryName = pascalCase(this.factoryName)
     const fileName = `${kebabCase(this.factoryName)}.factory.ts`
 
-    const factory = renderTemplate(
-      path.resolve(__dirname, '../../templates/generator/common/factory/factory.template.ts'),
-      { ClassName: factoryName }
-    )
-    fs.writeFileSync(`./src/database/factories/${fileName}`, factory)
+    const factory = renderTemplate(this.ctx.project.template('generator/common/factory/factory.template.ts'), {
+      ClassName: factoryName,
+    })
+    this.ctx.project.write(`src/database/factories/${fileName}`, factory, 'create')
   }
 }

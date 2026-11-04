@@ -1,7 +1,5 @@
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import fs from 'fs-extra'
-import path from 'path'
 import { camelCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
 import { CliError } from '../errors'
@@ -24,18 +22,17 @@ export class SeederGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   async createDirectories(): Promise<void> {
-    fs.mkdirSync('./src/database/seeds', { recursive: true })
+    this.ctx.project.ensureDir('src/database/seeds')
   }
 
   async copyFiles(): Promise<void> {
     const filename = `${camelCase(this.seederName)}.seeder.ts`
     const seederName = `${pascalCase(this.seederName)}Seeder`
 
-    const seeder = renderTemplate(
-      path.resolve(__dirname, '../../templates/generator/common/seed/seed.template.ts'),
-      { ClassName: seederName }
-    )
+    const seeder = renderTemplate(this.ctx.project.template('generator/common/seed/seed.template.ts'), {
+      ClassName: seederName,
+    })
 
-    fs.writeFileSync(`./src/database/seeds/${filename}`, seeder)
+    this.ctx.project.write(`src/database/seeds/${filename}`, seeder, 'create')
   }
 }

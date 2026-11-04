@@ -20,6 +20,15 @@ describe('command registry', () => {
     expect(auth?.requires).toContain('orm')
   })
 
+  it('requires a generated project for every command except init', () => {
+    const init = commands.find((command) => command.name === 'init')
+
+    expect(init?.requiresProject).toBe(false)
+    expect(commands.filter((command) => command.name !== 'init').every((command) => command.requiresProject !== false)).toBe(
+      true
+    )
+  })
+
   it('declares valid option types', () => {
     const validTypes = ['string', 'boolean', 'number']
 

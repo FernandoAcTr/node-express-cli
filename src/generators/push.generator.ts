@@ -13,8 +13,8 @@ export class PushGenerator implements IInstallerGenerator, IPostGenerator {
     }
 
     this.ctx.logger.info('================= Installing web-push =================')
-    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} web-push`)
-    await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} @types/web-push`)
+    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} web-push`, this.ctx.cwd)
+    await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} @types/web-push`, this.ctx.cwd)
   }
 
   async post(): Promise<void> {

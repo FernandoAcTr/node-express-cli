@@ -6,6 +6,7 @@ import { PackageManager } from '../types'
 import { Context } from '../context'
 import { NonInteractivePrompter } from '../prompts'
 import { ConfigService } from '../services/config.service'
+import { ProjectService } from '../services/project.service'
 import path from 'path'
 import fs from 'fs-extra'
 import { CliError } from '../errors'
@@ -17,12 +18,13 @@ export class BaseGenerator implements IGenerator {
   private packageManager: PackageManager
   private fileBasedRouting: boolean
   private projectConfig: ConfigService
+  private projectService: ProjectService
   private createdProjectDir = false
 
   constructor(private readonly ctx: Context) {}
 
   private get projectDir(): string {
-    return path.join(this.ctx.cwd, this.projectName)
+    return this.projectService?.cwd ?? path.join(this.ctx.cwd, this.projectName)
   }
 
   async pre() {
@@ -60,11 +62,12 @@ export class BaseGenerator implements IGenerator {
       })
     }
 
+    this.projectService = this.ctx.project.forDirectory(this.projectName)
     this.projectConfig = this.ctx.config.forDirectory(this.projectName)
   }
 
   async createDirectories() {
-    if (!this.projectConfig) {
+    if (!this.projectConfig || !this.projectService) {
       throw new CliError('Project configuration was not initialized')
     }
 
@@ -81,56 +84,49 @@ export class BaseGenerator implements IGenerator {
       package_manger: this.packageManager,
       fileBasedRouting: this.fileBasedRouting,
     })
+    this.projectService.record('cli.config.json')
 
-    const src = path.join(this.projectDir, 'src')
-    fs.mkdirSync(path.join(src, 'database'), { recursive: true })
-    fs.mkdirSync(path.join(src, 'entities'), { recursive: true })
-    fs.mkdirSync(path.join(src, 'middlewares'), { recursive: true })
-    fs.mkdirSync(path.join(src, 'modules'), { recursive: true })
-    fs.mkdirSync(path.join(src, 'config'), { recursive: true })
-    fs.mkdirSync(path.join(src, 'utils'), { recursive: true })
-    fs.mkdirSync(path.join(src, 'routing'), { recursive: true })
+    this.projectService.ensureDir('src/database')
+    this.projectService.ensureDir('src/entities')
+    this.projectService.ensureDir('src/middlewares')
+    this.projectService.ensureDir('src/modules')
+    this.projectService.ensureDir('src/config')
+    this.projectService.ensureDir('src/utils')
+    this.projectService.ensureDir('src/routing')
+
     if (this.fileBasedRouting) {
-      fs.mkdirSync(path.join(src, 'routes'), { recursive: true })
-      fs.mkdirSync(path.join(src, '@types'), { recursive: true })
+      this.projectService.ensureDir('src/routes')
+      this.projectService.ensureDir('src/@types')
     }
   }
 
   async copyFiles() {
-    if (!this.projectConfig) {
+    if (!this.projectConfig || !this.projectService) {
       throw new CliError('Project configuration was not initialized')
     }
 
-    fs.copySync(path.resolve(__dirname, '../../templates/base'), this.projectDir)
-    this.projectConfig.setPackageName(this.projectName)
+    const project = this.projectService
 
-    const gitignore = path.join(this.projectDir, 'gitignore')
-    if (fs.existsSync(gitignore)) {
-      fs.moveSync(gitignore, path.join(this.projectDir, '.gitignore'), { overwrite: true })
-    }
+    project.copyDir('', 'base', 'overwrite-if-unmodified')
 
-    const routingDir = path.join(this.projectDir, 'src/routing')
+    const gitignore = project.read('gitignore')
+    project.remove('gitignore')
+    project.write('.gitignore', gitignore)
+
     const routingTemplate = this.fileBasedRouting ? 'filebased.ts' : 'modules.ts'
-    fs.copySync(path.join(routingDir, routingTemplate), path.join(routingDir, 'index.ts'))
-    fs.rmSync(path.join(routingDir, 'modules.ts'), { force: true })
-    fs.rmSync(path.join(routingDir, 'filebased.ts'), { force: true })
+    project.copy('src/routing/index.ts', `base/src/routing/${routingTemplate}`)
+    project.remove('src/routing/modules.ts')
+    project.remove('src/routing/filebased.ts')
 
     if (this.fileBasedRouting) {
-      fs.copySync(
-        path.resolve(__dirname, '../../templates/generator/common/filerouting/global.d.ts'),
-        path.join(this.projectDir, 'src/@types/global.d.ts')
-      )
-      fs.copySync(
-        path.resolve(__dirname, '../../templates/generator/common/filerouting/healthcheck.ts'),
-        path.join(this.projectDir, 'src/routes/healthcheck.ts')
-      )
-      const healthcheckRoutes = path.join(this.projectDir, 'src/modules/healthcheck/routes.ts')
-      if (fs.existsSync(healthcheckRoutes)) {
-        fs.rmSync(healthcheckRoutes)
-      }
+      project.copy('src/@types/global.d.ts', 'generator/common/filerouting/global.d.ts')
+      project.copy('src/routes/healthcheck.ts', 'generator/common/filerouting/healthcheck.ts')
+      project.remove('src/modules/healthcheck/routes.ts')
     }
 
+    this.projectConfig.setPackageName(this.projectName)
     this.projectConfig.setScripts(baseScripts(this.projectConfig))
+    project.record('package.json')
   }
 
   async installDependencies(): Promise<void> {

@@ -4,7 +4,7 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { PackageManager } from '../../src/types'
-import { restoreCwd, scaffoldProject } from '../helpers/project'
+import { scaffoldProject } from '../helpers/project'
 
 /**
  * Smoke test real: genera el proyecto, instala dependencias con el package
@@ -17,7 +17,6 @@ const enabled = process.env.NEC_SMOKE === '1'
 const packageManager = (process.env.SMOKE_PACKAGE_MANAGER ?? PackageManager.NPM) as PackageManager
 const fileBasedRouting = process.env.SMOKE_FILE_BASED === 'true'
 
-const originalCwd = process.cwd()
 const dirs: string[] = []
 
 function tmpRoot(): string {
@@ -27,7 +26,6 @@ function tmpRoot(): string {
 }
 
 afterEach(() => {
-  restoreCwd(originalCwd)
   for (const dir of dirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true })
   }

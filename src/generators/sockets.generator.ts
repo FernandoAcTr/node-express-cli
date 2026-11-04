@@ -1,7 +1,5 @@
 import { IFileSystemGenerator, IInstallerGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import fs from 'fs'
-import path from 'path'
 import { findMissingAnchors, patchAtAnchor } from '../patch/anchor'
 import { Reporter } from '../report'
 
@@ -11,7 +9,7 @@ export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerat
   async createDirectories(): Promise<void> {}
 
   async copyFiles(): Promise<void> {
-    const mainFile = path.join(this.ctx.cwd, 'src/main.ts')
+    const mainFile = this.ctx.project.path('src/main.ts')
     const reporter = new Reporter(this.ctx.logger, 'already has the socket configuration')
     const missing = findMissingAnchors(mainFile, ['imports', 'afterListen'])
 
@@ -20,14 +18,9 @@ export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerat
       return
     }
 
-    fs.copyFileSync(
-      path.resolve(__dirname, '../../templates/generator/common/socketio/socket.ts'),
-      path.join(this.ctx.cwd, 'src/socket.ts')
-    )
-    fs.copyFileSync(
-      path.resolve(__dirname, '../../templates/generator/common/socketio/socket.controller.ts'),
-      path.join(this.ctx.cwd, 'src/socket.controller.ts')
-    )
+    const policy = 'overwrite-if-unmodified' as const
+    this.ctx.project.copy('src/socket.ts', 'generator/common/socketio/socket.ts', policy)
+    this.ctx.project.copy('src/socket.controller.ts', 'generator/common/socketio/socket.controller.ts', policy)
 
     const importPatch = patchAtAnchor(mainFile, 'imports', "import SocketIO from './socket'", {
       sort: true,
@@ -46,6 +39,6 @@ export class SocketsGenerator implements IInstallerGenerator, IFileSystemGenerat
     }
 
     this.ctx.logger.info('================= Installing Socket.io =================')
-    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} socket.io`)
+    await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} socket.io`, this.ctx.cwd)
   }
 }

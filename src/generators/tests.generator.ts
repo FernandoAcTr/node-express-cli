@@ -1,7 +1,5 @@
 import { IFileSystemGenerator, IInstallerGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import fs from 'fs-extra'
-import path from 'path'
 
 export class TestGenerator implements IInstallerGenerator, IFileSystemGenerator {
   constructor(private readonly ctx: Context) {}
@@ -11,18 +9,23 @@ export class TestGenerator implements IInstallerGenerator, IFileSystemGenerator 
       this.ctx.logger.info('The test stack is already installed; skipping dependency installation')
     } else {
       this.ctx.logger.info('================= Installing Test dependencies =================')
-      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`)
-      await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`, this.ctx.cwd)
+      await this.ctx.shell.execAsync(
+        `${this.ctx.config.getDevInstallCommand()} jest @types/jest ts-jest supertest @types/supertest`,
+        this.ctx.cwd
+      )
     }
     this.ctx.config.setScript('test', 'jest')
   }
 
   async createDirectories(): Promise<void> {
-    fs.mkdirSync('./src/tests', { recursive: true })
+    this.ctx.project.ensureDir('src/tests')
   }
 
   async copyFiles(): Promise<void> {
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/tests/jest.config.js'), './jest.config.js')
-    fs.copySync(path.resolve(__dirname, '../../templates/generator/common/tests/tests'), './src/tests')
+    const policy = 'overwrite-if-unmodified' as const
+
+    this.ctx.project.copy('jest.config.js', 'generator/common/tests/jest.config.js', policy)
+    this.ctx.project.copyDir('src/tests', 'generator/common/tests/tests', policy)
   }
 }

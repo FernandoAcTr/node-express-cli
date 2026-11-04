@@ -1,6 +1,5 @@
 import { IFileSystemGenerator, IPreGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import fs from 'fs'
 import path from 'path'
 import { kebabCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
@@ -16,7 +15,7 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   }
 
   private getModuleDirectory(): string {
-    return `./src/modules/${this.moduleDir}`
+    return path.join('src/modules', this.moduleDir)
   }
 
   async pre(): Promise<void> {
@@ -37,13 +36,11 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   async createDirectories(): Promise<void> {
     const config = this.ctx.config.getConfig()
 
-    const dir = this.getModuleDirectory()
-
-    fs.mkdirSync(dir, { recursive: true })
+    this.ctx.project.ensureDir(this.getModuleDirectory())
 
     if (config.fileBasedRouting) {
-      fs.mkdirSync(`./src/routes/${this.moduleDir}`, { recursive: true })
-      fs.mkdirSync(`./src/routes/${this.moduleDir}/[id]`, { recursive: true })
+      this.ctx.project.ensureDir(path.join('src/routes', this.moduleDir))
+      this.ctx.project.ensureDir(path.join('src/routes', this.moduleDir, '[id]'))
     }
   }
 
@@ -52,38 +49,37 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
     const dir = this.getModuleDirectory()
     const moduleDir = this.moduleDir
     const serviceName = pascalCase(this.moduleName)
+    const policy = 'create' as const
 
-    const validator = renderTemplate(path.resolve(__dirname, `../../templates/generator/module/validator.ts`), {})
-    fs.writeFileSync(`${dir}/${moduleDir}.validator.ts`, validator)
+    const validator = renderTemplate(this.ctx.project.template('generator/module/validator.ts'), {})
+    this.ctx.project.write(path.join(dir, `${moduleDir}.validator.ts`), validator, policy)
 
-    const service = renderTemplate(path.resolve(__dirname, `../../templates/generator/module/service.template.ts`), {
+    const service = renderTemplate(this.ctx.project.template('generator/module/service.template.ts'), {
       ServiceName: serviceName,
     })
-    fs.writeFileSync(`${dir}/${moduleDir}.service.ts`, service)
+    this.ctx.project.write(path.join(dir, `${moduleDir}.service.ts`), service, policy)
 
-    const controller = renderTemplate(
-      path.resolve(__dirname, `../../templates/generator/module/controller.template.ts`),
-      { ServiceName: serviceName, servicefile: moduleDir }
-    )
-    fs.writeFileSync(`${dir}/${moduleDir}.controller.ts`, controller)
+    const controller = renderTemplate(this.ctx.project.template('generator/module/controller.template.ts'), {
+      ServiceName: serviceName,
+      servicefile: moduleDir,
+    })
+    this.ctx.project.write(path.join(dir, `${moduleDir}.controller.ts`), controller, policy)
 
     if (config.fileBasedRouting) {
-      const router1 = renderTemplate(
-        path.resolve(__dirname, `../../templates/generator/module/filerouting/router.template.ts`),
-        { modulename: moduleDir }
-      )
-      const router2 = renderTemplate(
-        path.resolve(__dirname, `../../templates/generator/module/filerouting/[id]/router.template.ts`),
-        { modulename: moduleDir }
-      )
-
-      fs.writeFileSync(`./src/routes/${moduleDir}/index.ts`, router1)
-      fs.writeFileSync(`./src/routes/${moduleDir}/[id]/index.ts`, router2)
-    } else {
-      const routes = renderTemplate(path.resolve(__dirname, `../../templates/generator/module/routes.template.ts`), {
+      const router1 = renderTemplate(this.ctx.project.template('generator/module/filerouting/router.template.ts'), {
         modulename: moduleDir,
       })
-      fs.writeFileSync(`${dir}/${moduleDir}.routes.ts`, routes)
+      const router2 = renderTemplate(this.ctx.project.template('generator/module/filerouting/[id]/router.template.ts'), {
+        modulename: moduleDir,
+      })
+
+      this.ctx.project.write(path.join('src/routes', moduleDir, 'index.ts'), router1, policy)
+      this.ctx.project.write(path.join('src/routes', moduleDir, '[id]', 'index.ts'), router2, policy)
+    } else {
+      const routes = renderTemplate(this.ctx.project.template('generator/module/routes.template.ts'), {
+        modulename: moduleDir,
+      })
+      this.ctx.project.write(path.join(dir, `${moduleDir}.routes.ts`), routes, policy)
     }
   }
 }

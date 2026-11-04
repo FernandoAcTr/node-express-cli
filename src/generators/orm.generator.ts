@@ -1,4 +1,3 @@
-import fs from 'fs-extra'
 import path from 'path'
 import { IGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
@@ -7,6 +6,7 @@ import { renderTemplate } from '../utils/template'
 import { patchAtAnchor } from '../patch/anchor'
 import { ormScripts } from '../utils/scripts'
 import { Reporter } from '../report'
+import { WritePolicy } from '../services/project.service'
 
 export class OrmGenerator implements IGenerator {
   private orm: DbType
@@ -31,41 +31,43 @@ export class OrmGenerator implements IGenerator {
   }
 
   async createDirectories(): Promise<void> {
-    const dirs = ['./src/database/seeds', './src/database/factories', './src/entities']
+    this.ctx.project.ensureDir('src/database/seeds')
+    this.ctx.project.ensureDir('src/database/factories')
+    this.ctx.project.ensureDir('src/entities')
+
     if (this.orm == DbType.TYPEORM || this.orm == DbType.SEQUELIZE) {
-      dirs.push('./src/database/migrations')
+      this.ctx.project.ensureDir('src/database/migrations')
     }
     if (this.orm == DbType.PRISMA) {
-      dirs.push('./src/database/prisma')
-      dirs.push('./src/database/prisma/migrations')
+      this.ctx.project.ensureDir('src/database/prisma')
+      this.ctx.project.ensureDir('src/database/prisma/migrations')
     }
-
-    dirs.forEach((dir) => fs.mkdirSync(dir, { recursive: true }))
   }
 
   async copyFiles(): Promise<void> {
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/seed/seeder.ts'), './src/database/seeder.ts')
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/seed/seed.ts'), './src/database/seed.ts')
+    const policy: WritePolicy = 'overwrite-if-unmodified'
+    const project = this.ctx.project
+
+    project.copy('src/database/seeder.ts', 'generator/common/seed/seeder.ts', policy)
+    project.copy('src/database/seed.ts', 'generator/common/seed/seed.ts', policy)
 
     if (this.orm == DbType.TYPEORM) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/typeorm/datasources.ts'), './src/database/datasources.ts')
-      fs.copySync(path.resolve(__dirname, '../../templates/generator/orm/typeorm/audit'), './src/entities/audit')
+      project.copy('src/database/datasources.ts', 'generator/orm/typeorm/datasources.ts', policy)
+      project.copyDir('src/entities/audit', 'generator/orm/typeorm/audit', policy)
     } else if (this.orm == DbType.SEQUELIZE) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/sequelize/datasources.ts'), './src/database/datasources.ts')
-      fs.copyFileSync(
-        path.resolve(__dirname, '../../templates/generator/orm/sequelize/sequelize-cli.json'),
-        './src/database/sequelize-cli.json'
-      )
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/sequelize/.sequelizerc'), './.sequelizerc')
+      project.copy('src/database/datasources.ts', 'generator/orm/sequelize/datasources.ts', policy)
+      project.copy('src/database/sequelize-cli.json', 'generator/orm/sequelize/sequelize-cli.json', policy)
+      project.copy('.sequelizerc', 'generator/orm/sequelize/.sequelizerc', policy)
     } else if (this.orm == DbType.PRISMA) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/schema.prisma'), './src/database/prisma/schema.prisma')
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/prisma/client.ts'), './src/database/client.ts')
-      const prismaConfig = renderTemplate(path.resolve(__dirname, '../../templates/generator/orm/prisma/prisma.config.ts'), {
+      project.copy('src/database/prisma/schema.prisma', 'generator/orm/prisma/schema.prisma', policy)
+      project.copy('src/database/client.ts', 'generator/orm/prisma/client.ts', policy)
+
+      const prismaConfig = renderTemplate(project.template('generator/orm/prisma/prisma.config.ts'), {
         PRISMA_SEED_COMMAND: `${this.ctx.config.getTypeScriptExecutionCommand()} src/database/seeder.ts`,
       })
-      fs.writeFileSync('./prisma.config.ts', prismaConfig)
+      project.write('prisma.config.ts', prismaConfig, policy)
     } else if (this.orm == DbType.MONGO) {
-      fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/orm/mongo/datasources.ts'), './src/database/datasources.ts')
+      project.copy('src/database/datasources.ts', 'generator/orm/mongo/datasources.ts', policy)
     }
   }
 
@@ -101,26 +103,27 @@ export class OrmGenerator implements IGenerator {
     // config antes de que la instalación terminara.
     const alreadyInstalled = this.ctx.has('orm') && this.ctx.config.hasFeature('orm') && this.previousOrm === this.orm
     const runner = this.ctx.config.getPackageRunnerCommand()
+    const cwd = this.ctx.cwd
 
     if (alreadyInstalled) {
       this.ctx.logger.info(`${this.orm} is already installed; skipping dependency installation`)
     } else {
       this.ctx.logger.info('================= Installing ORM =================')
 
-      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @faker-js/faker`, cwd)
 
       if (this.orm == DbType.TYPEORM) {
-        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} typeorm reflect-metadata`)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} typeorm reflect-metadata`, cwd)
       } else if (this.orm == DbType.SEQUELIZE) {
-        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} sequelize`)
-        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} sequelize-cli`)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} sequelize`, cwd)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} sequelize-cli`, cwd)
       } else if (this.orm == DbType.PRISMA) {
-        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @prisma/client@^6`)
-        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prisma@^6 @prisma/config@^6`)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @prisma/client@^6`, cwd)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prisma@^6 @prisma/config@^6`, cwd)
         this.ctx.config.deletePackageField('prisma')
-        await this.ctx.shell.execAsync(`${runner} prisma generate`)
+        await this.ctx.shell.execAsync(`${runner} prisma generate`, cwd)
       } else if (this.orm == DbType.MONGO) {
-        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} mongoose`)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} mongoose`, cwd)
       }
     }
 

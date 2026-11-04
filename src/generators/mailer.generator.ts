@@ -1,7 +1,5 @@
-import path from 'path'
 import { IFileSystemGenerator, IInstallerGenerator, IPostGenerator } from '../interfaces/generator.interface'
 import { Context } from '../context'
-import fs from 'fs-extra'
 
 export class MailerGenerator implements IInstallerGenerator, IFileSystemGenerator, IPostGenerator {
   constructor(private readonly ctx: Context) {}
@@ -11,18 +9,20 @@ export class MailerGenerator implements IInstallerGenerator, IFileSystemGenerato
       this.ctx.logger.info('The mailer is already installed; skipping dependency installation')
     } else {
       this.ctx.logger.info('================= Installing Mail dependencies =================')
-      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} handlebars nodemailer`)
-      await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} @types/nodemailer`)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} handlebars nodemailer`, this.ctx.cwd)
+      await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} @types/nodemailer`, this.ctx.cwd)
     }
   }
 
   async createDirectories(): Promise<void> {
-    fs.mkdirSync('./src/utils', { recursive: true })
+    this.ctx.project.ensureDir('src/utils')
   }
 
   async copyFiles(): Promise<void> {
-    fs.copyFileSync(path.resolve(__dirname, '../../templates/generator/common/mailer/mailer.ts'), './src/utils/mailer.ts')
-    fs.copySync(path.resolve(__dirname, '../../templates/generator/common/mailer/templates'), './src/templates')
+    const policy = 'overwrite-if-unmodified' as const
+
+    this.ctx.project.copy('src/utils/mailer.ts', 'generator/common/mailer/mailer.ts', policy)
+    this.ctx.project.copyDir('src/templates', 'generator/common/mailer/templates', policy)
   }
 
   async post(): Promise<void> {

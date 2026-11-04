@@ -3,9 +3,8 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { PackageManager } from '../../src/types'
-import { listFiles, readJson, restoreCwd, scaffoldProject } from '../helpers/project'
+import { listFiles, readJson, scaffoldProject } from '../helpers/project'
 
-const originalCwd = process.cwd()
 const dirs: string[] = []
 
 function tmpRoot(): string {
@@ -15,7 +14,6 @@ function tmpRoot(): string {
 }
 
 afterEach(() => {
-  restoreCwd(originalCwd)
   for (const dir of dirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true })
   }

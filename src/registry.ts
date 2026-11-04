@@ -34,6 +34,8 @@ export interface CommandDefinition {
   description: string
   aliases?: string[]
   requires?: ContextFeature[]
+  /** Si es false, el comando puede ejecutarse fuera de un proyecto generado. */
+  requiresProject?: boolean
   /** Feature que se marca en cli.config.json cuando el comando termina bien. */
   feature?: Feature
   options?: Record<string, CommandOptionDefinition>
@@ -54,6 +56,7 @@ export const commands: CommandDefinition[] = [
     name: 'init',
     description: 'Init a new Express project',
     aliases: ['i'],
+    requiresProject: false,
     options: {
       name: NAME_OPTION,
       'package-manager': {
