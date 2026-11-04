@@ -51,7 +51,7 @@ describe('generated project (init + orm + auth)', () => {
   })
 
   it('wires database config and env from install:orm only', async () => {
-    const project = await scaffoldProject({ root: tmpRoot() })
+    const project = await scaffoldProject({ root: tmpRoot(), installAuth: false })
     const config = fs.readFileSync(path.join(project, 'src/config/index.ts'), 'utf-8')
     const env = fs.readFileSync(path.join(project, '.env.example'), 'utf-8')
 

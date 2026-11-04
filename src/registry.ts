@@ -51,6 +51,12 @@ const REQUIRE_ORM: RequiredFeature = {
   hint: 'Run "node-express-cli install:orm" first.',
 }
 
+/** `install:auth` envía correos de verificación y reset a través de mailer. */
+const REQUIRE_MAILER: RequiredFeature = {
+  feature: 'mailer',
+  hint: 'Run "node-express-cli install:mailer" first.',
+}
+
 /**
  * Convierte un `InstallerSpec` en un comando `install:*`. Añadir un instalador
  * simple es crear el spec y agregar una línea aquí.
@@ -99,6 +105,7 @@ export const commands: CommandDefinition[] = [
   installer(prettierSpec),
   installer(eslintSpec),
   installer(socketSpec),
+  installer(mailerSpec),
   {
     name: 'install:orm',
     description: 'Add Database support using an orm',
@@ -114,13 +121,12 @@ export const commands: CommandDefinition[] = [
   },
   {
     name: 'install:auth',
-    description: 'Add basic scaffolding to auth with jwt and passport',
+    description: 'Add basic scaffolding to auth with jwt and passport (requires mailer)',
     requiresProject: true,
-    requires: [REQUIRE_ORM],
+    requires: [REQUIRE_ORM, REQUIRE_MAILER],
     feature: 'auth',
     create: (ctx) => new AuthGenerator(ctx),
   },
-  installer(mailerSpec),
   installer(pushSpec),
   {
     name: 'make:seeder',

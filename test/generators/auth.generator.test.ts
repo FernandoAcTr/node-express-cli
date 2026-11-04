@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createContext } from '../../src/context'
+import { CliError } from '../../src/errors'
 import { AuthGenerator } from '../../src/generators/auth.generator'
 import { Logger } from '../../src/logger'
 import { run } from '../../src/run'
@@ -35,8 +36,15 @@ function count(content: string, needle: string): number {
   return content.split(needle).length - 1
 }
 
-function prismaProject(installAuth = false): Promise<string> {
-  return scaffoldProject({ root: tmpRoot(), orm: DbType.PRISMA, installAuth, logger: silentLogger })
+function prismaProject(installAuth = false, shell = new FakeShell()): Promise<string> {
+  return scaffoldProject({
+    root: tmpRoot(),
+    orm: DbType.PRISMA,
+    installAuth,
+    installMailer: true,
+    logger: silentLogger,
+    shell: shell as never,
+  })
 }
 
 function context(cwd: string, logger: Logger = silentLogger) {
@@ -47,8 +55,16 @@ function generator(cwd: string, force = false, logger: Logger = silentLogger): A
   return new AuthGenerator(createContext({ cwd, force, logger }))
 }
 
-function schemaPath(projectDir: string): string {
-  return path.join(projectDir, 'src/database/prisma/schema.prisma')
+function prismaSchema(projectDir: string): string {
+  return 'src/database/prisma/schema.prisma'
+}
+
+function authSchema(projectDir: string): string {
+  return 'src/database/prisma/schemas/auth.prisma'
+}
+
+function read(projectDir: string, file: string): string {
+  return fs.readFileSync(path.join(projectDir, file), 'utf-8')
 }
 
 function features(projectDir: string): string[] {
@@ -62,13 +78,43 @@ afterEach(() => {
 })
 
 describe('AuthGenerator', () => {
-  it('copies the auth files with the overwrite-if-unmodified policy', async () => {
+  it('copies the shared domain and the ORM-specific repository', async () => {
     const cwd = project()
 
     await generator(cwd).copyFiles()
 
-    expect(fs.existsSync(path.join(cwd, 'src/modules/auth/auth.controller.ts'))).toBe(true)
-    expect(fs.existsSync(path.join(cwd, 'src/middlewares/passport.ts'))).toBe(true)
+    for (const file of [
+      'src/modules/auth/auth.service.ts',
+      'src/modules/auth/auth.controller.ts',
+      'src/modules/auth/auth.tokens.ts',
+      'src/modules/auth/auth.types.ts',
+      'src/modules/auth/auth.mailer.ts',
+      'src/modules/auth/auth.repository.ts',
+      'src/middlewares/passport.ts',
+      'src/utils/hash.ts',
+    ]) {
+      expect(fs.existsSync(path.join(cwd, file))).toBe(true)
+    }
+
+    expect(read(cwd, 'src/modules/auth/auth.service.ts')).toContain("from './auth.repository'")
+    expect(read(cwd, 'src/modules/auth/auth.repository.ts')).toContain("from '@/database/datasources'")
+  })
+
+  it('writes the repository that belongs to each ORM', async () => {
+    const expectations: Array<[DbType, string]> = [
+      [DbType.TYPEORM, "from 'typeorm'"],
+      [DbType.SEQUELIZE, "from '@/entities/user.entity'"],
+      [DbType.MONGO, "from '@/entities/user.entity'"],
+      [DbType.PRISMA, "from '@/database/client'"],
+    ]
+
+    for (const [orm, expected] of expectations) {
+      const cwd = project(orm)
+
+      await generator(cwd).copyFiles()
+
+      expect(read(cwd, 'src/modules/auth/auth.repository.ts')).toContain(expected)
+    }
   })
 
   it('preserves a customized auth.controller.ts', async () => {
@@ -102,80 +148,105 @@ describe('AuthGenerator', () => {
     expect(fs.readFileSync(controller, 'utf-8')).not.toBe('// custom controller\n')
   })
 
-  it('merges the Prisma auth models into the schema without replacing it', async () => {
+  it('requires the mailer feature before writing anything', async () => {
+    const cwd = project()
+
+    const error = await generator(cwd)
+      .pre()
+      .catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(CliError)
+    expect((error as CliError).hint).toContain('install:mailer')
+  })
+
+  it('writes the Prisma models in a multi-file schema', async () => {
     const cwd = await prismaProject()
     const ctx = context(cwd)
 
     await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
 
-    const schema = fs.readFileSync(schemaPath(cwd), 'utf-8')
+    const models = read(cwd, authSchema(cwd))
+    const schema = read(cwd, prismaSchema(cwd))
 
-    expect(count(schema, 'generator client')).toBe(1)
-    expect(count(schema, 'datasource db')).toBe(1)
-    expect(schema).toContain('// @nec:prisma')
-    expect(schema).toContain('// @nec:auth:start')
+    expect(schema).toContain('provider     = "prisma-client"')
+    expect(schema).toContain('provider = "mysql"')
+    expect(schema).not.toContain('model User')
 
-    for (const model of ['model Role', 'model User', 'model RefreshToken', 'model ResetPasswordToken']) {
-      expect(count(schema, `${model} {`)).toBe(1)
+    for (const model of ['model Role', 'model User', 'model RefreshToken', 'model PasswordResetToken']) {
+      expect(count(models, `${model} {`)).toBe(1)
     }
+
+    for (const field of ['email', 'email_verified_at', 'refresh_token', 'expires_at']) {
+      expect(models).toContain(field)
+    }
+
+    expect(models).toMatch(/email\s+String\s+@unique/)
 
     expect(features(cwd)).toContain('auth')
   })
 
-  it('is idempotent when auth is installed twice', async () => {
+  it('is idempotent when auth is installed twice with Prisma', async () => {
     const cwd = await prismaProject()
     const first = context(cwd)
 
     await run(new AuthGenerator(first), { ctx: first, feature: 'auth' })
-    const schema = fs.readFileSync(schemaPath(cwd), 'utf-8')
+    const models = read(cwd, authSchema(cwd))
+    const schema = read(cwd, prismaSchema(cwd))
 
     const second = context(cwd)
     await run(new AuthGenerator(second), { ctx: second, feature: 'auth' })
 
-    expect(fs.readFileSync(schemaPath(cwd), 'utf-8')).toBe(schema)
-    expect(count(schema, '// @nec:auth:start')).toBe(1)
+    expect(read(cwd, authSchema(cwd))).toBe(models)
+    expect(read(cwd, prismaSchema(cwd))).toBe(schema)
   })
 
-  it('warns and leaves an older schema untouched when the Prisma anchor is missing', async () => {
-    const cwd = await prismaProject()
-    const file = schemaPath(cwd)
-    const withoutAnchor = fs.readFileSync(file, 'utf-8').replace('\n// @nec:prisma\n', '\n')
-    const warnings: string[] = []
-    const ctx = context(cwd, { ...silentLogger, warn: (message) => warnings.push(message) })
-
-    fs.writeFileSync(file, withoutAnchor)
+  it('skips prisma generate when DB_URL is missing', async () => {
+    const shell = new FakeShell()
+    const cwd = await prismaProject(false, shell)
+    const ctx = createContext({ cwd, logger: silentLogger, shell: shell as never })
 
     await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
 
-    expect(warnings.join('\n')).toContain('@nec:prisma')
-    expect(fs.readFileSync(file, 'utf-8')).toBe(withoutAnchor)
-    expect(features(cwd)).not.toContain('auth')
-  })
-
-  it('merges the models after the anchor is added to an older schema', async () => {
-    const cwd = await prismaProject()
-    const file = schemaPath(cwd)
-    const schema = fs.readFileSync(file, 'utf-8')
-    const withoutAnchor = schema.replace('\n// @nec:prisma\n', '\n')
-
-    fs.writeFileSync(file, withoutAnchor)
-    const first = context(cwd)
-    await run(new AuthGenerator(first), { ctx: first, feature: 'auth' })
-
-    fs.writeFileSync(file, `${withoutAnchor}\n// @nec:prisma\n`)
-    const second = context(cwd)
-    await run(new AuthGenerator(second), { ctx: second, feature: 'auth' })
-
-    expect(fs.readFileSync(file, 'utf-8')).toContain('// @nec:auth:start')
+    expect(shell.commands.some((command) => command.includes('m:generate'))).toBe(false)
     expect(features(cwd)).toContain('auth')
   })
 
-  it('aborts an incomplete auth block without touching the schema', async () => {
+  it('runs prisma generate when .env provides DB_URL', async () => {
+    const shell = new FakeShell()
+    const cwd = await prismaProject(false, shell)
+
+    fs.writeFileSync(path.join(cwd, '.env'), 'DB_URL=mysql://user:password@localhost:3306/app\n')
+
+    const ctx = createContext({ cwd, logger: silentLogger, shell: shell as never })
+    await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
+
+    expect(shell.commands.some((command) => command === 'npm run m:generate')).toBe(true)
+  })
+
+  it('keeps supporting the legacy Prisma block', async () => {
     const cwd = await prismaProject()
-    const file = schemaPath(cwd)
-    const broken = `${fs.readFileSync(file, 'utf-8')}\n// @nec:auth:start\nmodel Broken {\n  id Int @id\n}\n`
+    const file = path.join(cwd, prismaSchema(cwd))
+    const schema = read(cwd, prismaSchema(cwd)).replace('// @nec:prisma', '')
+
+    fs.writeFileSync(file, `${schema}\n// @nec:prisma\n// @nec:auth:start\nmodel Legacy {\n  id Int @id\n}\n// @nec:auth:end\n`)
+
+    const ctx = context(cwd)
+    await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
+
+    const updated = read(cwd, prismaSchema(cwd))
+
+    expect(updated).toContain('model RefreshToken {')
+    expect(updated).not.toContain('model Legacy {')
+    expect(count(updated, '// @nec:auth:start')).toBe(1)
+    expect(fs.existsSync(path.join(cwd, authSchema(cwd)))).toBe(false)
+  })
+
+  it('warns and leaves an incomplete legacy block untouched', async () => {
+    const cwd = await prismaProject()
+    const file = path.join(cwd, prismaSchema(cwd))
+    const broken = `${read(cwd, prismaSchema(cwd))}\n// @nec:prisma\n// @nec:auth:start\nmodel Broken {\n  id Int @id\n}\n`
     const warnings: string[] = []
-    const ctx = context(cwd, { ...silentLogger, warn: (message) => warnings.push(message) })
+    const ctx = context(cwd, { ...silentLogger, warn: (message: string) => warnings.push(message) })
 
     fs.writeFileSync(file, broken)
 
@@ -195,7 +266,7 @@ describe('AuthGenerator', () => {
     fs.mkdirSync(path.dirname(mainFile), { recursive: true })
     fs.writeFileSync(mainFile, original)
 
-    const result = await generator(cwd, false, { ...silentLogger, warn: (message) => warnings.push(message) }).post()
+    const result = await generator(cwd, false, { ...silentLogger, warn: (message: string) => warnings.push(message) }).post()
 
     expect(result?.warnings.length).toBeGreaterThan(0)
     expect(fs.readFileSync(mainFile, 'utf-8')).toBe(original)

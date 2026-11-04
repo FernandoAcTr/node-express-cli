@@ -1,9 +1,9 @@
-"use strict";
+'use strict'
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("roles", {
+    await queryInterface.createTable('roles', {
       id: {
         type: Sequelize.INTEGER.UNSIGNED,
         autoIncrement: true,
@@ -11,17 +11,23 @@ module.exports = {
       },
       name: {
         type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
       },
-    });
+    })
 
-    await queryInterface.createTable("users", {
+    await queryInterface.createTable('users', {
       id: {
         type: Sequelize.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
       },
       name: Sequelize.STRING,
-      email: Sequelize.STRING,
+      email: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
+      },
       password: Sequelize.STRING,
       role_id: {
         type: Sequelize.INTEGER.UNSIGNED,
@@ -30,19 +36,23 @@ module.exports = {
         onUpdate: 'CASCADE',
         allowNull: false,
       },
-      createdAt: {
+      created_at: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn("now"),
+        defaultValue: Sequelize.fn('now'),
       },
-      updatedAt: {
+      updated_at: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.fn("now"),
+        defaultValue: Sequelize.fn('now'),
       },
-    });
+      email_verified_at: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
+    })
   },
 
-  async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("users");
-    await queryInterface.dropTable("roles");
+  async down(queryInterface) {
+    await queryInterface.dropTable('users')
+    await queryInterface.dropTable('roles')
   },
-};
+}

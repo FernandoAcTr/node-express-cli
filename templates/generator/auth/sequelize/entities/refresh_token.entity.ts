@@ -1,5 +1,13 @@
 import { sequelize } from '@/database/datasources'
-import { CreationOptional, InferAttributes, InferCreationAttributes, Model, DataTypes, ForeignKey, NonAttribute } from 'sequelize'
+import {
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+  Model,
+  DataTypes,
+  ForeignKey,
+  NonAttribute,
+} from 'sequelize'
 import { User } from './user.entity'
 
 export class RefreshToken extends Model<InferAttributes<RefreshToken>, InferCreationAttributes<RefreshToken>> {
@@ -7,8 +15,9 @@ export class RefreshToken extends Model<InferAttributes<RefreshToken>, InferCrea
   declare refresh_token: string
   declare user_id: ForeignKey<number>
   declare user: NonAttribute<User>
-  declare createdAt: CreationOptional<Date>
   declare expiresAt: Date
+  declare createdAt: CreationOptional<Date>
+  declare updatedAt: CreationOptional<Date>
 }
 
 RefreshToken.init(
@@ -20,13 +29,20 @@ RefreshToken.init(
     },
     refresh_token: {
       type: DataTypes.STRING,
+      allowNull: false,
     },
     user_id: {
       type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      unique: true,
       references: { model: User, key: 'id' },
     },
+    expiresAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
     createdAt: DataTypes.DATE,
-    expiresAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
   },
-  { sequelize, createdAt: true, updatedAt: true }
+  { sequelize, tableName: 'refresh_tokens', underscored: true }
 )

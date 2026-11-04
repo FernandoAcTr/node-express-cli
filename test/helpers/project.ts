@@ -6,6 +6,8 @@ import { Logger } from '../../src/logger'
 import { BaseGenerator } from '../../src/generators/base.generator'
 import { OrmGenerator } from '../../src/generators/orm.generator'
 import { AuthGenerator } from '../../src/generators/auth.generator'
+import { SpecGenerator } from '../../src/installers'
+import { mailerSpec } from '../../src/installers/specs/mailer.spec'
 import { NonInteractivePrompter } from '../../src/prompts'
 import { commands } from '../../src/registry'
 import { run } from '../../src/run'
@@ -41,6 +43,8 @@ export interface ScaffoldOptions {
   fileBasedRouting?: boolean
   orm?: DbType
   installAuth?: boolean
+  /** Instala mailer aunque auth no se instale (auth lo requiere). */
+  installMailer?: boolean
   logger?: Logger
   shell?: Pick<ShellService, 'execAsync' | 'exec'>
   installDependencies?: boolean
@@ -62,6 +66,7 @@ export async function scaffoldProject(options: ScaffoldOptions): Promise<string>
     fileBasedRouting = false,
     orm = DbType.TYPEORM,
     installAuth = true,
+    installMailer = installAuth,
     logger = silentLogger,
     installDependencies = false,
     onProjectCreated,
@@ -120,7 +125,12 @@ export async function scaffoldProject(options: ScaffoldOptions): Promise<string>
 
   await run(new OrmGenerator(ctx), { ctx, feature: 'orm' })
 
+  if (installMailer) {
+    await run(new SpecGenerator(ctx, mailerSpec), { ctx, feature: 'mailer' })
+  }
+
   if (installAuth) {
+    // `install:auth` depende de `install:mailer` para verificación y reset.
     await run(new AuthGenerator(ctx), { ctx, feature: 'auth' })
   }
 

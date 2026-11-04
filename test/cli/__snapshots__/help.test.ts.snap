@@ -9,9 +9,9 @@ Commands:
   node-express-cli install:prettier  Add prettier to the project
   node-express-cli install:eslint    Add ESLint (flat config) to the project
   node-express-cli install:socket    Add Socket.io to the project
-  node-express-cli install:orm       Add Database support using an orm
-  node-express-cli install:auth      Add basic scaffolding to auth with jwt and passport
   node-express-cli install:mailer    Add support for send mails via nodemailer library
+  node-express-cli install:orm       Add Database support using an orm
+  node-express-cli install:auth      Add basic scaffolding to auth with jwt and passport (requires mailer)
   node-express-cli install:push      Add web push notifications support via web-push
   node-express-cli make:seeder       Generate a new seeder class
   node-express-cli make:entity       Generate a new entity class

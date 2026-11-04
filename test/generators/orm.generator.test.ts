@@ -7,7 +7,7 @@ import { CliError } from '../../src/errors'
 import { OrmGenerator } from '../../src/generators/orm.generator'
 import { NonInteractivePrompter } from '../../src/prompts'
 import { DbType } from '../../src/types'
-import { silentLogger } from '../helpers/project'
+import { scaffoldProject, silentLogger } from '../helpers/project'
 
 const dirs: string[] = []
 
@@ -80,5 +80,27 @@ describe('OrmGenerator', () => {
 
     await expect(generator.pre()).resolves.toBeUndefined()
     expect(generator.installMetadata()).toEqual({ orm: DbType.MONGO })
+  })
+
+  it('writes the Prisma 7 configuration with the mariadb adapter', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-orm-prisma-'))
+    dirs.push(root)
+
+    const cwd = await scaffoldProject({ root, orm: DbType.PRISMA, installAuth: false, logger: silentLogger })
+    const read = (file: string) => fs.readFileSync(path.join(cwd, file), 'utf-8')
+
+    expect(read('src/database/prisma/schema.prisma')).toContain('provider     = "prisma-client"')
+    expect(read('src/database/prisma/schema.prisma')).toContain('provider = "mysql"')
+    expect(read('src/database/prisma/schema.prisma')).not.toContain('url      = env')
+
+    expect(read('prisma.config.ts')).toContain("schema: './src/database/prisma'")
+    expect(read('prisma.config.ts')).toContain("url: env('DB_URL')")
+
+    expect(read('src/database/client.ts')).toContain("from '@prisma/adapter-mariadb'")
+    expect(read('src/database/client.ts')).toContain("from './prisma/generated/client'")
+
+    const scripts = JSON.parse(read('package.json')).scripts
+    expect(scripts['m:run']).toContain('prisma migrate dev && npx prisma generate')
+    expect(scripts['db:seed']).toBe('npx prisma db seed')
   })
 })

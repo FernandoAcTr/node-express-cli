@@ -1,0 +1,49 @@
+model Role {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+  users      User[]
+
+  @@map("roles")
+}
+
+model User {
+  id                    Int                  @id @default(autoincrement())
+  name                  String
+  email                 String               @unique
+  password              String
+  email_verified_at     DateTime?
+  role_id               Int
+  role                  Role                 @relation(fields: [role_id], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  created_at            DateTime             @default(now())
+  updated_at            DateTime             @default(now()) @updatedAt
+  refresh_tokens        RefreshToken[]
+  password_reset_tokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id            Int      @id @default(autoincrement())
+  user_id       Int      @unique
+  user          User     @relation(fields: [user_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  refresh_token String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+  expires_at    DateTime
+
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  token      String
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+  expires_at DateTime
+
+  @@map("password_reset_tokens")
+}

@@ -10,18 +10,21 @@ import {
 } from 'sequelize'
 import { Role } from './role.entity'
 import { RefreshToken } from './refresh_token.entity'
+import { PasswordResetToken } from './password_reset_token.entity'
 
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare id: CreationOptional<number>
   declare name: string
   declare email: string
   declare password: string
+  declare emailVerifiedAt: Date | null
   declare createdAt: CreationOptional<Date>
   declare updatedAt: CreationOptional<Date>
 
   declare role_id: ForeignKey<number>
   declare role: NonAttribute<Role>
-  declare token: NonAttribute<RefreshToken>
+  declare refreshToken: NonAttribute<RefreshToken>
+  declare passwordResetTokens: NonAttribute<PasswordResetToken[]>
 }
 
 User.init(
@@ -38,10 +41,15 @@ User.init(
     email: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
     password: {
       type: DataTypes.STRING,
       allowNull: false,
+    },
+    emailVerifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
     role_id: {
       type: DataTypes.INTEGER.UNSIGNED,
@@ -50,9 +58,11 @@ User.init(
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },
-  { sequelize, tableName: 'users' }
+  { sequelize, tableName: 'users', underscored: true }
 )
 
 User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' })
 User.hasOne(RefreshToken, { foreignKey: 'user_id', as: 'refreshToken' })
+User.hasMany(PasswordResetToken, { foreignKey: 'user_id', as: 'passwordResetTokens' })
 RefreshToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+PasswordResetToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' })

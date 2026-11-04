@@ -49,11 +49,11 @@ export function ormScripts(orm: DbType, config: ConfigService): Record<string, s
 
   if (orm === DbType.PRISMA) {
     return {
-      'm:run': `${runner} prisma migrate dev`,
-      'm:run:deploy': `${runner} prisma migrate deploy`,
+      'm:run': `${runner} prisma migrate dev && ${runner} prisma generate`,
+      'm:run:deploy': `${runner} prisma migrate deploy && ${runner} prisma generate`,
       'm:reset': `${runner} prisma migrate reset`,
       'm:generate': `${runner} prisma generate`,
-      ...seed,
+      'db:seed': `${runner} prisma db seed`,
     }
   }
 

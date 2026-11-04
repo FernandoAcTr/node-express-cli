@@ -117,6 +117,7 @@ export class OrmGenerator implements IGenerator {
     } else if (this.orm == DbType.PRISMA) {
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
       this.ctx.logger.success(`You need to create your first migration. Run ${this.ctx.config.getRunCommand()} m:run`)
+      this.ctx.logger.success('Prisma 7 generates its client inside src/database/prisma/generated')
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
     } else if (this.orm == DbType.MONGO) {
       this.ctx.logger.success('-------------------------------------------------------------------------------------------')
@@ -127,6 +128,18 @@ export class OrmGenerator implements IGenerator {
     return result
   }
 
+  private hasDatabaseUrl(): boolean {
+    if (process.env.DB_URL) {
+      return true
+    }
+
+    if (!this.ctx.project.exists('.env')) {
+      return false
+    }
+
+    return /^DB_URL=\S+/m.test(this.ctx.project.read('.env'))
+  }
+
   async installDependencies(): Promise<void> {
     // `has('orm')` se apoya en `features`; comparar con el ORM guardado evita
     // reinstalar dependencias al repetir el mismo motor. Cambiar de ORM está
@@ -134,7 +147,6 @@ export class OrmGenerator implements IGenerator {
     const alreadyInstalled = this.ctx.has('orm') && this.ctx.config.getConfig().orm === this.orm
     const runner = this.ctx.config.getPackageRunnerCommand()
     const cwd = this.ctx.cwd
-
     if (alreadyInstalled) {
       this.ctx.logger.info(`${this.orm} is already installed; skipping dependency installation`)
     } else {
@@ -148,14 +160,20 @@ export class OrmGenerator implements IGenerator {
         await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} sequelize`, cwd)
         await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} sequelize-cli`, cwd)
       } else if (this.orm == DbType.PRISMA) {
-        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @prisma/client@^6`, cwd)
-        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prisma@^6 @prisma/config@^6`, cwd)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} @prisma/client@^7 @prisma/adapter-mariadb@^7`, cwd)
+        await this.ctx.shell.execAsync(`${this.ctx.config.getDevInstallCommand()} prisma@^7 @prisma/config@^7`, cwd)
 
         if (this.ctx.config.deletePackageField('prisma')) {
           this.ctx.project.record('package.json')
         }
 
-        await this.ctx.shell.execAsync(`${runner} prisma generate`, cwd)
+        if (this.hasDatabaseUrl()) {
+          await this.ctx.shell.execAsync(`${runner} prisma generate`, cwd)
+        } else {
+          this.ctx.logger.warn(
+            'Skipped "prisma generate" because DB_URL is not set. Create .env with DB_URL and run the "m:generate" script.'
+          )
+        }
       } else if (this.orm == DbType.MONGO) {
         await this.ctx.shell.execAsync(`${this.ctx.config.getInstallCommand()} mongoose`, cwd)
       }

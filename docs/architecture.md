@@ -282,11 +282,19 @@ el config solo desactiva reglas que chocan con el formato. El smoke de todas las
 features ejecuta `eslint src` además de `tsc --noEmit`.
 
 Los instaladores con lógica propia siguen siendo custom: `orm` (elige el ORM,
-copia templates por motor y calcula scripts), `auth` (templates por ORM) y
-`migration` (shell). `orm` reutiliza `ormWireSteps()` para la configuración
-`DB` y las variables `DB_*`, que ya no viven en `templates/base`. Cambiar de ORM
-en un proyecto existente se rechaza en `pre()` antes de copiar archivos: no hay
-limpieza automática y el proyecto quedaría mezclado.
+copia templates por motor y calcula scripts), `auth` (dominio compartido +
+repositorio por ORM) y `migration` (shell). `orm` reutiliza `ormWireSteps()` para
+la configuración `DB` y las variables `DB_*`, que ya no viven en
+`templates/base`. Cambiar de ORM en un proyecto existente se rechaza en `pre()`
+antes de copiar archivos: no hay limpieza automática y el proyecto quedaría
+mezclado.
+
+`install:auth` declara `requires: [{ feature: 'orm' }, { feature: 'mailer' }]`.
+El dominio (`auth.service.ts`, `auth.controller.ts`, `auth.tokens.ts`,
+`auth.validator.ts`, `auth.mailer.ts`, `passport.ts`) es común; solo
+`auth.repository.ts` cambia por ORM y traduce las entidades al contrato
+`auth.types.ts`. Añadir un motor nuevo requiere sus entidades y un repositorio,
+no tocar el servicio.
 
 `templates/base` solo contiene lo común a todos los proyectos. `MAILER`,
 `MAIL_*`, `VAPID`, `DB_*`, `prettier:fix` y `vapid:generate` pertenecen a los
@@ -321,18 +329,20 @@ solo se modifican en los puntos marcados:
 | `templates/base/src/config/index.ts`            | `// @nec:config`            | `config()`                | `DB`, `MAILER`, `VAPID` y cualquier config  |
 | `templates/base/.env.example`                   | `# @nec:env`                | `env()`                   | variables sueltas                           |
 | `templates/base/.env.example`                   | `# @nec:<marker>:start/end` | `envBlock(marker, …)`     | bloques reemplazables (mailer, webpush, DB) |
-| `templates/generator/orm/prisma/schema.prisma`  | `// @nec:prisma`            | `block(..., 'auth', …)`   | modelos de `install:auth` para Prisma       |
 
-El schema de Prisma usa un bloque reemplazable `// @nec:auth:start` /
-`// @nec:auth:end`, insertado después de `// @nec:prisma`. `install:auth` nunca
-reemplaza el schema completo: añade o actualiza los modelos de auth y conserva
-los modelos propios. En proyectos anteriores sin `// @nec:prisma` y sin los
-modelos de auth, el wiring devuelve un warning, no toca el schema y no marca
-`auth` como instalada. Si los modelos ya existen (schema copiado por una versión
-anterior), el bloque se omite para no duplicarlos. El motor de bloques aborta si
-encuentra un bloque incompleto, así que no deja el schema a medias. El anchor se
-exporta como `PRISMA_ANCHOR` (`src/patch/anchors.ts`) para que los generadores no
-contengan markers literales.
+Prisma 7 usa un **multi-file schema**: `templates/generator/orm/prisma/schema.prisma`
+solo contiene `generator` y `datasource`, y `install:auth` copia
+`src/database/prisma/schemas/auth.prisma` con sus modelos. No hay merge ni
+anchor en proyectos nuevos, por lo que no se toca el schema del usuario.
+
+Por compatibilidad, si un proyecto antiguo conserva el bloque
+`// @nec:auth:start` / `// @nec:auth:end` (o el anchor `// @nec:prisma`), el
+generador mantiene ese camino y actualiza el bloque en lugar de crear el archivo
+nuevo; así no se duplican modelos. Si encuentra modelos de auth sueltos en
+`schema.prisma`, avisa y no escribe `schemas/auth.prisma`. El motor de bloques
+aborta si encuentra un bloque incompleto. Los marcadores legacy se exportan como
+`PRISMA_ANCHOR` y `AUTH_PRISMA_BLOCK_MARKERS` (`src/patch/anchors.ts`) para que
+los generadores no contengan markers literales.
 
 Los anchors son un contrato público: si renombras uno, los proyectos generados
 con versiones anteriores dejan de recibir parches. En ese caso el wiring devuelve
@@ -528,7 +538,8 @@ Todos los comandos declaran `requiresProject`; solo `init` usa `false`. Si un
 comando necesita una feature instalada, declara
 `requires: [{ feature: 'orm', hint: 'Run "node-express-cli install:orm" first.' }]`.
 El hint se muestra tal cual en `src/cli.ts`; no añadas switches de requisitos
-en el entrypoint.
+en el entrypoint. `install:auth` exige además `mailer` con
+`hint: 'Run "node-express-cli install:mailer" first.'`.
 
 Declara los flags propios en `options` del registry. Llegan en `ctx.args.flags`
 y solo aparecen en el help de ese comando. Usa `booleanFlag`/`stringFlag` de
@@ -567,9 +578,12 @@ Los snapshots están en `test/golden/__snapshots__/` y `test/cli/__snapshots__/`
 intencional, actualízalos con `npm test -- -u` y revísalos en el diff.
 
 El smoke test usa `SMOKE_PROFILE` (`core` por defecto o `all`),
-`SMOKE_PACKAGE_MANAGER` (`npm`/`pnpm`) y `SMOKE_FILE_BASED` (`true`/`false`).
-`core` genera el proyecto con `init + orm + auth`; `all` instala además todas las
-features declarativas y comprueba que `features` las contiene todas.
+`SMOKE_PACKAGE_MANAGER` (`npm`/`pnpm`), `SMOKE_FILE_BASED` (`true`/`false`) y
+`SMOKE_ORM` (`typeorm` por defecto, o `mongoose`/`sequelize`/`prisma`).
+`core` genera el proyecto con `init + orm + mailer + auth`; `all` instala además
+todas las features declarativas y comprueba que `features` las contiene todas.
+Para Prisma el smoke crea un `.env` con `DB_URL` ficticio para que
+`prisma generate` se ejecute de verdad antes de `tsc`.
 
 ## CI
 
@@ -577,6 +591,8 @@ features declarativas y comprueba que `features` las contiene todas.
 - Job `smoke`: matriz `{npm, pnpm} × {fileBasedRouting true,false}` con
   `SMOKE_PROFILE=core`; instala un proyecto generado con TypeORM y corre
   `tsc --noEmit`.
+- Job `smoke-orms`: matriz `{mongoose, sequelize, prisma} × {fileBasedRouting true,false}`
+  con npm; valida que auth compila con cada repositorio.
 - Job `smoke-all`: un proyecto con todas las features (`SMOKE_PROFILE=all`) que
   debe compilar. Es el criterio de que cada feature instalable se compila al
   menos una vez.

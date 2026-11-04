@@ -5,7 +5,7 @@ export class Role extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number
 
-  @Column()
+  @Column({ unique: true })
   name: string
 
   public static readonly ADMIN = 1

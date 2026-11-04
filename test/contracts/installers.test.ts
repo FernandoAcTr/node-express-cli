@@ -72,19 +72,20 @@ async function runInstall(project: string, command: CommandDefinition, flags: Re
 
 /** Instala las dependencias de las que depende el comando, si las declara. */
 async function prepare(project: string, command: CommandDefinition): Promise<void> {
-  const requiresOrm = command.requires?.some((requirement) => requirement.feature === 'orm') ?? false
+  for (const requirement of command.requires ?? []) {
+    if (requirement.feature === 'fileBasedRouting') {
+      continue
+    }
 
-  if (!requiresOrm) {
-    return
+    const dependency = commands.find((candidate) => candidate.name.startsWith('install:') && candidate.feature === requirement.feature)
+
+    if (!dependency || dependency.name === command.name) {
+      continue
+    }
+
+    await prepare(project, dependency)
+    await runInstall(project, dependency, dependency.name === 'install:orm' ? { orm: DbType.TYPEORM } : {})
   }
-
-  const orm = commands.find((candidate) => candidate.name === 'install:orm')
-
-  if (!orm) {
-    throw new Error('install:orm is required by the contract fixture but is not registered')
-  }
-
-  await runInstall(project, orm, { orm: DbType.TYPEORM })
 }
 
 /** Añade líneas que ningún instalador debería perder. */

@@ -108,8 +108,9 @@ Para el caso de [Sequelize](https://sequelize.org) también se incluyen una list
 - m:run:deploy
 - m:reset
 - m:generate
+- db:seed
 
-Cuando eliges Prisma también se genera un archivo raíz llamado `prisma.config.ts`, el cual apunta al schema en `src/database/prisma/schema.prisma`, usa `src/database/prisma/migrations` como directorio de migraciones y configura el comando de `seed` según el package manager elegido. La conexión a la base de datos se toma de la variable de entorno `DB_URL` definida en tu `.env`.
+Cuando eliges Prisma (v7) se genera un archivo raíz `prisma.config.ts` que apunta al directorio `src/database/prisma`, usa `src/database/prisma/migrations` como directorio de migraciones y configura el `seed` según el package manager elegido. La conexión del CLI se toma de `DB_URL` en tu `.env`; el cliente de la app usa `@prisma/adapter-mariadb` con las variables `DB_*`. El cliente se genera en `src/database/prisma/generated` y se ignora en git. `m:run` y `m:run:deploy` ejecutan `prisma generate` después de migrar.
 
 ## Creación de módulos
 Un módulo comprende un controlador, un archivo de rutas, uno o más servicios y un archivo de validaciones, todos dentro de un mismo directorio dentro de modules. Esto permite que la aplicación se divida en piezas que son fácilmente conectables.
@@ -267,13 +268,55 @@ node-express-cli install:eslint
 Es necesario instalar prettier para poder instalar eslint. `install:eslint` usa la configuración plana de ESLint (`eslint.config.mjs`) con `typescript-eslint` y añade los scripts `lint` y `lint:fix`, que revisan `src/**/*.ts`.
 
 ## Scaffolding de autenticación
-Es posible instalar un módulo de autenticación con lo básico necesario para autenticar un usuario con JWT, haciendo uso de la conocida librería [Passport](https://www.npmjs.com/package/passport).  
-Para instalarlo utiliza el comando `node-express-cli install:auth`.
-Esta acción creará un modelo básico de usuario, una estrategia de passport y un módulo de autenticación. 
-El módulo queda cableado automáticamente en `src/main.ts` (se registran `passport.initialize()` y la estrategia JWT) y las rutas del módulo auth se montan solas gracias al enrutador. 
-Para TypeORM también se inicializa `AppDataSource` y para Mongoose se importa la conexión. Solamente deberás crear/ejecutar las migraciones para la base de datos, de ser necesario. 
+Es posible instalar un módulo de autenticación con JWT usando [Passport](https://www.npmjs.com/package/passport). El módulo incluye registro, login, logout, refresh token, recuperación y restablecimiento de contraseña, verificación de correo, `/me` y un middleware para proteger rutas.
 
-Si usas Prisma, los modelos de auth se añaden dentro de un bloque reemplazable en `src/database/prisma/schema.prisma` (después del anchor `// @nec:prisma`), sin reemplazar los modelos que ya tengas. Si el schema no tiene el anchor ni los modelos de auth, recibirás un aviso: añade `// @nec:prisma` al final del schema y vuelve a ejecutar `install:auth`.
+`install:auth` requiere que `install:mailer` esté instalado, porque la verificación de correo y el reset de contraseña envían emails:
+
+```bash
+node-express-cli install:mailer
+node-express-cli install:auth
+```
+
+El módulo queda cableado automáticamente en `src/main.ts` (`passport.initialize()` y la estrategia JWT) y las rutas se montan solas. Añade `FRONTEND_URL` a `src/config/index.ts` y `.env.example`; los enlaces de los correos usan esa URL. También necesitas `SECRET` en `.env`.
+
+### Endpoints
+
+```
+POST /auth/register            (alias /auth/signup)
+POST /auth/login
+POST /auth/logout              requiere Bearer token
+POST /auth/refresh-token       público; body { refresh_token }
+POST /auth/refresh             alias de /refresh-token
+POST /auth/forgot-password
+POST /auth/reset-password      { email, token, password, password_confirmation }
+POST /auth/resend-verification requiere Bearer token
+GET  /auth/verify-email/:id/:token
+GET  /auth/me                  requiere Bearer token
+```
+
+El access token dura 1 hora y el refresh token 7 días. Hay un refresh activo por usuario: `logout` lo invalida y `reset-password` invalida además los refresh tokens.
+
+### Estructura
+
+La lógica de negocio es común a todos los ORMs (`auth.service.ts`, `auth.controller.ts`, `auth.validator.ts`, `auth.tokens.ts`, `auth.mailer.ts`, `passport.ts`). Solo cambia `auth.repository.ts`, que traduce las entidades de cada motor al contrato normalizado de `auth.types.ts`. Añadir un ORM nuevo requiere sus entidades y un repositorio.
+
+### Prisma 7
+
+Si usas Prisma, el proyecto se genera con `prisma.config.ts`, `provider = "prisma-client"` y el cliente dentro de `src/database/prisma/generated`. La conexión usa `@prisma/adapter-mariadb` con las variables `DB_*`:
+
+- `prisma.config.ts` lee `DB_URL` de `.env`; si no existe, `install:orm`/`install:auth` avisan y omiten `prisma generate`. Crea `.env` y ejecuta `m:generate`.
+- Los modelos de auth se añaden en `src/database/prisma/schemas/auth.prisma` (multi-file schema), sin reemplazar tus modelos.
+- Los proyectos antiguos con el bloque `// @nec:auth:start` en `schema.prisma` siguen funcionando; no se duplican modelos.
+
+```bash
+cp .env.example .env   # configura DB_* y DB_URL
+node-express-cli install:orm --orm prisma --no-interaction
+node-express-cli install:mailer
+node-express-cli install:auth
+npm run m:run
+```
+
+Para TypeORM se inicializa `AppDataSource`; para Mongoose se importa la conexión. Solo debes crear/ejecutar las migraciones del motor elegido.
 
 ## Envío de Emails
 Es posible agregar soporte para envío de emails vía nodemailer, utilizando el comando `node-express-cli install:mailer`.  

@@ -1,10 +1,12 @@
 import { MigrationInterface, QueryRunner, Table } from 'typeorm'
 
-export class resetPasswordTokens1677458918277 implements MigrationInterface {
+export class passwordResetTokens1677458918277 implements MigrationInterface {
+  name = 'passwordResetTokens1677458918277'
+
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
       new Table({
-        name: 'reset-password-tokens',
+        name: 'password_reset_tokens',
         columns: [
           {
             name: 'id',
@@ -29,7 +31,7 @@ export class resetPasswordTokens1677458918277 implements MigrationInterface {
             default: 'CURRENT_TIMESTAMP(6)',
           },
           {
-            name: 'expiration_date',
+            name: 'expires_at',
             type: 'datetime(6)',
           },
         ],
@@ -47,6 +49,6 @@ export class resetPasswordTokens1677458918277 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable('reset-password-tokens')
+    await queryRunner.dropTable('password_reset_tokens')
   }
 }

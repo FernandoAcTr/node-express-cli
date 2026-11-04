@@ -3,7 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { PackageManager } from '../../src/types'
+import { PackageManager, DbType } from '../../src/types'
 import { scaffoldProject } from '../helpers/project'
 
 /**
@@ -16,6 +16,7 @@ import { scaffoldProject } from '../helpers/project'
 const enabled = process.env.NEC_SMOKE === '1' && (process.env.SMOKE_PROFILE ?? 'core') === 'core'
 const packageManager = (process.env.SMOKE_PACKAGE_MANAGER ?? PackageManager.NPM) as PackageManager
 const fileBasedRouting = process.env.SMOKE_FILE_BASED === 'true'
+const orm = (process.env.SMOKE_ORM ?? DbType.TYPEORM) as DbType
 
 const dirs: string[] = []
 
@@ -39,6 +40,7 @@ describe.skipIf(!enabled)('generated project compiles', () => {
         root: tmpRoot(),
         packageManager,
         fileBasedRouting,
+        orm,
         installDependencies: true,
         onProjectCreated: (dir) => {
           if (packageManager === PackageManager.PNPM) {
@@ -46,6 +48,12 @@ describe.skipIf(!enabled)('generated project compiles', () => {
             // permitidos explícitamente. Es una configuración del entorno de
             // prueba, no algo que el CLI escriba en los proyectos generados.
             fs.writeFileSync(path.join(dir, 'pnpm-workspace.yaml'), 'allowBuilds:\n  bcrypt: true\n')
+          }
+
+          if (orm === DbType.PRISMA) {
+            // prisma.config.ts usa env('DB_URL'); generate no se conecta, pero
+            // sí necesita que la variable exista.
+            fs.writeFileSync(path.join(dir, '.env'), 'DB_URL=mysql://user:password@localhost:3306/app\n')
           }
         },
       })

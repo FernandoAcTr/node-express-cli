@@ -14,10 +14,12 @@ describe('command registry', () => {
     }
   })
 
-  it('declares install:auth as requiring an ORM with a hint', () => {
+  it('declares install:auth as requiring an ORM and mailer with hints', () => {
     const auth = commands.find((command) => command.name === 'install:auth')
+    const requirements = auth?.requires?.map((requirement) => requirement.feature) ?? []
 
-    expect(auth?.requires?.map((requirement) => requirement.feature)).toContain('orm')
+    expect(requirements).toContain('orm')
+    expect(requirements).toContain('mailer')
     expect(auth?.requires?.every((requirement) => requirement.hint.length > 0)).toBe(true)
   })
 

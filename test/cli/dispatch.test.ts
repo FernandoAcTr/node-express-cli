@@ -84,7 +84,7 @@ describe('command dispatch', () => {
   })
 
   it('accepts a command when its requirements are installed', () => {
-    const ctx = createContext({ cwd: project(['orm']), logger: silentLogger })
+    const ctx = createContext({ cwd: project(['orm', 'mailer']), logger: silentLogger })
 
     expect(() => assertCommandCanRun(findCommand('install:auth')!, ctx)).not.toThrow()
   })
