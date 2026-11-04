@@ -14,7 +14,7 @@ import { socketSpec } from '../../src/installers/specs/socket.spec'
 import { NonInteractivePrompter } from '../../src/prompts'
 import { commands } from '../../src/registry'
 import { run } from '../../src/run'
-import { CommandArgs, DbType, PackageManager } from '../../src/types'
+import { CommandArgs, DbType, PackageManager, ValidationLibrary } from '../../src/types'
 import { ShellService } from '../../src/services/shell.service'
 
 export const silentLogger: Logger = {
@@ -44,6 +44,7 @@ export interface ScaffoldOptions {
   root: string
   packageManager?: PackageManager
   fileBasedRouting?: boolean
+  validation?: ValidationLibrary
   orm?: DbType
   installOrm?: boolean
   installAuth?: boolean
@@ -72,6 +73,7 @@ export async function scaffoldProject(options: ScaffoldOptions): Promise<string>
     root,
     packageManager = PackageManager.NPM,
     fileBasedRouting = false,
+    validation = ValidationLibrary.EXPRESS_VALIDATOR,
     orm = DbType.TYPEORM,
     installOrm = true,
     installAuth = true,
@@ -100,6 +102,7 @@ export async function scaffoldProject(options: ScaffoldOptions): Promise<string>
         const values: Record<string, unknown> = {
           'package-manager': packageManager,
           'file-based-routing': fileBasedRouting,
+          validation,
         }
         return values[prompt.name ?? ''] as T
       },

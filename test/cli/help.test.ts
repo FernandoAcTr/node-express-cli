@@ -21,6 +21,7 @@ describe('--help', () => {
   it('registers command-specific options only for their command', () => {
     expect(commandOptions(findCommand('route:list')!)).toHaveProperty('omit')
     expect(commandOptions(findCommand('make:module')!)).toHaveProperty('name')
+    expect(commandOptions(findCommand('init')!)).toHaveProperty('validation')
     expect(commandOptions(findCommand('install:orm')!)).toHaveProperty('orm')
     expect(commandOptions(findCommand('install:auth')!)).toEqual({})
   })

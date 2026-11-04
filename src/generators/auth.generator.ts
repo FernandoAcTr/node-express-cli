@@ -6,6 +6,7 @@ import { WritePolicy } from '../services/project.service'
 import { PRISMA_ANCHOR, AUTH_PRISMA_BLOCK_MARKERS } from '../patch/anchors'
 import { CliError } from '../errors'
 import { generatePrismaClient } from './prisma'
+import { validationTemplates } from './validation'
 
 interface AuthOrmTemplates {
   /** Directorio de entidades dentro de `templates/generator/auth`. */
@@ -104,13 +105,14 @@ export class AuthGenerator implements IPreGenerator, IFileSystemGenerator, IPost
     const policy: WritePolicy = 'overwrite-if-unmodified'
     const project = this.ctx.project
     const templates = AUTH_ORMS[this.dbType]
+    const validation = validationTemplates(config.validation)
 
     // Dominio compartido: idéntico para todos los ORM.
     project.copy('src/modules/auth/auth.controller.ts', 'generator/auth/common/auth.controller.ts', policy)
     project.copy('src/modules/auth/auth.service.ts', 'generator/auth/common/auth.service.ts', policy)
     project.copy('src/modules/auth/auth.tokens.ts', 'generator/auth/common/auth.tokens.ts', policy)
     project.copy('src/modules/auth/auth.types.ts', 'generator/auth/common/auth.types.ts', policy)
-    project.copy('src/modules/auth/auth.validator.ts', 'generator/auth/common/auth.validator.ts', policy)
+    project.copy('src/modules/auth/auth.validator.ts', validation.auth, policy)
     project.copy('src/modules/auth/auth.mailer.ts', 'generator/auth/common/auth.mailer.ts', policy)
     project.copy('src/notifications/emails/password_reset.email.ts', 'generator/auth/common/emails/password_reset.email.ts', policy)
     project.copy('src/notifications/emails/verify_email.email.ts', 'generator/auth/common/emails/verify_email.email.ts', policy)

@@ -4,7 +4,7 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ShellService } from '../../src/services/shell.service'
-import { FEATURES, PackageManager } from '../../src/types'
+import { FEATURES, PackageManager, ValidationLibrary } from '../../src/types'
 import { installAllFeatures, readJson, scaffoldProject, silentLogger } from '../helpers/project'
 
 /**
@@ -17,6 +17,7 @@ import { installAllFeatures, readJson, scaffoldProject, silentLogger } from '../
 const enabled = process.env.NEC_SMOKE === '1' && process.env.SMOKE_PROFILE === 'all'
 const packageManager = (process.env.SMOKE_PACKAGE_MANAGER ?? PackageManager.NPM) as PackageManager
 const fileBasedRouting = process.env.SMOKE_FILE_BASED === 'true'
+const validation = (process.env.SMOKE_VALIDATION ?? ValidationLibrary.EXPRESS_VALIDATOR) as ValidationLibrary
 
 const dirs: string[] = []
 
@@ -40,6 +41,7 @@ describe.skipIf(!enabled)('generated project with every feature compiles', () =>
         root: tmpRoot(),
         packageManager,
         fileBasedRouting,
+        validation,
         installDependencies: true,
         onProjectCreated: (dir) => {
           if (packageManager === PackageManager.PNPM) {

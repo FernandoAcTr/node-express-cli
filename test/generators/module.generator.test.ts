@@ -6,6 +6,7 @@ import { Context, createContext } from '../../src/context'
 import { CliError } from '../../src/errors'
 import { ModuleGenerator } from '../../src/generators/module.generator'
 import { NonInteractivePrompter } from '../../src/prompts'
+import { ValidationLibrary } from '../../src/types'
 
 const dirs: string[] = []
 
@@ -16,10 +17,13 @@ const silentLogger = {
   error: () => undefined,
 }
 
-function project(): string {
+function project(validation = ValidationLibrary.EXPRESS_VALIDATOR): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-module-'))
   dirs.push(dir)
-  fs.writeFileSync(path.join(dir, 'cli.config.json'), JSON.stringify({ fileBasedRouting: false, package_manger: 'npm', features: [] }))
+  fs.writeFileSync(
+    path.join(dir, 'cli.config.json'),
+    JSON.stringify({ fileBasedRouting: false, package_manger: 'npm', validation, features: [] })
+  )
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'app' }))
   return dir
 }
@@ -72,6 +76,19 @@ describe('ModuleGenerator', () => {
     expect(fs.existsSync(path.join(dir, 'users.service.ts'))).toBe(true)
     expect(fs.existsSync(path.join(dir, 'users.validator.ts'))).toBe(true)
     expect(fs.existsSync(path.join(dir, 'users.routes.ts'))).toBe(true)
+  })
+
+  it('writes zod validators when the project uses zod', async () => {
+    const cwd = project(ValidationLibrary.ZOD)
+
+    await generate(cwd)
+
+    const validator = fs.readFileSync(path.join(cwd, 'src/modules/users/users.validator.ts'), 'utf-8')
+
+    expect(validator).toContain("import { z } from 'zod'")
+    expect(validator).toContain("from '@/middlewares/validator'")
+    expect(validator).toContain('validate(storeSchema')
+    expect(validator).not.toContain('express-validator')
   })
 
   it('fails when the module already exists and suggests --force', async () => {

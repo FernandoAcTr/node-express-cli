@@ -39,6 +39,7 @@
 - Prisma client uses `@prisma/adapter-mariadb` and is generated into `src/database/prisma/generated` (gitignored). `prisma.config.ts` reads `DB_URL`; if it is missing, `prisma generate` is skipped with a warning instead of failing the install.
 - `install:auth` requires `install:mailer` (`REQUIRE_MAILER` in `src/registry.ts`) for verification/reset emails. The auth domain is shared; only `src/modules/auth/auth.repository.ts` changes per ORM. Auth emails are classes (`PasswordResetEmail`, `VerifyEmailEmail`) sent through `Mailable`; `auth.mailer.ts` only builds URLs.
 - `install:eslint` ships a flat `eslint.config.mjs` and requires `install:prettier`. Keep the config compatible with the current ESLint major and make sure `eslint src` passes on a freshly generated project (the `all-features` smoke runs it).
+- `init` persists the validation library in `cli.config.json` (`validation`: `express-validator` | `zod`; projects without the key default to express-validator). `src/generators/validation.ts` is the only map of template paths. Any new `*.validator.ts` must exist in both variants, keep the `RequestHandler[]` shape and the `{ errors, message }` response, and be covered by the smoke test with `SMOKE_VALIDATION=zod`. The middleware is copied from `templates/generator/validation/<lib>/validator.ts` to `src/middlewares/validator.ts`; changing the library in an existing project is not supported.
 - `CommandDefinition.create` receives only `ctx`; commands read flags from `ctx.args`. Do not reintroduce a separate `args` parameter.
 
 ## Adding a command

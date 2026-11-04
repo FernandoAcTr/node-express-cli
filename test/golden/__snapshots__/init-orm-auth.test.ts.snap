@@ -153,6 +153,7 @@ exports[`generated project (init + orm + auth) > produces a stable file tree, ma
   "fileBasedRouting": false,
   "orm": "typeorm",
   "package_manger": "npm",
+  "validation": "express-validator",
   "version": "4.1.0",
 }
 `;

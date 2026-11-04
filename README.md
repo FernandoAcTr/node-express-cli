@@ -18,7 +18,13 @@ o en su versión corta, la cuál puedes usar para ejecutar cualquier comando que
 nec init
 ```
 
-Este comando te preguntará el nombre de tu proyecto y creará un nuevo directorio con ese nombre, el cuál contendrá todo el código fuente.
+Este comando te preguntará el nombre de tu proyecto, el package manager, si quieres routing file-based y qué librería de validación usar (`express-validator` o `zod`), y creará un nuevo directorio con ese nombre, el cuál contendrá todo el código fuente.
+
+En un entorno no interactivo puedes pasar las respuestas por flags:
+
+```bash
+node-express-cli init --name my-app --package-manager npm --validation zod
+```
 
 Usa `node-express-cli --help` Para ver una lista completa de los comandos disponibles.
 
@@ -28,6 +34,7 @@ El proyecto incluye y debe incluir un archivo llamado cli.config.json con las op
     "orm": "mongoose", -> opciones disponibles: mongoose | typeorm | sequelize | prisma
     "package_manger": "npm" -> opciones disponibles: npm | yarn | pnpm | bun
     "fileBasedRouting": false, -> opciones disponibles: true | false
+    "validation": "express-validator", -> opciones disponibles: express-validator | zod
     "version": "4.1.0", -> versión del CLI que generó el proyecto
     "features": ["orm", "auth", "mailer", "notifications"] -> features instaladas; las escribe el CLI automáticamente
 }
@@ -166,8 +173,29 @@ node-express-cli make:module
 Cada que se crea un módulo debes asignarle un nombre.
 
 ## Validación de Request
-El body de un request puede ser validado utilizando la librería [express-validator](https://www.npmjs.com/package/express-validator). 
-Para esto un módulo incluye un archivo de validación en donde se colocan cada conjunto de validaciones dentro de un array y en la última posición se coloca el middleware requestValidator, el cual se encarga de obtener los mensajes de error generados por express-validator y devolverlos como una respuesta estándar al cliente.
+Al crear el proyecto, `init` pregunta qué librería de validación quieres usar. La elección se guarda en `cli.config.json` (`validation`) y determina cómo se escriben los archivos `*.validator.ts` de `make:module`, `install:auth` e `install:notifications`:
+
+- `express-validator` (por defecto).
+- `zod` (Zod 4).
+
+En ambos casos los validadores se exportan como un arreglo de middlewares, así que las rutas no cambian:
+
+```TS
+import { storeValidators } from './user.validator';
+
+router.post('/', storeValidators, userController.store);
+```
+
+El middleware responde `400` con el mismo formato en las dos variantes:
+
+```JSON
+{
+  "errors": [{ "type": "field", "value": "", "msg": "field email is required", "path": "email", "location": "body" }],
+  "message": "field email is required"
+}
+```
+
+### express-validator
 
 ```TS
 import { check } from 'express-validator';
@@ -188,13 +216,29 @@ export const updateValidators = [
 ];
 ```
 
-Y para utilizarlos se pasan como middleware, ya que express permite pasar un array de middlewares a una ruta.
-Para más información acerca del uso de express validator visita la [documentación oficial](https://express-validator.github.io/docs/)
+Para más información visita la [documentación oficial](https://express-validator.github.io/docs/).
+
+### zod
 
 ```TS
-import { storeValidators } from './user.validators';
-router.post('/', storeValidators, userController.store);
+import { z } from 'zod';
+import { validate } from '@/middlewares/validator';
+
+export const storeSchema = z.object({
+  name: z.string().min(3, 'field name must have at least 3 characters'),
+  email: z.email('field email is required'),
+  password: z.string().min(6, 'password must be at least 6 characters'),
+});
+
+export const storeValidators = [validate(storeSchema)];
+
+export const updateSchema = storeSchema.partial();
+export const updateValidators = [validate(updateSchema)];
 ```
+
+`validate(schema, source)` acepta `'body'` (por defecto), `'query'` o `'params'`. Solo valida: no reemplaza `req.body`, `req.query` ni `req.params`. Si necesitas los datos transformados, vuelve a llamar `schema.parse(req.body)` en el controller.
+
+La librería se elige en `init`; no está pensado para cambiarla después en un proyecto existente, igual que el ORM.
 
 ## Logger
 

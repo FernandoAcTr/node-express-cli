@@ -2,7 +2,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { PackageManager } from '../../src/types'
+import { PackageManager, ValidationLibrary } from '../../src/types'
 import { listFiles, readJson, scaffoldProject } from '../helpers/project'
 
 const dirs: string[] = []
@@ -48,6 +48,14 @@ describe('generated project (init + orm + auth)', () => {
     const scripts = readJson<{ scripts: Record<string, string> }>(path.join(project, 'package.json')).scripts
 
     expect(JSON.stringify(scripts)).not.toMatch(/\bnpm\b|\bnpx\b/)
+  })
+
+  it('generates zod validators when zod is selected', async () => {
+    const project = await scaffoldProject({ root: tmpRoot(), validation: ValidationLibrary.ZOD })
+
+    expect(readJson<{ validation: string }>(path.join(project, 'cli.config.json')).validation).toBe(ValidationLibrary.ZOD)
+    expect(fs.readFileSync(path.join(project, 'src/middlewares/validator.ts'), 'utf-8')).toContain('export function validate')
+    expect(fs.readFileSync(path.join(project, 'src/modules/auth/auth.validator.ts'), 'utf-8')).toContain("import { z } from 'zod'")
   })
 
   it('wires database config and env from install:orm only', async () => {

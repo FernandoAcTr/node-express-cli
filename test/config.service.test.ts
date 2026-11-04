@@ -3,7 +3,7 @@ import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ConfigService } from '../src/services/config.service'
-import { DbType, PackageManager } from '../src/types'
+import { DbType, PackageManager, ValidationLibrary } from '../src/types'
 import { CliError } from '../src/errors'
 
 const dirs: string[] = []
@@ -28,15 +28,20 @@ describe('ConfigService', () => {
     expect(config.forDirectory('my-app').cwd).toBe(path.join(root, 'my-app'))
   })
 
+  it('defaults to express-validator when cli.config.json does not exist', () => {
+    expect(new ConfigService(tmpDir()).getConfig().validation).toBe(ValidationLibrary.EXPRESS_VALIDATOR)
+  })
+
   it('writes and reads cli.config.json for its directory', () => {
     const root = tmpDir()
     const config = new ConfigService(root)
 
-    config.writeConfig({ package_manger: PackageManager.PNPM, fileBasedRouting: true })
+    config.writeConfig({ package_manger: PackageManager.PNPM, fileBasedRouting: true, validation: ValidationLibrary.ZOD })
 
     expect(config.getConfig()).toMatchObject({
       package_manger: PackageManager.PNPM,
       fileBasedRouting: true,
+      validation: ValidationLibrary.ZOD,
       features: [],
     })
   })
@@ -110,6 +115,7 @@ describe('ConfigService', () => {
         orm: 'not-an-orm',
         package_manger: 'not-a-manager',
         fileBasedRouting: 'yes',
+        validation: 'not-a-library',
         features: [1, 'push', 'push', ''],
       })
     )
@@ -118,6 +124,7 @@ describe('ConfigService', () => {
       orm: undefined,
       package_manger: PackageManager.NPM,
       fileBasedRouting: false,
+      validation: ValidationLibrary.EXPRESS_VALIDATOR,
       features: ['push'],
     })
   })

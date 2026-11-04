@@ -7,7 +7,7 @@ import { createContext } from '../../src/context'
 import { CliError } from '../../src/errors'
 import { NotificationsGenerator } from '../../src/generators/notifications.generator'
 import { run } from '../../src/run'
-import { DbType } from '../../src/types'
+import { DbType, ValidationLibrary } from '../../src/types'
 import { FakeShell, listFiles, scaffoldProject, silentLogger } from '../helpers/project'
 
 const dirs: string[] = []
@@ -99,6 +99,29 @@ describe.each(Object.values(DbType))('NotificationsGenerator (%s)', (orm) => {
     await run(new NotificationsGenerator(ctx), { ctx, feature: 'notifications' })
 
     expect(snapshot(project)).toEqual(before)
+  })
+})
+
+describe('NotificationsGenerator validation library', () => {
+  it('writes zod validators for notifications and push', async () => {
+    const project = await scaffoldProject({
+      root: tmpRoot(),
+      orm: DbType.TYPEORM,
+      installNotifications: true,
+      installPush: true,
+      validation: ValidationLibrary.ZOD,
+      logger: silentLogger,
+    })
+
+    const notifications = read(project, 'src/modules/notifications/notifications.validator.ts')
+    const push = read(project, 'src/modules/notifications/push/push.validator.ts')
+
+    expect(notifications).toContain("import { z } from 'zod'")
+    expect(notifications).toContain("validate(notificationIdSchema, 'params')")
+    expect(push).toContain("import { z } from 'zod'")
+    expect(push).toContain('subscribeSchema')
+    expect(notifications).not.toContain('express-validator')
+    expect(push).not.toContain('express-validator')
   })
 })
 

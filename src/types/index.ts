@@ -12,6 +12,12 @@ export enum PackageManager {
   BUN = 'bun',
 }
 
+/** Librería usada por los archivos `*.validator.ts` del proyecto generado. */
+export enum ValidationLibrary {
+  EXPRESS_VALIDATOR = 'express-validator',
+  ZOD = 'zod',
+}
+
 /** Features que se registran en `cli.config.json` después de instalarse. */
 export const FEATURES = ['orm', 'auth', 'push', 'socket', 'mailer', 'notifications', 'tests', 'prettier', 'eslint'] as const
 
@@ -39,6 +45,8 @@ export type Config = {
   orm?: DbType
   fileBasedRouting: boolean
   package_manger: PackageManager
+  /** Librería de validación elegida en `init`; los proyectos viejos usan express-validator. */
+  validation: ValidationLibrary
   /** Versión del CLI que escribió el archivo. */
   version?: string
   /** Features ya instaladas; permite repetir comandos sin duplicar trabajo. */

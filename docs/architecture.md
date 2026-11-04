@@ -295,6 +295,7 @@ limpieza automática y el proyecto quedaría mezclado.
 `install:auth` declara `requires: [{ feature: 'orm' }, { feature: 'mailer' }]`.
 El dominio (`auth.service.ts`, `auth.controller.ts`, `auth.tokens.ts`,
 `auth.validator.ts`, `auth.mailer.ts`, `passport.ts`) es común; solo
+`auth.validator.ts` cambia según la librería de validación elegida y
 `auth.repository.ts` cambia por ORM y traduce las entidades al contrato
 `auth.types.ts`. Añadir un motor nuevo requiere sus entidades y un repositorio,
 no tocar el servicio. Los correos de auth (`PasswordResetEmail`,
@@ -317,6 +318,19 @@ no tocar el servicio. Los correos de auth (`PasswordResetEmail`,
 `templates/base` solo contiene lo común a todos los proyectos. `MAILER`,
 `MAIL_*`, `VAPID`, `DB_*`, `prettier:fix` y `vapid:generate` pertenecen a los
 specs de sus features.
+
+### Librería de validación
+
+`init` guarda `validation` (`express-validator` | `zod`) en `cli.config.json`.
+`src/generators/validation.ts` es la única pieza que conoce las rutas de las
+plantillas; `ModuleGenerator`, `AuthGenerator` y `NotificationsGenerator` eligen
+la variante desde ese mapa. El middleware vive en
+`templates/generator/validation/<lib>/validator.ts` y `init` lo copia a
+`src/middlewares/validator.ts`. La forma de los validadores
+(`RequestHandler[]`) y el formato de error (`{ errors, message }`) son idénticos
+en ambas variantes. Los proyectos anteriores sin la clave usan
+express-validator. Cambiar de librería en un proyecto existente no está
+soportado, igual que cambiar de ORM.
 
 ## Plantillas
 

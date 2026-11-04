@@ -99,6 +99,10 @@ export const commands: CommandDefinition[] = [
         type: 'boolean',
         description: 'Use file-based routing',
       },
+      validation: {
+        type: 'string',
+        description: 'Validation library: express-validator or zod',
+      },
     },
     create: (ctx) => new BaseGenerator(ctx),
   },

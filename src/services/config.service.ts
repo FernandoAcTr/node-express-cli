@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { Config, DbType, FEATURES, Feature, FeatureMetadata, PackageManager } from '../types'
+import { Config, DbType, FEATURES, Feature, FeatureMetadata, PackageManager, ValidationLibrary } from '../types'
 import { version } from '../version'
 import { CliError } from '../errors'
 import { FileSystem } from './file-system'
@@ -44,6 +44,7 @@ export class ConfigService {
         orm: undefined,
         package_manger: PackageManager.NPM,
         fileBasedRouting: false,
+        validation: ValidationLibrary.EXPRESS_VALIDATOR,
         version,
         features: [],
       }
@@ -68,6 +69,7 @@ export class ConfigService {
       orm: isDbType(parsed.orm) ? parsed.orm : undefined,
       package_manger: isPackageManager(parsed.package_manger) ? parsed.package_manger : PackageManager.NPM,
       fileBasedRouting: parsed.fileBasedRouting === true,
+      validation: isValidationLibrary(parsed.validation) ? parsed.validation : ValidationLibrary.EXPRESS_VALIDATOR,
       version: typeof parsed.version === 'string' ? parsed.version : version,
       features: normalizeFeatures(parsed.features),
     }
@@ -86,6 +88,7 @@ export class ConfigService {
       orm: config.orm ?? current?.orm,
       package_manger: config.package_manger ?? current?.package_manger ?? PackageManager.NPM,
       fileBasedRouting: config.fileBasedRouting ?? current?.fileBasedRouting ?? false,
+      validation: config.validation ?? current?.validation ?? ValidationLibrary.EXPRESS_VALIDATOR,
       version,
       features: normalizeFeatures(config.features ?? current?.features ?? []),
     }
@@ -296,6 +299,10 @@ function isDbType(value: unknown): value is DbType {
 
 function isPackageManager(value: unknown): value is PackageManager {
   return typeof value === 'string' && Object.values(PackageManager).includes(value as PackageManager)
+}
+
+function isValidationLibrary(value: unknown): value is ValidationLibrary {
+  return typeof value === 'string' && Object.values(ValidationLibrary).includes(value as ValidationLibrary)
 }
 
 function normalizeFeatures(value: unknown): Feature[] {

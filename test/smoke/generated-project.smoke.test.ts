@@ -3,7 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { PackageManager, DbType } from '../../src/types'
+import { PackageManager, DbType, ValidationLibrary } from '../../src/types'
 import { scaffoldProject } from '../helpers/project'
 
 /**
@@ -17,6 +17,7 @@ const enabled = process.env.NEC_SMOKE === '1' && (process.env.SMOKE_PROFILE ?? '
 const packageManager = (process.env.SMOKE_PACKAGE_MANAGER ?? PackageManager.NPM) as PackageManager
 const fileBasedRouting = process.env.SMOKE_FILE_BASED === 'true'
 const orm = (process.env.SMOKE_ORM ?? DbType.TYPEORM) as DbType
+const validation = (process.env.SMOKE_VALIDATION ?? ValidationLibrary.EXPRESS_VALIDATOR) as ValidationLibrary
 
 const dirs: string[] = []
 
@@ -40,6 +41,7 @@ describe.skipIf(!enabled)('generated project compiles', () => {
         root: tmpRoot(),
         packageManager,
         fileBasedRouting,
+        validation,
         orm,
         installNotifications: true,
         installDependencies: true,

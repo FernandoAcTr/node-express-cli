@@ -5,6 +5,7 @@ import { OperationResult, createResult } from '../report'
 import { WritePolicy } from '../services/project.service'
 import { CliError } from '../errors'
 import { generatePrismaClient } from './prisma'
+import { validationTemplates } from './validation'
 
 interface MigrationTemplate {
   from: string
@@ -164,6 +165,7 @@ export class NotificationsGenerator implements IPreGenerator, IFileSystemGenerat
     const policy: WritePolicy = 'overwrite-if-unmodified'
     const project = this.ctx.project
     const templates = NOTIFICATION_ORMS[this.dbType]
+    const validation = validationTemplates(config.validation)
 
     project.copy('src/modules/notifications/notifications.types.ts', 'generator/notifications/common/notifications.types.ts', policy)
     project.copy('src/modules/notifications/notifications.store.ts', 'generator/notifications/common/notifications.store.ts', policy)
@@ -173,11 +175,7 @@ export class NotificationsGenerator implements IPreGenerator, IFileSystemGenerat
       'generator/notifications/common/notifications.controller.ts',
       policy
     )
-    project.copy(
-      'src/modules/notifications/notifications.validator.ts',
-      'generator/notifications/common/notifications.validator.ts',
-      policy
-    )
+    project.copy('src/modules/notifications/notifications.validator.ts', validation.notifications, policy)
 
     if (config.fileBasedRouting) {
       project.copyDir('src/routes/notifications', 'generator/notifications/common/filerouting', policy)
@@ -217,7 +215,7 @@ export class NotificationsGenerator implements IPreGenerator, IFileSystemGenerat
     }
 
     if (this.withPush) {
-      this.copyPushFiles(templates, policy)
+      this.copyPushFiles(templates, validation.push, policy)
     }
 
     this.writeChannelsIndex()
@@ -251,14 +249,14 @@ export class NotificationsGenerator implements IPreGenerator, IFileSystemGenerat
     return result
   }
 
-  private copyPushFiles(templates: NotificationOrmTemplates, policy: WritePolicy): void {
+  private copyPushFiles(templates: NotificationOrmTemplates, pushValidator: string, policy: WritePolicy): void {
     const config = this.ctx.config.getConfig()
     const project = this.ctx.project
 
     project.copy('src/modules/notifications/push/types/push.types.ts', 'generator/notifications/push/types/push.types.ts', policy)
     project.copy('src/modules/notifications/push/push.service.ts', 'generator/notifications/push/common/push.service.ts', policy)
     project.copy('src/modules/notifications/push/push.controller.ts', 'generator/notifications/push/common/push.controller.ts', policy)
-    project.copy('src/modules/notifications/push/push.validator.ts', 'generator/notifications/push/common/push.validator.ts', policy)
+    project.copy('src/modules/notifications/push/push.validator.ts', pushValidator, policy)
 
     if (config.fileBasedRouting) {
       project.copyDir('src/routes/notifications/push', 'generator/notifications/push/filerouting', policy)

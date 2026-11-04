@@ -7,7 +7,7 @@ import { CliError } from '../../src/errors'
 import { AuthGenerator } from '../../src/generators/auth.generator'
 import { Logger } from '../../src/logger'
 import { run } from '../../src/run'
-import { DbType } from '../../src/types'
+import { DbType, ValidationLibrary } from '../../src/types'
 import { FakeShell, scaffoldProject } from '../helpers/project'
 
 const dirs: string[] = []
@@ -78,6 +78,15 @@ afterEach(() => {
 })
 
 describe('AuthGenerator', () => {
+  it('writes zod validators when the project uses zod', async () => {
+    const project = await scaffoldProject({ root: tmpRoot(), validation: ValidationLibrary.ZOD })
+    const validator = read(project, 'src/modules/auth/auth.validator.ts')
+
+    expect(validator).toContain("import { z } from 'zod'")
+    expect(validator).toContain('registerSchema')
+    expect(validator).not.toContain('express-validator')
+  })
+
   it('copies the shared domain and the ORM-specific repository', async () => {
     const cwd = project()
 

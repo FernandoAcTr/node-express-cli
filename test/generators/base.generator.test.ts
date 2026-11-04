@@ -8,6 +8,8 @@ import { BaseGenerator } from '../../src/generators/base.generator'
 import { NonInteractivePrompter } from '../../src/prompts'
 import { run } from '../../src/run'
 import { ShellService } from '../../src/services/shell.service'
+import { ValidationLibrary } from '../../src/types'
+import { FakeShell } from '../helpers/project'
 
 const dirs: string[] = []
 
@@ -18,7 +20,11 @@ const silentLogger = {
   error: () => undefined,
 }
 
-async function initProject(fileBasedRouting: boolean, packageManager = 'npm'): Promise<string> {
+async function initProject(
+  fileBasedRouting: boolean,
+  packageManager = 'npm',
+  validation = ValidationLibrary.EXPRESS_VALIDATOR
+): Promise<string> {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-base-'))
   dirs.push(cwd)
 
@@ -26,6 +32,7 @@ async function initProject(fileBasedRouting: boolean, packageManager = 'npm'): P
     name: 'app',
     'package-manager': packageManager,
     'file-based-routing': fileBasedRouting,
+    validation,
   })
   const ctx = createContext({ cwd, prompter, logger: silentLogger })
   const generator = new BaseGenerator(ctx)
@@ -80,7 +87,41 @@ describe('BaseGenerator routing selection', () => {
 
     expect(config.features).toEqual([])
     expect(config.orm).toBeUndefined()
+    expect(config.validation).toBe(ValidationLibrary.EXPRESS_VALIDATOR)
     expect(config.version).toBeDefined()
+  })
+
+  it('writes the zod middleware and dependency when zod is selected', async () => {
+    const project = await initProject(false, 'npm', ValidationLibrary.ZOD)
+    const config = JSON.parse(fs.readFileSync(path.join(project, 'cli.config.json'), 'utf-8'))
+    const middleware = fs.readFileSync(path.join(project, 'src/middlewares/validator.ts'), 'utf-8')
+
+    expect(config.validation).toBe(ValidationLibrary.ZOD)
+    expect(middleware).toContain("from 'zod'")
+    expect(middleware).not.toContain("from 'express-validator'")
+  })
+
+  it('installs only the selected validation library', async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'nec-base-'))
+    dirs.push(cwd)
+    const shell = new FakeShell()
+    const prompter = new NonInteractivePrompter({
+      name: 'app',
+      'package-manager': 'npm',
+      'file-based-routing': false,
+      validation: ValidationLibrary.ZOD,
+    })
+    const ctx = createContext({ cwd, prompter, logger: silentLogger, shell: shell as unknown as ShellService })
+    const generator = new BaseGenerator(ctx)
+
+    await generator.pre()
+    await generator.createDirectories()
+    await generator.copyFiles()
+    await generator.installDependencies()
+
+    const install = shell.commands.find((command) => command.includes('app-root-path'))
+    expect(install).toContain('zod@^4')
+    expect(install).not.toContain('express-validator')
   })
 
   it('writes the project name into package.json', async () => {

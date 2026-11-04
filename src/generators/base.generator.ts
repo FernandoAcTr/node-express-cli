@@ -2,7 +2,7 @@ import { IGenerator } from '../interfaces/generator.interface'
 import figlet from 'figlet'
 import gradient from 'gradient-string'
 import { sleep } from '../utils/time'
-import { PackageManager } from '../types'
+import { PackageManager, ValidationLibrary } from '../types'
 import { Context } from '../context'
 import { NonInteractivePrompter } from '../prompts'
 import { ConfigService } from '../services/config.service'
@@ -12,11 +12,13 @@ import fs from 'fs-extra'
 import { CliError } from '../errors'
 import { baseScripts } from '../utils/scripts'
 import { validateProjectName } from '../utils/validation'
+import { validationTemplates } from './validation'
 
 export class BaseGenerator implements IGenerator {
   private projectName: string
   private packageManager: PackageManager
   private fileBasedRouting: boolean
+  private validation: ValidationLibrary
   private projectConfig: ConfigService
   private projectService: ProjectService
   private createdProjectDir = false
@@ -55,6 +57,13 @@ export class BaseGenerator implements IGenerator {
       ],
       default: false,
     })
+    this.validation =
+      (await this.ctx.prompter.select<ValidationLibrary>({
+        message: 'Choose validation library',
+        name: 'validation',
+        choices: Object.values(ValidationLibrary).map((x) => ({ name: x, value: x })),
+        default: ValidationLibrary.EXPRESS_VALIDATOR,
+      })) ?? ValidationLibrary.EXPRESS_VALIDATOR
 
     if (fs.existsSync(this.projectDir)) {
       throw new CliError(`The directory "${this.projectName}" already exists`, {
@@ -82,6 +91,7 @@ export class BaseGenerator implements IGenerator {
     this.projectConfig.writeConfig({
       package_manger: this.packageManager,
       fileBasedRouting: this.fileBasedRouting,
+      validation: this.validation,
     })
     this.projectService.record('cli.config.json')
 
@@ -123,6 +133,8 @@ export class BaseGenerator implements IGenerator {
       project.remove('src/modules/healthcheck/routes.ts')
     }
 
+    project.copy('src/middlewares/validator.ts', validationTemplates(this.validation).middleware, 'overwrite-if-unmodified')
+
     this.projectConfig.setPackageName(this.projectName)
     this.projectConfig.setScripts(baseScripts(this.projectConfig))
     project.record('package.json')
@@ -135,8 +147,10 @@ export class BaseGenerator implements IGenerator {
 
     this.ctx.logger.info('================= Installing dependencies =================')
 
+    const validationPackage = this.validation === ValidationLibrary.ZOD ? 'zod@^4' : ValidationLibrary.EXPRESS_VALIDATOR
+
     await this.ctx.shell.execAsync(
-      `${this.projectConfig.getInstallCommand()} app-root-path cors dotenv express express-validator helmet morgan rate-limiter-flexible ts-mixer express-http-context`,
+      `${this.projectConfig.getInstallCommand()} app-root-path cors dotenv express ${validationPackage} helmet morgan rate-limiter-flexible ts-mixer express-http-context`,
       this.projectDir
     )
     await this.ctx.shell.execAsync(

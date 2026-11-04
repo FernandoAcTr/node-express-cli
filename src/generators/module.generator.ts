@@ -4,6 +4,7 @@ import path from 'path'
 import { kebabCase, pascalCase } from '../utils/naming'
 import { renderTemplate } from '../utils/template'
 import { validateIdentifier } from '../utils/validation'
+import { validationTemplates } from './validation'
 
 export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
   private moduleName: string
@@ -44,11 +45,12 @@ export class ModuleGenerator implements IPreGenerator, IFileSystemGenerator {
     const moduleDir = this.moduleDir
     const serviceName = pascalCase(this.moduleName)
     const policy = 'create' as const
+    const validation = validationTemplates(config.validation)
 
     const files: Array<{ path: string; content: string }> = [
       {
         path: path.join(dir, `${moduleDir}.validator.ts`),
-        content: renderTemplate(this.ctx.project.template('generator/module/validator.ts'), {}),
+        content: renderTemplate(this.ctx.project.template(validation.module), {}),
       },
       {
         path: path.join(dir, `${moduleDir}.service.ts`),
